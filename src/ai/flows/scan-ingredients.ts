@@ -4,26 +4,11 @@
  * @fileOverview This file defines the scanIngredients flow, which uses AI to detect ingredients from an image.
  *
  * - scanIngredients - A function that takes an image data URI as input and returns a list of identified ingredients.
- * - ScanIngredientsInput - The input type for the scanIngredients function.
- * - ScanIngredientsOutput - The return type for the scanIngredients function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ScanIngredientsInput, ScanIngredientsInputSchema, ScanIngredientsOutput, ScanIngredientsOutputSchema } from '../schemas';
 
-const ScanIngredientsInputSchema = z.object({
-  photoDataUri: z
-    .string()
-    .describe(
-      "A photo of ingredients, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-});
-export type ScanIngredientsInput = z.infer<typeof ScanIngredientsInputSchema>;
-
-const ScanIngredientsOutputSchema = z.object({
-  ingredients: z.array(z.string()).describe('A list of ingredients identified in the image.'),
-});
-export type ScanIngredientsOutput = z.infer<typeof ScanIngredientsOutputSchema>;
 
 export async function scanIngredients(input: ScanIngredientsInput): Promise<ScanIngredientsOutput> {
   return scanIngredientsFlow(input);

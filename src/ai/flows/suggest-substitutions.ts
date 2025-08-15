@@ -4,33 +4,10 @@
  * @fileOverview A flow for suggesting ingredient substitutions based on what the user has available.
  *
  * - suggestSubstitutions - A function that suggests ingredient substitutions.
- * - SuggestSubstitutionsInput - The input type for the suggestSubstitutions function.
- * - SuggestSubstitutionsOutput - The return type for the suggestSubstitutions function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const SuggestSubstitutionsInputSchema = z.object({
-  missingIngredient: z
-    .string()
-    .describe('The ingredient that the user is missing.'),
-  availableIngredients: z
-    .array(z.string())
-    .describe('A list of ingredients the user has available.'),
-});
-export type SuggestSubstitutionsInput = z.infer<
-  typeof SuggestSubstitutionsInputSchema
->;
-
-const SuggestSubstitutionsOutputSchema = z.object({
-  substitutions: z
-    .array(z.string())
-    .describe('A list of suggested ingredient substitutions.'),
-});
-export type SuggestSubstitutionsOutput = z.infer<
-  typeof SuggestSubstitutionsOutputSchema
->;
+import { SuggestSubstitutionsInput, SuggestSubstitutionsInputSchema, SuggestSubstitutionsOutput, SuggestSubstitutionsOutputSchema } from '../schemas';
 
 export async function suggestSubstitutions(
   input: SuggestSubstitutionsInput

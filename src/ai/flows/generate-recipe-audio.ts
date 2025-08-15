@@ -4,24 +4,12 @@
  * @fileOverview A flow for generating audio narration for a recipe.
  *
  * - generateRecipeAudio - Converts recipe instructions to speech.
- * - GenerateRecipeAudioInput - The input type for the generateRecipeAudio function.
- * - GenerateRecipeAudioOutput - The return type for the generateRecipeAudio function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
 import wav from 'wav';
 import { googleAI } from '@genkit-ai/googleai';
-
-export const GenerateRecipeAudioInputSchema = z.object({
-  instructions: z.string().describe('The recipe instructions to be converted to speech.'),
-});
-export type GenerateRecipeAudioInput = z.infer<typeof GenerateRecipeAudioInputSchema>;
-
-export const GenerateRecipeAudioOutputSchema = z.object({
-  audioDataUri: z.string().describe("The generated audio as a data URI. Expected format: 'data:audio/wav;base64,<encoded_data>'."),
-});
-export type GenerateRecipeAudioOutput = z.infer<typeof GenerateRecipeAudioOutputSchema>;
+import { GenerateRecipeAudioInput, GenerateRecipeAudioInputSchema, GenerateRecipeAudioOutput, GenerateRecipeAudioOutputSchema } from '../schemas';
 
 async function toWav(
   pcmData: Buffer,

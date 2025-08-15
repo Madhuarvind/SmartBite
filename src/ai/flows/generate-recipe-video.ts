@@ -4,23 +4,11 @@
  * @fileOverview A flow for generating a short video for a recipe.
  *
  * - generateRecipeVideo - Generates a video based on a recipe name.
- * - GenerateRecipeVideoInput - The input type for the generateRecipeVideo function.
- * - GenerateRecipeVideoOutput - The return type for the generateRecipeVideo function.
  */
 
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { z } from 'genkit';
-
-export const GenerateRecipeVideoInputSchema = z.object({
-  recipeName: z.string().describe('The name of the recipe to generate a video for.'),
-});
-export type GenerateRecipeVideoInput = z.infer<typeof GenerateRecipeVideoInputSchema>;
-
-export const GenerateRecipeVideoOutputSchema = z.object({
-  videoDataUri: z.string().describe("The generated video as a data URI. Expected format: 'data:video/mp4;base64,<encoded_data>'."),
-});
-export type GenerateRecipeVideoOutput = z.infer<typeof GenerateRecipeVideoOutputSchema>;
+import { GenerateRecipeVideoInput, GenerateRecipeVideoInputSchema, GenerateRecipeVideoOutput, GenerateRecipeVideoOutputSchema } from '../schemas';
 
 export async function generateRecipeVideo(
   input: GenerateRecipeVideoInput

@@ -4,49 +4,13 @@
  * @fileOverview A recipe recommendation AI agent.
  *
  * - recommendRecipes - A function that handles the recipe recommendation process.
- * - RecommendRecipesInput - The input type for the recommendRecipes function.
- * - RecommendRecipesOutput - The return type for the recommendRecipes function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import { generateRecipeAudio, GenerateRecipeAudioOutputSchema } from './generate-recipe-audio';
-import { generateRecipeVideo, GenerateRecipeVideoOutputSchema } from './generate-recipe-video';
+import { generateRecipeAudio } from './generate-recipe-audio';
+import { generateRecipeVideo } from './generate-recipe-video';
+import { RecommendRecipesInput, RecommendRecipesInputSchema, RecommendRecipesOutput, RecommendRecipesOutputSchema } from '../schemas';
 
-const RecommendRecipesInputSchema = z.object({
-  ingredients: z
-    .array(z.string())
-    .describe('A list of ingredients the user has available.'),
-  dietaryRestrictions: z
-    .array(z.string())
-    .optional()
-    .describe('A list of dietary restrictions the user has.'),
-  expiringIngredients: z
-    .array(z.string())
-    .optional()
-    .describe('A list of ingredients that are about to expire.'),
-});
-export type RecommendRecipesInput = z.infer<typeof RecommendRecipesInputSchema>;
-
-const RecipeSchema = z.object({
-  name: z.string().describe('The name of the recipe.'),
-  ingredients: z.array(z.string()).describe('The ingredients required for the recipe.'),
-  instructions: z.string().describe('The instructions for the recipe.'),
-  dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),
-  nutrition: z.object({
-      calories: z.number().describe('The estimated number of calories per serving.'),
-      protein: z.number().describe('The estimated grams of protein per serving.'),
-      carbs: z.number().describe('The estimated grams of carbohydrates per serving.'),
-      fat: z.number().describe('The estimated grams of fat per serving.'),
-  }).describe('The nutritional information for the recipe.'),
-  audio: GenerateRecipeAudioOutputSchema.optional(),
-  video: GenerateRecipeVideoOutputSchema.optional(),
-});
-
-const RecommendRecipesOutputSchema = z.object({
-  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
-});
-export type RecommendRecipesOutput = z.infer<typeof RecommendRecipesOutputSchema>;
 
 export async function recommendRecipes(input: RecommendRecipesInput): Promise<RecommendRecipesOutput> {
   return recommendRecipesFlow(input);

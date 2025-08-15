@@ -33,6 +33,12 @@ const RecipeSchema = z.object({
   ingredients: z.array(z.string()).describe('The ingredients required for the recipe.'),
   instructions: z.string().describe('The instructions for the recipe.'),
   dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),
+  nutrition: z.object({
+      calories: z.number().describe('The estimated number of calories per serving.'),
+      protein: z.number().describe('The estimated grams of protein per serving.'),
+      carbs: z.number().describe('The estimated grams of carbohydrates per serving.'),
+      fat: z.number().describe('The estimated grams of fat per serving.'),
+  }).describe('The nutritional information for the recipe.'),
   audio: GenerateRecipeAudioOutputSchema.optional(),
   video: GenerateRecipeVideoOutputSchema.optional(),
 });
@@ -50,9 +56,11 @@ const prompt = ai.definePrompt({
   name: 'recommendRecipesPrompt',
   input: {schema: RecommendRecipesInputSchema},
   output: {schema: RecommendRecipesOutputSchema},
-  prompt: `You are a recipe recommendation engine. You will be provided with a list of ingredients the user has available, their dietary restrictions, and a list of ingredients that are about to expire.
+  prompt: `You are a recipe recommendation engine and nutritionist. You will be provided with a list of ingredients the user has available, their dietary restrictions, and a list of ingredients that are about to expire.
 
 You will use this information to recommend recipes to the user. Prioritize recipes that use ingredients that are about to expire.
+
+For each recipe, you MUST provide a detailed nutritional analysis per serving, including calories, protein, carbs, and fat.
 
 Ingredients: {{{ingredients}}}
 Dietary Restrictions: {{{dietaryRestrictions}}}

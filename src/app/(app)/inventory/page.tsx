@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -10,6 +11,8 @@ import { PlusCircle, Upload, MoreHorizontal, Trash2, Pencil } from "lucide-react
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { scanIngredients } from "@/ai/flows/scan-ingredients";
+import { useToast } from "@/hooks/use-toast";
 
 const initialInventory = [
   { id: '1', name: 'Tomatoes', quantity: '500g', expiry: '2024-08-15' },
@@ -30,6 +33,7 @@ export default function InventoryPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [scannedIngredients, setScannedIngredients] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -43,14 +47,29 @@ export default function InventoryPage() {
     }
   };
   
-  const handleScan = () => {
-    if(!imagePreview) return;
+  const handleScan = async () => {
+    if (!imagePreview) return;
     setIsLoading(true);
-    // Mock AI call
-    setTimeout(() => {
-        setScannedIngredients(['Carrots', 'Celery', 'Onion']);
-        setIsLoading(false);
-    }, 2000);
+    try {
+      const result = await scanIngredients({ photoDataUri: imagePreview });
+      setScannedIngredients(result.ingredients);
+    } catch (error) {
+      console.error("Error scanning ingredients:", error);
+      toast({
+        variant: "destructive",
+        title: "Scan Failed",
+        description: "Could not detect ingredients from the image. Please try another one.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setImagePreview(null);
+    setScannedIngredients([]);
+    const fileInput = document.getElementById('picture') as HTMLInputElement;
+    if(fileInput) fileInput.value = '';
   }
 
   return (
@@ -91,7 +110,7 @@ export default function InventoryPage() {
                 )}
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={() => { setImagePreview(null); setScannedIngredients([]); }}>Clear</Button>
+                <Button variant="outline" onClick={handleClear}>Clear</Button>
                 <Button onClick={handleScan} disabled={!imagePreview || isLoading}>
                     {isLoading ? "Scanning..." : "Scan Ingredients"}
                 </Button>

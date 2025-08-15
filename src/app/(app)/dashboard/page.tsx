@@ -75,7 +75,7 @@ export default function DashboardPage() {
                   <TableRow key={item.name}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>
-                      <span className={item.daysLeft <= 2 ? "text-accent" : ""}>
+                      <span className={item.daysLeft <= 2 ? "text-destructive" : ""}>
                         {item.daysLeft} days
                       </span>
                     </TableCell>

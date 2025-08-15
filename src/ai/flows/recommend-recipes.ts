@@ -10,6 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { generateRecipeAudio, GenerateRecipeAudioOutputSchema } from './generate-recipe-audio';
+import { generateRecipeVideo, GenerateRecipeVideoOutputSchema } from './generate-recipe-video';
 
 const RecommendRecipesInputSchema = z.object({
   ingredients: z
@@ -31,6 +33,8 @@ const RecipeSchema = z.object({
   ingredients: z.array(z.string()).describe('The ingredients required for the recipe.'),
   instructions: z.string().describe('The instructions for the recipe.'),
   dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),
+  audio: GenerateRecipeAudioOutputSchema.optional(),
+  video: GenerateRecipeVideoOutputSchema.optional(),
 });
 
 const RecommendRecipesOutputSchema = z.object({
@@ -66,6 +70,20 @@ const recommendRecipesFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output || !output.recipes) {
+      return { recipes: [] };
+    }
+
+    const enhancedRecipes = await Promise.all(
+      output.recipes.map(async (recipe) => {
+        const [audio, video] = await Promise.all([
+          generateRecipeAudio({ instructions: recipe.instructions }),
+          generateRecipeVideo({ recipeName: recipe.name })
+        ]);
+        return { ...recipe, audio, video };
+      })
+    );
+
+    return { recipes: enhancedRecipes };
   }
 );

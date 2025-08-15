@@ -1,27 +1,80 @@
+
 "use client";
 
+import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Users, Flame, UtensilsCrossed } from "lucide-react";
+import { Clock, Users, Flame, UtensilsCrossed, Loader, Music, Video } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { recommendRecipes, RecommendRecipesOutput } from "@/ai/flows/recommend-recipes";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const availableIngredients = [
   'Tomatoes', 'Chicken Breast', 'Milk', 'Spinach', 'Eggs', 'Onion', 'Garlic', 'Bread'
 ];
 
-const recommendedRecipes = [
-  { id: '1', name: 'Tomato Basil Bruschetta', time: '15 min', servings: 4, calories: 150, imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'bruschetta tomato' },
-  { id: '2', name: 'Spinach and Feta Omelette', time: '10 min', servings: 1, calories: 300, imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'omelette spinach' },
-  { id: '3', name: 'Creamy Tomato Chicken', time: '30 min', servings: 2, calories: 450, imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'chicken dish' },
-  { id: '4', name: 'Garlic Bread', time: '20 min', servings: 4, calories: 250, imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'garlic bread' },
-];
+type Recipe = RecommendRecipesOutput['recipes'][0];
 
 export default function RecipesPage() {
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+  const [dietaryNeeds, setDietaryNeeds] = useState<string>('any');
+  const [isLoading, setIsLoading] = useState(false);
+  const [recommendedRecipes, setRecommendedRecipes] = useState<Recipe[]>([]);
+  const { toast } = useToast();
+
+  const handleIngredientChange = (ingredient: string, checked: boolean | 'indeterminate') => {
+    if (checked) {
+      setSelectedIngredients(prev => [...prev, ingredient]);
+    } else {
+      setSelectedIngredients(prev => prev.filter(item => item !== ingredient));
+    }
+  };
+
+  const handleGenerateRecipes = async () => {
+    if (selectedIngredients.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Ingredients Selected",
+        description: "Please select at least one ingredient to get recommendations.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setRecommendedRecipes([]);
+
+    try {
+      const input = {
+        ingredients: selectedIngredients,
+        dietaryRestrictions: dietaryNeeds === 'any' ? [] : [dietaryNeeds],
+      };
+      const result = await recommendRecipes(input);
+      setRecommendedRecipes(result.recipes);
+      if (result.recipes.length === 0) {
+        toast({
+          title: "No Recipes Found",
+          description: "We couldn't find any recipes with the selected ingredients. Try selecting more items!",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating recipes:", error);
+      toast({
+        variant: "destructive",
+        title: "Generation Failed",
+        description: "There was an error generating recipes. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="Find Your Next Meal" />
@@ -38,7 +91,11 @@ export default function RecipesPage() {
               <div className="flex flex-wrap gap-4">
                 {availableIngredients.map(ingredient => (
                   <div key={ingredient} className="flex items-center space-x-2">
-                    <Checkbox id={ingredient} />
+                    <Checkbox 
+                      id={ingredient} 
+                      onCheckedChange={(checked) => handleIngredientChange(ingredient, checked)}
+                      checked={selectedIngredients.includes(ingredient)}
+                    />
                     <Label htmlFor={ingredient} className="font-normal">{ingredient}</Label>
                   </div>
                 ))}
@@ -47,7 +104,7 @@ export default function RecipesPage() {
           </div>
           <div>
             <Label htmlFor="dietary-needs">Dietary Needs</Label>
-            <Select>
+            <Select onValueChange={setDietaryNeeds} value={dietaryNeeds}>
               <SelectTrigger id="dietary-needs" className="mt-2">
                 <SelectValue placeholder="Any" />
               </SelectTrigger>
@@ -62,9 +119,8 @@ export default function RecipesPage() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>
-            <UtensilsCrossed className="mr-2" />
-            Generate Recipes
+          <Button onClick={handleGenerateRecipes} disabled={isLoading}>
+            {isLoading ? <><Loader className="mr-2 animate-spin" /> Generating...</> : <><UtensilsCrossed className="mr-2" /> Generate Recipes</>}
           </Button>
         </CardFooter>
       </Card>
@@ -72,24 +128,62 @@ export default function RecipesPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Recommended For You</h2>
         <div className="grid gap-6 mt-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {recommendedRecipes.map(recipe => (
-            <Card key={recipe.id} className="overflow-hidden flex flex-col">
+          {isLoading && Array.from({ length: 4 }).map((_, i) => (
+             <Card key={i} className="overflow-hidden flex flex-col">
+                <CardHeader className="p-0">
+                    <Skeleton className="aspect-video w-full" />
+                </CardHeader>
+                <CardContent className="p-4 flex-grow">
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-full" />
+                </CardContent>
+                <CardFooter className="p-4 pt-0">
+                    <Skeleton className="h-10 w-full" />
+                </CardFooter>
+             </Card>
+          ))}
+          {recommendedRecipes.map((recipe, index) => (
+            <Card key={`${recipe.name}-${index}`} className="overflow-hidden flex flex-col">
               <CardHeader className="p-0">
-                <div className="relative aspect-video">
-                  <Image src={recipe.imageUrl} alt={recipe.name} layout="fill" objectFit="cover" data-ai-hint={recipe.dataAiHint} />
-                   <Badge variant="secondary" className="absolute top-2 right-2">Recommended</Badge>
+                 <div className="relative aspect-video">
+                  {recipe.video?.videoDataUri ? (
+                    <video
+                      src={recipe.video.videoDataUri}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-secondary flex flex-col items-center justify-center text-muted-foreground">
+                        <Video className="w-10 h-10 mb-2"/>
+                        <p className="text-sm">Video is generating...</p>
+                        <Skeleton className="w-full h-full absolute inset-0" />
+                    </div>
+                  )}
+                  <Badge variant="secondary" className="absolute top-2 right-2">Recommended</Badge>
                 </div>
               </CardHeader>
               <CardContent className="p-4 flex-grow">
                 <CardTitle className="text-lg mb-2">{recipe.name}</CardTitle>
-                <div className="flex items-center text-sm text-muted-foreground gap-4">
-                  <div className="flex items-center gap-1"><Clock className="w-4 h-4"/> {recipe.time}</div>
-                  <div className="flex items-center gap-1"><Users className="w-4 h-4"/> {recipe.servings}</div>
-                  <div className="flex items-center gap-1"><Flame className="w-4 h-4"/> {recipe.calories} kcal</div>
+                <div className="text-sm text-muted-foreground">
+                  <p className="line-clamp-3">{recipe.instructions}</p>
                 </div>
+
+                {recipe.audio?.audioDataUri ? (
+                  <div className="mt-4">
+                      <Label className="flex items-center mb-2"><Music className="mr-2"/> Audio Narration</Label>
+                      <audio controls src={recipe.audio.audioDataUri} className="w-full h-10" />
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <Label className="flex items-center mb-2"><Music className="mr-2"/> Audio Narration</Label>
+                    <div className="h-10 w-full flex items-center justify-center bg-secondary rounded-md">
+                        <p className="text-sm text-muted-foreground">Audio is generating...</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
               <CardFooter className="p-4 pt-0">
-                <Button className="w-full">View Recipe</Button>
+                <Button className="w-full">View Full Recipe</Button>
               </CardFooter>
             </Card>
           ))}

@@ -2,7 +2,8 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Leaf, Award, Recycle } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import { Trophy, FirstBadge } from "@/components/icons";

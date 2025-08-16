@@ -104,3 +104,37 @@ export const RecommendRecipesOutputSchema = z.object({
   recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
 });
 export type RecommendRecipesOutput = z.infer<typeof RecommendRecipesOutputSchema>;
+
+
+// Schemas for generate-meal-plan.ts
+export const GenerateMealPlanInputSchema = z.object({
+    availableIngredients: z.array(z.string()).describe('A list of ingredients the user has available.'),
+    dietaryRestrictions: z.array(z.string()).optional().describe('A list of dietary restrictions the user has.'),
+    nutritionalGoal: z.string().optional().describe('A specific nutritional goal for the week (e.g., high protein, low carb).')
+});
+export type GenerateMealPlanInput = z.infer<typeof GenerateMealPlanInputSchema>;
+
+const MealSchema = z.object({
+    name: z.string().describe('The name of the meal.'),
+    // We can add more details like recipe link or nutrition later if needed
+}).nullable();
+
+const DailyPlanSchema = z.object({
+    breakfast: MealSchema,
+    lunch: MealSchema,
+    dinner: MealSchema,
+});
+
+export const GenerateMealPlanOutputSchema = z.object({
+    mealPlan: z.object({
+        monday: DailyPlanSchema,
+        tuesday: DailyPlanSchema,
+        wednesday: DailyPlanSchema,
+        thursday: DailyPlanSchema,
+        friday: DailyPlanSchema,
+        saturday: DailyPlanSchema,
+        sunday: DailyPlanSchema,
+    }).describe("The 7-day meal plan."),
+    shoppingList: z.array(z.string()).describe('A list of ingredients to buy.'),
+});
+export type GenerateMealPlanOutput = z.infer<typeof GenerateMealPlanOutputSchema>;

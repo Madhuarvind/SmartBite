@@ -1,3 +1,4 @@
+
 // src/ai/schemas.ts
 /**
  * @fileOverview This file contains all the Zod schemas and TypeScript types for the AI flows.
@@ -136,28 +137,9 @@ export const GenerateMealPlanInputSchema = z.object({
 });
 export type GenerateMealPlanInput = z.infer<typeof GenerateMealPlanInputSchema>;
 
-const MealSchema = z.object({
-    name: z.string().describe('The name of the meal.'),
-    // We can add more details like recipe link or nutrition later if needed
-}).nullable();
-
-const DailyPlanSchema = z.object({
-    breakfast: MealSchema,
-    lunch: MealSchema,
-    dinner: MealSchema,
-});
-
 export const GenerateMealPlanOutputSchema = z.object({
-    mealPlan: z.object({
-        monday: DailyPlanSchema,
-        tuesday: DailyPlanSchema,
-        wednesday: DailyPlanSchema,
-        thursday: DailyPlanSchema,
-        friday: DailyPlanSchema,
-        saturday: DailyPlanSchema,
-        sunday: DailyPlanSchema,
-    }).describe("The 7-day meal plan."),
-    shoppingList: z.array(z.string()).describe('A list of ingredients to buy.'),
+    mealPlan: z.string().describe("A string containing the 7-day meal plan, with each meal on a new line formatted as 'Day: Meal Type: Meal Name'."),
+    shoppingList: z.string().describe('A comma-separated string of ingredients to buy.'),
 });
 export type GenerateMealPlanOutput = z.infer<typeof GenerateMealPlanOutputSchema>;
 

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -21,16 +21,22 @@ const availableIngredients = [
   'Tomatoes', 'Chicken Breast', 'Milk', 'Spinach', 'Eggs', 'Onion', 'Garlic', 'Bread', 'Flour', 'Sugar', 'Butter', 'Olive Oil', 'Salt', 'Pepper'
 ];
 
+type ParsedMealPlan = {
+  [day: string]: {
+    [mealType: string]: string | undefined;
+  };
+};
+
 export default function PlannerPage() {
   const [nutritionalGoal, setNutritionalGoal] = useState("balanced");
-  const [mealPlan, setMealPlan] = useState<GenerateMealPlanOutput['mealPlan'] | null>(null);
+  const [rawMealPlan, setRawMealPlan] = useState<string | null>(null);
   const [shoppingList, setShoppingList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleGeneratePlan = async () => {
     setIsLoading(true);
-    setMealPlan(null);
+    setRawMealPlan(null);
     setShoppingList([]);
 
     try {
@@ -40,8 +46,8 @@ export default function PlannerPage() {
         nutritionalGoal,
         dietaryRestrictions,
       });
-      setMealPlan(result.mealPlan);
-      setShoppingList(result.shoppingList);
+      setRawMealPlan(result.mealPlan);
+      setShoppingList(result.shoppingList ? result.shoppingList.split(',').map(s => s.trim()) : []);
     } catch (error) {
       console.error("Error generating meal plan:", error);
       toast({
@@ -53,6 +59,29 @@ export default function PlannerPage() {
       setIsLoading(false);
     }
   };
+
+  const mealPlan = useMemo((): ParsedMealPlan | null => {
+    if (!rawMealPlan) return null;
+
+    const parsed: ParsedMealPlan = {};
+    const lines = rawMealPlan.split('\n').filter(line => line.trim() !== '');
+
+    lines.forEach(line => {
+      const parts = line.split(':');
+      if (parts.length >= 3) {
+        const day = parts[0].trim().toLowerCase();
+        const mealType = parts[1].trim().toLowerCase();
+        const mealName = parts.slice(2).join(':').trim();
+        
+        if (!parsed[day]) {
+          parsed[day] = {};
+        }
+        parsed[day][mealType] = mealName;
+      }
+    });
+
+    return parsed;
+  }, [rawMealPlan]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -122,7 +151,7 @@ export default function PlannerPage() {
                       ) : mealPlan && mealPlan[dayKey]?.[mealType] ? (
                         <Card className="p-2 bg-secondary">
                           <p className="text-sm font-medium text-secondary-foreground text-center">
-                            {mealPlan[dayKey][mealType]?.name}
+                            {mealPlan[dayKey][mealType]}
                           </p>
                         </Card>
                       ) : (

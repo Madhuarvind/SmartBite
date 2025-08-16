@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-meal-plan.ts
 'use server';
 /**
@@ -24,19 +25,28 @@ const prompt = ai.definePrompt({
   name: 'generateMealPlanPrompt',
   input: { schema: GenerateMealPlanInputSchema },
   output: { schema: GenerateMealPlanOutputSchema },
-  prompt: `You are a diet planning assistant. Your task is to generate a 7-day meal plan based on the user's available ingredients, a specific nutritional goal, and any dietary restrictions.
+  prompt: `You are a diet planning assistant. Your task is to generate a 7-day meal plan and a shopping list based on the user's available ingredients, a specific nutritional goal, and any dietary restrictions.
 
 The nutritional goal (e.g., 'high protein', 'vegetarian') should guide the overall theme of the meal plan. The dietary restrictions are hard constraints that must be followed.
 
-You must create a plan for Breakfast, Lunch, and Dinner for each day of the week (Monday to Sunday).
+Create a plan for Breakfast, Lunch, and Dinner for each day of the week (Monday to Sunday).
+Format the meal plan as follows, with each meal on a new line:
+Day: Meal Type: Meal Name
+Example:
+Monday: Breakfast: Scrambled Eggs
+Monday: Lunch: Chicken Salad
+...
 
 After creating the meal plan, generate a shopping list of all the ingredients required for the week's recipes that are NOT in the user's list of available ingredients.
+Format the shopping list as a comma-separated string.
+Example:
+Quinoa, Black Beans, Avocado, Lime
 
 Nutritional Goal: {{{nutritionalGoal}}}
 Dietary Restrictions: {{{dietaryRestrictions}}}
-Available Ingredients: {{{availableIngredients}}}
+Available Ingredients: {{#each availableIngredients}}{{{this}}}, {{/each}}
 
-Respond in JSON format.
+Respond in the specified JSON format.
 `,
 });
 

@@ -6,9 +6,10 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ArrowRight, ScanLine, Lightbulb, Carrot } from "lucide-react";
+import { ArrowRight, ScanLine, Lightbulb } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 const chartData = [
   { day: "Mon", meals: 2, waste: 0 },
@@ -22,14 +23,14 @@ const chartData = [
 
 const chartConfig = {
   meals: { label: "Meals Cooked", color: "hsl(var(--primary))" },
-  waste: { label: "Items Wasted", color: "hsl(var(--accent))" },
+  waste: { label: "Items Wasted", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig;
 
 const expiringItems = [
-  { name: "Tomatoes", daysLeft: 1, status: "Urgent" },
-  { name: "Chicken Breast", daysLeft: 2, status: "Urgent" },
-  { name: "Milk", daysLeft: 3, status: "Soon" },
-  { name: "Spinach", daysLeft: 4, status: "Soon" },
+  { name: "Tomatoes", daysLeft: 1, status: "Urgent" as const },
+  { name: "Chicken Breast", daysLeft: 2, status: "Urgent" as const },
+  { name: "Milk", daysLeft: 3, status: "Soon" as const },
+  { name: "Spinach", daysLeft: 4, status: "Soon" as const },
 ];
 
 export default function DashboardPage() {
@@ -68,16 +69,18 @@ export default function DashboardPage() {
                 <TableRow>
                   <TableHead>Item</TableHead>
                   <TableHead>Expires In</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {expiringItems.map((item) => (
                   <TableRow key={item.name}>
                     <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.daysLeft} days</TableCell>
                     <TableCell>
-                      <span className={item.daysLeft <= 2 ? "text-destructive" : ""}>
-                        {item.daysLeft} days
-                      </span>
+                      <Badge variant={item.status === 'Urgent' ? 'destructive' : 'secondary'}>
+                        {item.status}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -93,10 +96,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="flex flex-col justify-between">
+          <CardHeader>
+            <ScanLine className="w-12 h-12 text-primary mb-4" />
             <CardTitle>Scan Your Fridge</CardTitle>
-            <ScanLine className="w-8 h-8 text-primary" />
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">Quickly add ingredients by taking a picture of your fridge or pantry.</p>
@@ -108,10 +111,10 @@ export default function DashboardPage() {
           </CardFooter>
         </Card>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="flex flex-col justify-between">
+          <CardHeader>
+            <Lightbulb className="w-12 h-12 text-primary mb-4" />
             <CardTitle>Get Recipe Ideas</CardTitle>
-            <Lightbulb className="w-8 h-8 text-primary" />
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">Let our AI find the perfect meal for you based on what you have.</p>

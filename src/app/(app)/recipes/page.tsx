@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat } from "lucide-react";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
 import type { RecommendRecipesOutput } from "@/ai/schemas";
@@ -186,7 +186,7 @@ export default function RecipesPage() {
                </Card>
             ))}
             {recommendedRecipes.map((recipe, index) => (
-              <Card key={`${recipe.name}-${index}`} className="overflow-hidden flex flex-col">
+              <Card key={`${recipe.name}-${index}`} className="overflow-hidden flex flex-col bg-card hover:bg-secondary/50 transition-colors duration-300">
                 <CardHeader className="p-0">
                    <div className="relative aspect-video">
                     {recipe.video?.videoDataUri ? (
@@ -196,10 +196,10 @@ export default function RecipesPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-secondary flex flex-col items-center justify-center text-muted-foreground">
-                          <Video className="w-10 h-10 mb-2"/>
-                          <p className="text-sm">Video is generating...</p>
-                          <Skeleton className="w-full h-full absolute inset-0" />
+                      <div className="w-full h-full bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
+                          <Film className="w-10 h-10 mb-2 animate-pulse text-primary"/>
+                          <p className="text-sm font-medium">Preparing your video...</p>
+                          <p className="text-xs">This can take a moment.</p>
                       </div>
                     )}
                     <Badge variant="secondary" className="absolute top-2 right-2">Recommended</Badge>
@@ -218,9 +218,10 @@ export default function RecipesPage() {
                     </div>
                   ) : (
                     <div className="mt-4">
-                      <Label className="flex items-center mb-2"><Music className="mr-2"/> Audio Narration</Label>
-                      <div className="h-10 w-full flex items-center justify-center bg-secondary rounded-md">
-                          <p className="text-sm text-muted-foreground">Audio is generating...</p>
+                      <Label className="flex items-center mb-2 text-muted-foreground"><Music className="mr-2"/> Audio Narration</Label>
+                      <div className="h-10 w-full flex items-center justify-center bg-secondary rounded-md text-sm text-muted-foreground">
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          <span>Generating...</span>
                       </div>
                     </div>
                   )}

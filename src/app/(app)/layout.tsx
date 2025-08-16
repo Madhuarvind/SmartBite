@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -43,10 +43,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="flex flex-col p-0 w-72">
-            <div className="flex items-center gap-2 p-4 border-b">
-              <ForkAndLeaf className="w-8 h-8 text-primary" />
-              <h2 className="text-xl font-bold text-primary">SmartBite</h2>
-            </div>
+            <SheetHeader className="p-4 border-b">
+                 <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                 <div className="flex items-center gap-2">
+                    <ForkAndLeaf className="w-8 h-8 text-primary" />
+                    <h2 className="text-xl font-bold text-primary">SmartBite</h2>
+                </div>
+            </SheetHeader>
+            
             <nav className="grid gap-2 text-lg font-medium p-4">
               {menuItems.map((item) => (
                 <Link

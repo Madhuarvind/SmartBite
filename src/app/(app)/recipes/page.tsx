@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 
 const availableIngredients = [
   'Tomatoes', 'Chicken Breast', 'Milk', 'Spinach', 'Eggs', 'Onion', 'Garlic', 'Bread', 'Flour', 'Sugar', 'Butter', 'Olive Oil', 'Salt', 'Pepper'
@@ -239,16 +240,16 @@ export default function RecipesPage() {
 
       {selectedRecipe && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl">
                 <DialogHeader>
                     <DialogTitle className="text-3xl text-primary">{selectedRecipe.name}</DialogTitle>
                     <DialogDescription>
-                        View the full recipe details and find ingredient substitutions.
+                        View the full recipe details, nutritional information, and find ingredient substitutions.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto p-1">
-                    <div>
+                <div className="grid md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
+                    <div className="md:col-span-2">
                         <h3 className="font-bold text-lg mb-2">Ingredients</h3>
                         <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                            {selectedRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
@@ -261,11 +262,39 @@ export default function RecipesPage() {
                            {selectedRecipe.instructions}
                         </div>
                     </div>
-                    <div>
+                    <div className="space-y-6">
                         <Card className="bg-secondary/50">
                             <CardHeader>
-                                <CardTitle className="flex items-center"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Substitution Helper</CardTitle>
-                                <CardDescription>Missing an ingredient? Find a smart substitution from what you have on hand.</CardDescription>
+                                <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Nutritional Info</CardTitle>
+                                <CardDescription>Estimated values per serving.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableBody>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Calories</TableCell>
+                                            <TableCell className="text-right">{selectedRecipe.nutrition.calories} kcal</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Protein</TableCell>
+                                            <TableCell className="text-right">{selectedRecipe.nutrition.protein}g</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Carbs</TableCell>
+                                            <TableCell className="text-right">{selectedRecipe.nutrition.carbs}g</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Fat</TableCell>
+                                            <TableCell className="text-right">{selectedRecipe.nutrition.fat}g</TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-secondary/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Substitution Helper</CardTitle>
+                                <CardDescription>Missing an ingredient? Find a smart substitution.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Label htmlFor="missing-ingredient">Which ingredient are you missing?</Label>
@@ -308,3 +337,5 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    

@@ -165,7 +165,7 @@ export default function RecipesPage() {
             <div className="md:col-span-2">
               <Label>Available Ingredients</Label>
               <div className="mt-2 p-4 border rounded-md min-h-[120px] bg-background/50">
-                <div className="flex flex-wrap gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {availableIngredients.map(ingredient => (
                     <div key={ingredient} className="flex items-center space-x-2">
                       <Checkbox 
@@ -173,7 +173,7 @@ export default function RecipesPage() {
                         onCheckedChange={(checked) => handleIngredientChange(ingredient, checked)}
                         checked={selectedIngredients.includes(ingredient)}
                       />
-                      <Label htmlFor={ingredient} className="font-normal">{ingredient}</Label>
+                      <Label htmlFor={ingredient} className="font-normal cursor-pointer">{ingredient}</Label>
                     </div>
                   ))}
                 </div>
@@ -326,6 +326,7 @@ export default function RecipesPage() {
                                      <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
                                          {currentRecipe.instructions}
                                      </div>
+
                                 )}
                             </div>
                         </div>

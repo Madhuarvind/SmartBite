@@ -24,7 +24,7 @@ async function toWav(
       bitDepth: sampleWidth * 8,
     });
 
-    let bufs: Buffer[] = [];
+    const bufs: Buffer[] = [];
     writer.on('error', reject);
     writer.on('data', (d) => bufs.push(d));
     writer.on('end', () => resolve(Buffer.concat(bufs).toString('base64')));

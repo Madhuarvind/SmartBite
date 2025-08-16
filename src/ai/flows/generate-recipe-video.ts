@@ -36,8 +36,9 @@ const generateRecipeVideoFlow = ai.defineFlow(
       throw new Error('Expected the model to return an operation for video generation.');
     }
 
+    // Poll for the result of the long-running operation.
     while (!operation.done) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds before checking again.
       operation = await ai.checkOperation(operation);
     }
 
@@ -60,8 +61,8 @@ const generateRecipeVideoFlow = ai.defineFlow(
          throw new Error(`Failed to download video from ${videoPart.media.url}. Status: ${videoResponse.status}`);
     }
 
-    const videoBuffer = await videoResponse.buffer();
-    const videoBase64 = videoBuffer.toString('base64');
+    const videoBuffer = await videoResponse.arrayBuffer();
+    const videoBase64 = Buffer.from(videoBuffer).toString('base64');
 
     return {
       videoDataUri: `data:video/mp4;base64,${videoBase64}`,

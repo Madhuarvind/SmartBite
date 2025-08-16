@@ -13,6 +13,8 @@ import {
   TransformRecipeOutput,
   TransformRecipeOutputSchema,
 } from '../schemas';
+import { generateRecipeAudio } from './generate-recipe-audio';
+import { generateRecipeVideo } from './generate-recipe-video';
 
 export async function transformRecipe(
   input: TransformRecipeInput
@@ -48,6 +50,28 @@ const transformRecipeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('Could not transform recipe.');
+    }
+    
+    // After transforming the recipe, generate new audio and video for it.
+    try {
+        const [audioResult, videoResult] = await Promise.allSettled([
+          generateRecipeAudio({ instructions: output.instructions }),
+          generateRecipeVideo({ recipeName: output.name })
+        ]);
+
+        const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
+        const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+
+        if (audioResult.status === 'rejected') console.error(`Audio generation failed for transformed recipe ${output.name}:`, audioResult.reason);
+        if (videoResult.status === 'rejected') console.error(`Video generation failed for transformed recipe ${output.name}:`, videoResult.reason);
+        
+        return { ...output, audio, video };
+
+    } catch (error) {
+        console.error(`Failed to generate media for transformed recipe ${output.name}`, error);
+        return output;
+    }
   }
 );

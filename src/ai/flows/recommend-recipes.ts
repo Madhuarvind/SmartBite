@@ -46,13 +46,28 @@ const recommendRecipesFlow = ai.defineFlow(
       return { recipes: [] };
     }
 
+    // After generating the recipe text, kick off the audio and video generation in parallel.
     const enhancedRecipes = await Promise.all(
       output.recipes.map(async (recipe) => {
-        const [audio, video] = await Promise.all([
-          generateRecipeAudio({ instructions: recipe.instructions }),
-          generateRecipeVideo({ recipeName: recipe.name })
-        ]);
-        return { ...recipe, audio, video };
+        try {
+          const [audioResult, videoResult] = await Promise.allSettled([
+            generateRecipeAudio({ instructions: recipe.instructions }),
+            generateRecipeVideo({ recipeName: recipe.name })
+          ]);
+
+          const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
+          const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+
+          if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
+          if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
+
+          return { ...recipe, audio, video };
+
+        } catch (error) {
+            console.error(`Failed to generate media for ${recipe.name}`, error);
+            // Return the original recipe even if media generation fails
+            return recipe;
+        }
       })
     );
 

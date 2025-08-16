@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import type { Recipe, RecommendRecipesOutput } from "@/ai/schemas";
+import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput } from "@/ai/schemas";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { useToast } from "@/hooks/use-toast";
@@ -45,7 +45,7 @@ export default function RecipesPage() {
   // State for transformation
   const [transformationRequest, setTransformationRequest] = useState("");
   const [isTransforming, setIsTransforming] = useState(false);
-  const [transformedRecipe, setTransformedRecipe] = useState<Recipe | null>(null);
+  const [transformedRecipe, setTransformedRecipe] = useState<TransformRecipeOutput | null>(null);
 
 
   const handleIngredientChange = (ingredient: string, checked: boolean | 'indeterminate') => {
@@ -139,7 +139,7 @@ export default function RecipesPage() {
         recipe: selectedRecipe,
         transformation: transformationRequest,
       });
-      setTransformedRecipe(result.transformedRecipe);
+      setTransformedRecipe(result);
     } catch (error) {
       console.error("Error transforming recipe:", error);
       toast({ variant: "destructive", title: "Transformation failed. Please try again." });
@@ -225,6 +225,9 @@ export default function RecipesPage() {
                         src={recipe.video.videoDataUri}
                         controls
                         className="w-full h-full object-cover"
+                        autoPlay
+                        loop
+                        muted
                       />
                     ) : (
                       <div className="w-full h-full bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
@@ -272,7 +275,7 @@ export default function RecipesPage() {
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl text-primary">{selectedRecipe.name}</DialogTitle>
+                    <DialogTitle className="text-3xl text-primary">{transformedRecipe ? transformedRecipe.name : selectedRecipe.name}</DialogTitle>
                     <DialogDescription>
                         View the full recipe details, and use our AI tools to find substitutions or transform the recipe.
                     </DialogDescription>
@@ -280,10 +283,18 @@ export default function RecipesPage() {
 
                 <div className="grid md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
                     <div className="md:col-span-2 space-y-4">
+                        <Alert>
+                           <Wand2 className="h-4 w-4" />
+                           <AlertTitle className="text-accent-foreground">Recipe Transformation</AlertTitle>
+                           <AlertDescription>
+                                {transformedRecipe ? "This is the AI-transformed version of the recipe." : "Original recipe is shown below. Use the AI tools on the right to modify it."}
+                           </AlertDescription>
+                       </Alert>
+                        
                         <div>
                             <h3 className="font-bold text-lg mb-2">Ingredients</h3>
                             <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                               {selectedRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
+                               {(transformedRecipe || selectedRecipe).ingredients.map(ing => <li key={ing}>{ing}</li>)}
                             </ul>
                         </div>
 
@@ -292,31 +303,9 @@ export default function RecipesPage() {
                         <div>
                             <h3 className="font-bold text-lg mb-2">Instructions</h3>
                             <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
-                               {selectedRecipe.instructions}
+                               {(transformedRecipe || selectedRecipe).instructions}
                             </div>
                         </div>
-
-                        {transformedRecipe && (
-                            <div className="pt-4 border-t border-dashed">
-                               <Alert>
-                                    <Wand2 className="h-4 w-4" />
-                                    <AlertTitle className="text-accent-foreground">Recipe Transformed!</AlertTitle>
-                                    <AlertDescription className="space-y-4">
-                                        <h3 className="font-bold text-lg mb-2 text-primary">{transformedRecipe.name}</h3>
-                                        <div>
-                                            <h4 className="font-semibold mb-1">New Ingredients:</h4>
-                                            <ul className="list-disc pl-5 space-y-1">
-                                                {transformedRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
-                                            </ul>
-                                        </div>
-                                         <div>
-                                            <h4 className="font-semibold mb-1">New Instructions:</h4>
-                                            <p className="whitespace-pre-wrap">{transformedRecipe.instructions}</p>
-                                        </div>
-                                    </AlertDescription>
-                                </Alert>
-                            </div>
-                        )}
 
                     </div>
                     <div className="space-y-6">
@@ -330,19 +319,19 @@ export default function RecipesPage() {
                                     <TableBody>
                                         <TableRow>
                                             <TableCell className="font-medium">Calories</TableCell>
-                                            <TableCell className="text-right">{selectedRecipe.nutrition.calories} kcal</TableCell>
+                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.calories} kcal</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Protein</TableCell>
-                                            <TableCell className="text-right">{selectedRecipe.nutrition.protein}g</TableCell>
+                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.protein}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Carbs</TableCell>
-                                            <TableCell className="text-right">{selectedRecipe.nutrition.carbs}g</TableCell>
+                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.carbs}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Fat</TableCell>
-                                            <TableCell className="text-right">{selectedRecipe.nutrition.fat}g</TableCell>
+                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.fat}g</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>

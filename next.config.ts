@@ -20,13 +20,9 @@ const nextConfig: NextConfig = {
   },
   serverActions: {
     bodySizeLimit: '4.5mb',
-    // Increase timeout for slow AI operations
-    serverActions: {
-      bodySizeLimit: '4.5mb',
-      // Increase timeout for slow AI operations
-      // @ts-expect-error - `timeout` is not yet in the type definition
-      timeout: 120000,
-    },
+    // Increase timeout for slow AI operations like video generation
+    // @ts-expect-error - `timeout` is not yet in the type definition
+    timeout: 120000,
   },
 };
 

@@ -148,7 +148,5 @@ export const TransformRecipeInputSchema = z.object({
 });
 export type TransformRecipeInput = z.infer<typeof TransformRecipeInputSchema>;
 
-export const TransformRecipeOutputSchema = z.object({
-    transformedRecipe: RecipeSchema.describe('The new, transformed recipe.'),
-});
+export const TransformRecipeOutputSchema = RecipeSchema.describe('The new, transformed recipe.');
 export type TransformRecipeOutput = z.infer<typeof TransformRecipeOutputSchema>;

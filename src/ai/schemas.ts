@@ -6,6 +6,19 @@
 
 import { z } from 'genkit';
 
+// Schemas for generate-recipe-step-image.ts
+export const GenerateRecipeStepImageInputSchema = z.object({
+  instruction: z.string().describe('The single recipe instruction to generate an image for.'),
+  recipeName: z.string().describe('The name of the recipe this step belongs to.'),
+});
+export type GenerateRecipeStepImageInput = z.infer<typeof GenerateRecipeStepImageInputSchema>;
+
+export const GenerateRecipeStepImageOutputSchema = z.object({
+    imageDataUri: z.string().describe("The generated image as a data URI. Expected format: 'data:image/png;base64,<encoded_data>'."),
+});
+export type GenerateRecipeStepImageOutput = z.infer<typeof GenerateRecipeStepImageOutputSchema>;
+
+
 // Schemas for generate-recipe-audio.ts
 export const GenerateRecipeAudioInputSchema = z.object({
   instructions: z.string().describe('The recipe instructions to be converted to speech.'),
@@ -85,10 +98,18 @@ export const RecommendRecipesInputSchema = z.object({
 });
 export type RecommendRecipesInput = z.infer<typeof RecommendRecipesInputSchema>;
 
+export const InstructionStepSchema = z.object({
+    step: z.number().describe('The step number.'),
+    text: z.string().describe('The text of the instruction.'),
+    image: GenerateRecipeStepImageOutputSchema.optional(),
+});
+export type InstructionStep = z.infer<typeof InstructionStepSchema>;
+
 export const RecipeSchema = z.object({
   name: z.string().describe('The name of the recipe.'),
   ingredients: z.array(z.string()).describe('The ingredients required for the recipe.'),
-  instructions: z.string().describe('The instructions for the recipe.'),
+  instructions: z.string().describe('The instructions for the recipe, with each step on a new line.'),
+  instructionSteps: z.array(InstructionStepSchema).optional().describe('A structured list of recipe instruction steps, each with an optional image.'),
   dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),
   nutrition: z.object({
       calories: z.number().describe('The estimated number of calories per serving.'),

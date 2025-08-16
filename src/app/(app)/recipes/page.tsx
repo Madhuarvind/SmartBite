@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2 } from "lucide-react";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
 import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput } from "@/ai/schemas";
@@ -147,6 +148,8 @@ export default function RecipesPage() {
       setIsTransforming(false);
     }
   }
+  
+  const currentRecipe = transformedRecipe || selectedRecipe;
 
   return (
     <>
@@ -271,11 +274,11 @@ export default function RecipesPage() {
         </div>
       </div>
 
-      {selectedRecipe && (
+      {currentRecipe && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl text-primary">{transformedRecipe ? transformedRecipe.name : selectedRecipe.name}</DialogTitle>
+                    <DialogTitle className="text-3xl text-primary">{currentRecipe.name}</DialogTitle>
                     <DialogDescription>
                         View the full recipe details, and use our AI tools to find substitutions or transform the recipe.
                     </DialogDescription>
@@ -294,7 +297,7 @@ export default function RecipesPage() {
                         <div>
                             <h3 className="font-bold text-lg mb-2">Ingredients</h3>
                             <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                               {(transformedRecipe || selectedRecipe).ingredients.map(ing => <li key={ing}>{ing}</li>)}
+                               {currentRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
                             </ul>
                         </div>
 
@@ -302,8 +305,28 @@ export default function RecipesPage() {
 
                         <div>
                             <h3 className="font-bold text-lg mb-2">Instructions</h3>
-                            <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
-                               {(transformedRecipe || selectedRecipe).instructions}
+                            <div className="space-y-4">
+                                {currentRecipe.instructionSteps?.map((step, index) => (
+                                    <div key={index} className="flex gap-4 items-start">
+                                        <div className="flex flex-col items-center gap-1">
+                                           <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{step.step}</div>
+                                           <Checkbox id={`step-${index}`} className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 space-y-2">
+                                            <Label htmlFor={`step-${index}`} className="font-normal text-base text-foreground leading-snug">{step.text}</Label>
+                                            {step.image?.imageDataUri ? (
+                                                <Image src={step.image.imageDataUri} alt={`Step ${step.step}`} width={400} height={225} className="rounded-lg border aspect-video object-cover" />
+                                            ) : (
+                                                <Skeleton className="w-full aspect-video rounded-lg" />
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                {!currentRecipe.instructionSteps && (
+                                     <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
+                                         {currentRecipe.instructions}
+                                     </div>
+                                )}
                             </div>
                         </div>
 
@@ -319,19 +342,19 @@ export default function RecipesPage() {
                                     <TableBody>
                                         <TableRow>
                                             <TableCell className="font-medium">Calories</TableCell>
-                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.calories} kcal</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.calories} kcal</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Protein</TableCell>
-                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.protein}g</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.protein}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Carbs</TableCell>
-                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.carbs}g</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.carbs}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Fat</TableCell>
-                                            <TableCell className="text-right">{(transformedRecipe || selectedRecipe).nutrition.fat}g</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.fat}g</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -349,7 +372,7 @@ export default function RecipesPage() {
                                         <SelectValue placeholder="Select an ingredient..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {selectedRecipe.ingredients.map(ing => (
+                                        {selectedRecipe?.ingredients.map(ing => (
                                             <SelectItem key={ing} value={ing}>{ing}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -402,5 +425,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    

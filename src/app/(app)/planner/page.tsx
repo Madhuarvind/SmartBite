@@ -34,10 +34,11 @@ export default function PlannerPage() {
     setShoppingList([]);
 
     try {
+      const dietaryRestrictions = nutritionalGoal === 'vegetarian' ? ['vegetarian'] : [];
       const result = await generateMealPlan({
         availableIngredients,
         nutritionalGoal,
-        dietaryRestrictions: [] // Add any restrictions if needed
+        dietaryRestrictions,
       });
       setMealPlan(result.mealPlan);
       setShoppingList(result.shoppingList);

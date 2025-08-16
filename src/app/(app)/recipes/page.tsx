@@ -8,22 +8,23 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import type { RecommendRecipesOutput } from "@/ai/schemas";
+import type { Recipe, RecommendRecipesOutput } from "@/ai/schemas";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
+import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const availableIngredients = [
   'Tomatoes', 'Chicken Breast', 'Milk', 'Spinach', 'Eggs', 'Onion', 'Garlic', 'Bread', 'Flour', 'Sugar', 'Butter', 'Olive Oil', 'Salt', 'Pepper'
 ];
-
-type Recipe = RecommendRecipesOutput['recipes'][0];
 
 export default function RecipesPage() {
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>(['Tomatoes', 'Chicken Breast', 'Garlic']);
@@ -40,6 +41,12 @@ export default function RecipesPage() {
   const [missingIngredient, setMissingIngredient] = useState<string | null>(null);
   const [substitutions, setSubstitutions] = useState<string[]>([]);
   const [isSubstituting, setIsSubstituting] = useState(false);
+
+  // State for transformation
+  const [transformationRequest, setTransformationRequest] = useState("");
+  const [isTransforming, setIsTransforming] = useState(false);
+  const [transformedRecipe, setTransformedRecipe] = useState<Recipe | null>(null);
+
 
   const handleIngredientChange = (ingredient: string, checked: boolean | 'indeterminate') => {
     if (checked) {
@@ -92,6 +99,8 @@ export default function RecipesPage() {
     setIsModalOpen(true);
     setSubstitutions([]);
     setMissingIngredient(null);
+    setTransformedRecipe(null);
+    setTransformationRequest("");
   };
   
   const handleFindSubstitutions = async () => {
@@ -117,6 +126,27 @@ export default function RecipesPage() {
           setIsSubstituting(false);
       }
   };
+
+  const handleTransformRecipe = async () => {
+    if (!selectedRecipe || !transformationRequest) {
+      toast({ variant: "destructive", title: "Please enter a transformation request." });
+      return;
+    }
+    setIsTransforming(true);
+    setTransformedRecipe(null);
+    try {
+      const result = await transformRecipe({
+        recipe: selectedRecipe,
+        transformation: transformationRequest,
+      });
+      setTransformedRecipe(result.transformedRecipe);
+    } catch (error) {
+      console.error("Error transforming recipe:", error);
+      toast({ variant: "destructive", title: "Transformation failed. Please try again." });
+    } finally {
+      setIsTransforming(false);
+    }
+  }
 
   return (
     <>
@@ -244,23 +274,50 @@ export default function RecipesPage() {
                 <DialogHeader>
                     <DialogTitle className="text-3xl text-primary">{selectedRecipe.name}</DialogTitle>
                     <DialogDescription>
-                        View the full recipe details, nutritional information, and find ingredient substitutions.
+                        View the full recipe details, and use our AI tools to find substitutions or transform the recipe.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
-                    <div className="md:col-span-2">
-                        <h3 className="font-bold text-lg mb-2">Ingredients</h3>
-                        <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                           {selectedRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
-                        </ul>
-
-                        <Separator className="my-4" />
-
-                        <h3 className="font-bold text-lg mb-2">Instructions</h3>
-                        <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
-                           {selectedRecipe.instructions}
+                    <div className="md:col-span-2 space-y-4">
+                        <div>
+                            <h3 className="font-bold text-lg mb-2">Ingredients</h3>
+                            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                               {selectedRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
+                            </ul>
                         </div>
+
+                        <Separator/>
+
+                        <div>
+                            <h3 className="font-bold text-lg mb-2">Instructions</h3>
+                            <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
+                               {selectedRecipe.instructions}
+                            </div>
+                        </div>
+
+                        {transformedRecipe && (
+                            <div className="pt-4 border-t border-dashed">
+                               <Alert>
+                                    <Wand2 className="h-4 w-4" />
+                                    <AlertTitle className="text-accent-foreground">Recipe Transformed!</AlertTitle>
+                                    <AlertDescription className="space-y-4">
+                                        <h3 className="font-bold text-lg mb-2 text-primary">{transformedRecipe.name}</h3>
+                                        <div>
+                                            <h4 className="font-semibold mb-1">New Ingredients:</h4>
+                                            <ul className="list-disc pl-5 space-y-1">
+                                                {transformedRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
+                                            </ul>
+                                        </div>
+                                         <div>
+                                            <h4 className="font-semibold mb-1">New Instructions:</h4>
+                                            <p className="whitespace-pre-wrap">{transformedRecipe.instructions}</p>
+                                        </div>
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
+                        )}
+
                     </div>
                     <div className="space-y-6">
                         <Card className="bg-secondary/50">
@@ -325,6 +382,25 @@ export default function RecipesPage() {
                                 )}
                             </CardContent>
                         </Card>
+                         <Card className="bg-secondary/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-lg"><Wand2 className="w-5 h-5 mr-2 text-primary"/> Transform Recipe</CardTitle>
+                                <CardDescription>Give this recipe a creative twist with AI.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Label htmlFor="transform-request">How should we change it?</Label>
+                                <Input 
+                                  id="transform-request"
+                                  className="mt-2"
+                                  placeholder="e.g., 'make it vegan'"
+                                  value={transformationRequest}
+                                  onChange={(e) => setTransformationRequest(e.target.value)}
+                                />
+                                <Button onClick={handleTransformRecipe} disabled={isTransforming || !transformationRequest} className="w-full mt-4">
+                                    {isTransforming ? <><Loader className="mr-2 animate-spin"/> Transforming...</> : 'Transform with AI'}
+                                </Button>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
 
@@ -337,5 +413,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    

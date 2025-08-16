@@ -99,6 +99,7 @@ export const RecipeSchema = z.object({
   audio: GenerateRecipeAudioOutputSchema.optional(),
   video: GenerateRecipeVideoOutputSchema.optional(),
 });
+export type Recipe = z.infer<typeof RecipeSchema>;
 
 export const RecommendRecipesOutputSchema = z.object({
   recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
@@ -138,3 +139,16 @@ export const GenerateMealPlanOutputSchema = z.object({
     shoppingList: z.array(z.string()).describe('A list of ingredients to buy.'),
 });
 export type GenerateMealPlanOutput = z.infer<typeof GenerateMealPlanOutputSchema>;
+
+
+// Schemas for transform-recipe.ts
+export const TransformRecipeInputSchema = z.object({
+    recipe: RecipeSchema.describe('The original recipe to be transformed.'),
+    transformation: z.string().describe('The requested transformation (e.g., "make it vegan", "add a spicy twist").'),
+});
+export type TransformRecipeInput = z.infer<typeof TransformRecipeInputSchema>;
+
+export const TransformRecipeOutputSchema = z.object({
+    transformedRecipe: RecipeSchema.describe('The new, transformed recipe.'),
+});
+export type TransformRecipeOutput = z.infer<typeof TransformRecipeOutputSchema>;

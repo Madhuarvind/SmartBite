@@ -1,0 +1,21 @@
+{
+  "name": "SmartBite: AI Meal Planner",
+  "short_name": "SmartBite",
+  "description": "AI-Powered Meal Suggestions from Your Fridge",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101010",
+  "theme_color": "#101010",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

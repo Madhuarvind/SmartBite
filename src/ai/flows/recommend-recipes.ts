@@ -50,10 +50,12 @@ const recommendRecipesFlow = ai.defineFlow(
     }
 
     // After generating the recipe text, kick off all media generation in parallel.
+    // This makes the UI feel much more responsive.
     const enhancedRecipes = await Promise.all(
       output.recipes.map(async (recipe) => {
         try {
           // Generate audio and video for the overall recipe
+          // Using allSettled ensures that if one fails (e.g., video), the others can still succeed.
           const [audioResult, videoResult] = await Promise.allSettled([
             generateRecipeAudio({ instructions: recipe.instructions }),
             generateRecipeVideo({ recipeName: recipe.name })
@@ -65,7 +67,7 @@ const recommendRecipesFlow = ai.defineFlow(
           if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
           if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
 
-          // Generate images for each instruction step
+          // Generate images for each instruction step in parallel as well.
           const instructionSteps: InstructionStep[] = await Promise.all(
             recipe.instructions.split('\n').filter(line => line.trim().length > 0).map(async (instructionText, index) => {
               const step: InstructionStep = {
@@ -73,6 +75,8 @@ const recommendRecipesFlow = ai.defineFlow(
                 text: instructionText.replace(/^\d+\.\s*/, ''), // Remove leading numbers like "1. "
               };
               try {
+                // We don't use allSettled here because we want to return the step regardless.
+                // A missing image is not a critical failure for a single step.
                 const imageResult = await generateRecipeStepImage({
                   instruction: step.text,
                   recipeName: recipe.name,
@@ -86,11 +90,12 @@ const recommendRecipesFlow = ai.defineFlow(
             })
           );
           
+          // Return the recipe with whatever media was successfully generated.
           return { ...recipe, audio, video, instructionSteps };
 
         } catch (error) {
-            console.error(`Failed to generate media for ${recipe.name}`, error);
-            // Return the original recipe even if media generation fails
+            console.error(`Failed to process media generation for ${recipe.name}`, error);
+            // Return the original recipe even if the media processing fails catastrophically.
             return recipe;
         }
       })

@@ -1,19 +1,21 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ChangeEvent } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader } from "lucide-react";
+import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scanIngredients } from "@/ai/flows/scan-ingredients";
 import { useToast } from "@/hooks/use-toast";
 import type { DetectedIngredient } from "@/ai/schemas";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Image from "next/image";
+
 
 const initialInventory = [
   { id: '1', name: 'Tomatoes', quantity: '500g', expiry: '2024-08-15' },
@@ -34,7 +36,9 @@ export default function InventoryPage() {
   const [scannedIngredients, setScannedIngredients] = useState<DetectedIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,20 +52,38 @@ export default function InventoryPage() {
       } catch (error) {
         console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please enable camera permissions in your browser settings to use this feature.',
-        });
       }
     };
     getCameraPermission();
-  }, [toast]);
+  }, []);
   
-  const handleScan = async () => {
+  const processImage = async (photoDataUri: string) => {
+     setIsLoading(true);
+     setScannedIngredients([]);
+     try {
+        const result = await scanIngredients({ photoDataUri });
+        setScannedIngredients(result.ingredients);
+        if(result.ingredients.length === 0) {
+            toast({
+                title: "No ingredients detected",
+                description: "The AI couldn't find any ingredients in the image. Please try a clearer picture.",
+            });
+        }
+      } catch (error) {
+        console.error("Error scanning ingredients:", error);
+        toast({
+          variant: "destructive",
+          title: "Scan Failed",
+          description: "Could not detect ingredients from the image. Please try again.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+  }
+
+  const handleScanFromCamera = async () => {
     if (!videoRef.current) return;
-    setIsLoading(true);
-    setScannedIngredients([]);
+    setUploadedImage(null);
 
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
@@ -70,27 +92,26 @@ export default function InventoryPage() {
     if(context) {
         context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         const photoDataUri = canvas.toDataURL('image/jpeg');
-
-        try {
-          const result = await scanIngredients({ photoDataUri });
-          setScannedIngredients(result.ingredients);
-        } catch (error) {
-          console.error("Error scanning ingredients:", error);
-          toast({
-            variant: "destructive",
-            title: "Scan Failed",
-            description: "Could not detect ingredients from the image. Please try another one.",
-          });
-        } finally {
-          setIsLoading(false);
-        }
+        processImage(photoDataUri);
     } else {
         toast({
             variant: "destructive",
             title: "Scan Error",
             description: "Could not capture an image from the video stream.",
         });
-        setIsLoading(false);
+    }
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const photoDataUri = e.target?.result as string;
+        setUploadedImage(photoDataUri);
+        processImage(photoDataUri);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -108,23 +129,33 @@ export default function InventoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Pantry Scanner</CardTitle>
-                <CardDescription>Point your camera at your fridge or pantry to automatically detect items.</CardDescription>
+                <CardDescription>Scan your pantry using your camera or upload a picture to automatically detect items.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary">
-                  <video ref={videoRef} className="w-full aspect-video rounded-md" autoPlay muted playsInline />
-                  {hasCameraPermission === false && (
+                <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden">
+                  {uploadedImage ? (
+                    <Image src={uploadedImage} alt="Uploaded ingredients" layout="fill" objectFit="contain" />
+                  ) : (
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                  )}
+                  {hasCameraPermission === false && !uploadedImage && (
                      <Alert variant="destructive" className="absolute m-4">
                        <AlertTitle>Camera Access Required</AlertTitle>
                        <AlertDescription>
-                         Please allow camera access in your browser settings to use this feature.
+                         To use the live scanner, please allow camera access in your browser settings. You can still upload an image.
                        </AlertDescription>
                      </Alert>
                   )}
                 </div>
-                 <Button onClick={handleScan} disabled={isLoading || hasCameraPermission === false} className="w-full">
-                    {isLoading ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2" /> Scan What You See</>}
-                </Button>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Button onClick={handleScanFromCamera} disabled={isLoading || hasCameraPermission === false} >
+                        {isLoading ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2" /> Scan With Camera</>}
+                    </Button>
+                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={isLoading}>
+                        <Upload className="mr-2" /> Upload Image
+                    </Button>
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                 </div>
                 {scannedIngredients.length > 0 && (
                     <div>
                         <h4 className="font-semibold mb-2">Detected Ingredients:</h4>

@@ -19,13 +19,16 @@ const prompt = ai.definePrompt({
   name: 'suggestSubstitutionsPrompt',
   input: {schema: SuggestSubstitutionsInputSchema},
   output: {schema: SuggestSubstitutionsOutputSchema},
-  prompt: `You are a helpful assistant that suggests ingredient substitutions.
+  prompt: `You are an expert chef and food scientist with access to a vast culinary knowledge graph. Your task is to provide intelligent ingredient substitutions.
 
-  The user is missing the following ingredient: {{{missingIngredient}}}
-  The user has the following ingredients available: {{#each availableIngredients}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
+The user is missing the following ingredient: **{{{missingIngredient}}}**.
 
-  Suggest some substitutions for the missing ingredient using the available ingredients.
-  Return a list of substitutions.`,
+The user has the following ingredients available: {{#each availableIngredients}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
+
+Based on the user's available ingredients, suggest the best possible substitutions. For each suggestion, provide a brief explanation of why it works, considering factors like flavor profile, texture, and its role in a typical recipe. If no good substitutions are available, return an empty array.
+
+Return a list of substitutions with explanations.
+  `,
 });
 
 const suggestSubstitutionsFlow = ai.defineFlow(

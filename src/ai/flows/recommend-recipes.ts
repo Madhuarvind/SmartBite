@@ -21,13 +21,15 @@ const prompt = ai.definePrompt({
   name: 'recommendRecipesPrompt',
   input: {schema: RecommendRecipesInputSchema},
   output: {schema: RecommendRecipesOutputSchema},
-  prompt: `You are a recipe recommendation engine and nutritionist. You will be provided with a list of ingredients the user has available, their dietary restrictions, and a list of ingredients that are about to expire.
+  prompt: `You are a creative and expert recipe recommendation engine, acting as if you are querying a vast food and recipe knowledge graph. You will be provided with a list of ingredients the user has available, their dietary restrictions, and a list of ingredients that are about to expire.
 
-You will use this information to recommend recipes to the user. Prioritize recipes that use ingredients that are about to expire.
+Your task is to generate novel and appealing recipes. Prioritize using the expiring ingredients first. Think about interesting flavor combinations and culinary pairings.
 
-For each recipe, you MUST provide a detailed nutritional analysis per serving, including calories, protein, carbs, and fat.
-
-The instructions should be a single string, with each step separated by a newline character.
+For each recipe, you MUST provide:
+1. A unique, appealing name.
+2. A full list of ingredients.
+3. Detailed, step-by-step instructions as a single string, with each step separated by a newline character.
+4. A detailed nutritional analysis per serving, including calories, protein, carbs, and fat.
 
 Ingredients: {{{ingredients}}}
 Dietary Restrictions: {{{dietaryRestrictions}}}

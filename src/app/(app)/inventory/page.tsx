@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload, Wand2 } from "lucide-react";
+import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload, Wand2, Mic } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scanIngredients } from "@/ai/flows/scan-ingredients";
@@ -26,6 +26,7 @@ export default function InventoryPage() {
   const [scannedIngredients, setScannedIngredients] = useState<DetectedIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -142,6 +143,13 @@ export default function InventoryPage() {
     }
   };
 
+  const resetAddDialog = () => {
+    setNewItemName("");
+    setNewItemQuantity("");
+    setNewItemPurchaseDate(new Date().toISOString().split('T')[0]);
+    setNewItemExpiry("");
+  }
+
   const handleAddItem = () => {
     if (!newItemName || !newItemQuantity) {
       toast({
@@ -157,29 +165,100 @@ export default function InventoryPage() {
       quantity: newItemQuantity,
       expiry: newItemExpiry || 'N/A',
     };
-    setInventory(prev => [...prev, newItem]);
+    setInventory(prev => [newItem, ...prev]);
     setIsAddDialogOpen(false);
-    setNewItemName("");
-    setNewItemQuantity("");
-    setNewItemPurchaseDate(new Date().toISOString().split('T')[0]);
-    setNewItemExpiry("");
+    resetAddDialog();
      toast({
         title: "Item Added",
         description: `${newItem.name} has been added to your inventory.`,
       });
   };
 
+  const handleShowAddDialogFromScan = (ingredient: DetectedIngredient) => {
+    setNewItemName(ingredient.name);
+    setNewItemQuantity(ingredient.quantity);
+    setNewItemExpiry(ingredient.expiryDate || "");
+    setIsAddDialogOpen(true);
+  };
+  
+  const handleVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({
+        variant: "destructive",
+        title: "Browser Not Supported",
+        description: "Your browser does not support voice recognition."
+      });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setIsListening(true);
+
+    recognition.start();
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      toast({
+        title: "You said:",
+        description: transcript,
+      });
+      
+      // Super simple NLP: look for keywords like "add" or "I have"
+      const keywords = ["add", "I have", "I've got", "also"];
+      const foundKeyword = keywords.some(k => transcript.toLowerCase().includes(k));
+      
+      if(foundKeyword) {
+         let itemsToAdd = transcript.toLowerCase();
+         keywords.forEach(k => itemsToAdd = itemsToAdd.replace(k, ''));
+         itemsToAdd = itemsToAdd.replace(/ and /g, ',');
+         const items = itemsToAdd.split(',').map(i => i.trim()).filter(Boolean);
+
+         const newDetected: DetectedIngredient[] = items.map(item => ({
+             name: item.charAt(0).toUpperCase() + item.slice(1), // Capitalize
+             quantity: '1',
+             expiryDate: null,
+         }));
+         setScannedIngredients(prev => [...prev, ...newDetected]);
+      } else {
+         toast({ title: "Didn't catch that.", description: "Try saying 'Add apples' or 'I have carrots'."});
+      }
+    };
+
+    recognition.onspeechend = () => {
+      recognition.stop();
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      toast({
+        variant: "destructive",
+        title: "Voice Recognition Error",
+        description: event.error,
+      });
+      setIsListening(false);
+    };
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="My Inventory" action={
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
+            setIsAddDialogOpen(isOpen);
+            if (!isOpen) resetAddDialog();
+        }}>
             <DialogTrigger asChild>
-                <Button><PlusCircle className="mr-2"/> Add Item</Button>
+                <Button><PlusCircle className="mr-2"/> Add Item Manually</Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Add New Inventory Item</DialogTitle>
-                    <DialogDescription>Enter the details of your new item below.</DialogDescription>
+                    <DialogDescription>Enter the details of your new item below. You can also scan items to pre-fill this form.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -222,7 +301,7 @@ export default function InventoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Pantry Scanner</CardTitle>
-                <CardDescription>Scan your pantry using your camera or upload a picture to automatically detect items.</CardDescription>
+                <CardDescription>Use multimodal input to add items. Scan with your camera, upload a photo, or add items with your voice.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden">
@@ -240,12 +319,15 @@ export default function InventoryPage() {
                      </Alert>
                   )}
                 </div>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <Button onClick={handleScanFromCamera} disabled={isLoading || hasCameraPermission === false} >
-                        {isLoading ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2" /> Scan With Camera</>}
+                        {isLoading ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2" /> Scan Camera</>}
                     </Button>
                     <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={isLoading}>
                         <Upload className="mr-2" /> Upload Image
+                    </Button>
+                     <Button onClick={handleVoiceInput} variant="outline" disabled={isListening}>
+                        {isListening ? <><Loader className="mr-2 animate-spin"/> Listening...</> : <><Mic className="mr-2" /> Add by Voice</>}
                     </Button>
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
                  </div>
@@ -257,6 +339,7 @@ export default function InventoryPage() {
                                 <TableRow>
                                     <TableHead>Item</TableHead>
                                     <TableHead>Quantity</TableHead>
+                                    <TableHead>Expiry (Detected)</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -265,8 +348,9 @@ export default function InventoryPage() {
                                     <TableRow key={`${ing.name}-${index}`}>
                                         <TableCell className="font-medium">{ing.name}</TableCell>
                                         <TableCell>{ing.quantity}</TableCell>
+                                        <TableCell>{ing.expiryDate || 'N/A'}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button size="sm" variant="outline">Add to Inventory</Button>
+                                            <Button size="sm" variant="outline" onClick={() => handleShowAddDialogFromScan(ing)}>Add</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}

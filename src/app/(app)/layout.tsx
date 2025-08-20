@@ -11,6 +11,7 @@ import {
   Settings,
   CircleUser,
   PanelLeft,
+  Utensils,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/inventory", label: "Inventory", icon: Refrigerator },
+  { href: "/plate-scanner", label: "Plate Scanner", icon: Utensils },
   { href: "/recipes", label: "Recipes", icon: ChefHat },
   { href: "/planner", label: "Meal Planner", icon: Calendar },
   { href: "/sustainability", label: "Sustainability", icon: Leaf },

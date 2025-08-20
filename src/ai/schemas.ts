@@ -6,6 +6,28 @@
 
 import { z } from 'genkit';
 
+// Schemas for analyze-plate.ts
+export const AnalyzePlateInputSchema = z.object({
+  photoDataUri: z
+    .string()
+    .describe(
+      "A photo of a cooked meal, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+});
+export type AnalyzePlateInput = z.infer<typeof AnalyzePlateInputSchema>;
+
+export const AnalyzePlateOutputSchema = z.object({
+    mealName: z.string().describe('The identified name of the meal (e.g., "Spaghetti Bolognese", "Chicken Salad").'),
+    nutrition: z.object({
+      calories: z.number().describe('The estimated number of calories for the meal.'),
+      protein: z.number().describe('The estimated grams of protein for the meal.'),
+      carbs: z.number().describe('The estimated grams of carbohydrates for the meal.'),
+      fat: z.number().describe('The estimated grams of fat for the meal.'),
+    }).describe('The estimated nutritional information for the meal.'),
+});
+export type AnalyzePlateOutput = z.infer<typeof AnalyzePlateOutputSchema>;
+
+
 // Schemas for predict-expiry-date.ts
 export const PredictExpiryDateInputSchema = z.object({
     ingredientName: z.string().describe('The name of the ingredient, e.g., "Tomatoes", "Chicken Breast".'),

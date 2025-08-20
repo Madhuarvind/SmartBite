@@ -85,6 +85,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading || isGoogleLoading}
+              suppressHydrationWarning
             />
           </div>
           <div className="grid gap-2">
@@ -101,6 +102,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading || isGoogleLoading}
+              suppressHydrationWarning
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>

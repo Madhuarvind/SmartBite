@@ -268,7 +268,7 @@ export default function RecipesPage() {
                       />
                     ) : (
                       <div className="w-full h-full bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
-                          <Film className="w-10 h-10 mb-2 animate-pulse text-primary"/>
+                          <Loader className="w-10 h-10 mb-2 animate-spin text-primary"/>
                           <p className="text-sm font-medium">Preparing your video...</p>
                           <p className="text-xs">This can take a moment.</p>
                       </div>
@@ -525,3 +525,5 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    

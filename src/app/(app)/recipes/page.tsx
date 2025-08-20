@@ -426,5 +426,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    

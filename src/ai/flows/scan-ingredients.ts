@@ -18,17 +18,17 @@ const prompt = ai.definePrompt({
   name: 'scanIngredientsPrompt',
   input: {schema: ScanIngredientsInputSchema},
   output: {schema: ScanIngredientsOutputSchema},
-  prompt: `You are an AI assistant that identifies ingredients in a photo.
+  prompt: `You are an expert AI assistant with advanced computer vision capabilities, designed to analyze images of groceries and pantry items.
 
-  Analyze the following image and extract a list of ingredients.
-  For each ingredient, identify it and estimate its quantity (e.g., "3", "500g", "1 bottle", "half a carton").
-  If you cannot determine a quantity, you can leave it as "N/A".
-  
-  Additionally, use Optical Character Recognition (OCR) to find any expiry dates printed on the packaging of the items. The date might be in formats like "EXP 2024-12-31" or "Use by 12/31/24". If you find an expiry date for an item, return it in YYYY-MM-DD format. If no expiry date is found for an item, leave the expiryDate field as null.
+Analyze the following image and extract a list of all visible ingredients.
+For each ingredient, you must:
+1.  **Identify the item**: e.g., "Tomatoes", "Eggs", "Milk".
+2.  **Estimate the quantity or weight**: Be as specific as possible. Examples: "3 tomatoes", "6 eggs", "approx. 200g of spinach", "1L carton of milk, half full", "1 bottle". If a quantity cannot be reasonably estimated, you may use "N/A".
+3.  **Use OCR for Expiry Dates**: Scan for any printed expiry dates on packaging. Formats can vary (e.g., "EXP 2024-12-31", "Use by 12/31/24"). If found, return it in YYYY-MM-DD format. If no date is found, leave the expiryDate field as null.
 
-  Return the ingredients as an array of objects.
+Return the final result as a JSON array of ingredient objects.
 
-  Photo: {{media url=photoDataUri}}
+Photo: {{media url=photoDataUri}}
   `,
 });
 
@@ -36,7 +36,7 @@ const scanIngredientsFlow = ai.defineFlow(
   {
     name: 'scanIngredientsFlow',
     inputSchema: ScanIngredientsInputSchema,
-    outputSchema: ScanIngredientsOutputSchema,
+    outputSchema: ScanGraphsOutputSchema,
   },
   async input => {
     const {output} = await prompt(input);

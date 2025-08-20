@@ -23,7 +23,7 @@ const prompt = ai.definePrompt({
   output: {schema: RecommendRecipesOutputSchema},
   prompt: `You are a creative and expert recipe recommendation engine. You will be provided with a list of ingredients the user has available, their dietary restrictions, and a list of ingredients that are about to expire.
 
-Your task is to generate novel and appealing recipes. Prioritize using the expiring ingredients first. 
+Your task is to generate exactly 4 distinct and creative recipes. Prioritize using the expiring ingredients first. 
 
 For each recipe, you MUST provide:
 1. A unique, appealing name.

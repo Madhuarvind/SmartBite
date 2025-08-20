@@ -7,6 +7,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import {
   PredictExpiryDateInput,
   PredictExpiryDateInputSchema,
@@ -20,18 +21,22 @@ export async function predictExpiryDate(
   return predictExpiryDateFlow(input);
 }
 
+// Internal schema for what we want the LLM to output
+const ShelfLifeSchema = z.object({
+    shelfLifeDays: z.number().describe('The estimated shelf life of the ingredient in days.'),
+});
+
 const prompt = ai.definePrompt({
   name: 'predictExpiryDatePrompt',
   input: { schema: PredictExpiryDateInputSchema },
-  output: { schema: PredictExpiryDateOutputSchema },
-  prompt: `You are an expert in food science and safety. Your task is to predict the shelf life of a given ingredient.
+  output: { schema: ShelfLifeSchema },
+  prompt: `You are an expert in food science and safety. Your task is to estimate the typical shelf life of a fresh food item when stored correctly.
 
-Based on the ingredient name and its purchase date, estimate how long it will typically last when stored correctly.
+Return only the estimated number of days the ingredient will last from its purchase date.
 
-Return only the calculated expiry date in YYYY-MM-DD format. Do not provide any explanation or additional text.
+Do not provide any explanation or additional text. Just return the JSON object with the shelf life in days.
 
 Ingredient: {{{ingredientName}}}
-Purchase Date: {{{purchaseDate}}}
 `,
 });
 
@@ -41,8 +46,26 @@ const predictExpiryDateFlow = ai.defineFlow(
     inputSchema: PredictExpiryDateInputSchema,
     outputSchema: PredictExpiryDateOutputSchema,
   },
-  async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+  async ({ ingredientName, purchaseDate }) => {
+    // Step 1: Get the shelf life in days from the AI
+    const { output } = await prompt({ ingredientName, purchaseDate });
+    if (!output?.shelfLifeDays) {
+        throw new Error('Could not predict shelf life from AI.');
+    }
+
+    // Step 2: Calculate the expiry date in code for reliability
+    const purchase = new Date(purchaseDate);
+    // Add a day to the purchase date to account for timezone shifts and ensure the calculation is from the start of that day.
+    purchase.setDate(purchase.getDate() + 1);
+
+    const expiry = new Date(purchase);
+    expiry.setDate(purchase.getDate() + output.shelfLifeDays);
+
+    // Step 3: Format the date into YYYY-MM-DD string
+    const expiryDateString = expiry.toISOString().split('T')[0];
+
+    return {
+        expiryDate: expiryDateString,
+    };
   }
 );

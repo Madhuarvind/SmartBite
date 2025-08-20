@@ -22,10 +22,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { initialInventory, pantryEssentials } from "@/lib/inventory";
 
-const availableIngredients = [
-  'Tomatoes', 'Chicken Breast', 'Milk', 'Spinach', 'Eggs', 'Onion', 'Garlic', 'Bread', 'Flour', 'Sugar', 'Butter', 'Olive Oil', 'Salt', 'Pepper'
-];
+const availableIngredients = [...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)];
 
 export default function RecipesPage() {
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>(['Tomatoes', 'Chicken Breast', 'Garlic']);
@@ -187,6 +186,7 @@ export default function RecipesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Any</SelectItem>
+                  <SelectItem value="diabetes-friendly">Diabetes-Friendly</SelectItem>
                   <SelectItem value="vegan">Vegan</SelectItem>
                   <SelectItem value="vegetarian">Vegetarian</SelectItem>
                   <SelectItem value="gluten-free">Gluten-Free</SelectItem>
@@ -426,3 +426,5 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    

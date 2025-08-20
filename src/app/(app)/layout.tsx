@@ -12,14 +12,22 @@ import {
   CircleUser,
   PanelLeft,
   Utensils,
+  LogOut,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -47,10 +55,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SheetContent side="left" className="flex flex-col p-0 w-72">
             <SheetHeader className="p-4 border-b">
                  <SheetTitle className="sr-only">Main Menu</SheetTitle>
-                 <div className="flex items-center gap-2">
+                 <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}>
                     <ForkAndLeaf className="w-8 h-8 text-primary" />
                     <h2 className="text-xl font-bold text-primary">SmartBite</h2>
-                </div>
+                </Link>
             </SheetHeader>
             
             <nav className="grid gap-2 text-lg font-medium p-4">
@@ -80,19 +88,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     Settings
                   </Link>
                    <Link
-                    href="#"
+                    href="/login"
                     onClick={() => setIsSheetOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-all hover:bg-destructive/10"
                   >
-                    <CircleUser className="h-5 w-5" />
-                    John Doe
+                    <LogOut className="h-5 w-5" />
+                    Logout
                   </Link>
                </nav>
             </div>
           </SheetContent>
         </Sheet>
-        <div className="flex w-full items-center justify-center">
-           <ForkAndLeaf className="w-8 h-8 text-primary" />
+        <div className="flex w-full items-center justify-end gap-4">
+            <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
+                <ForkAndLeaf className="w-8 h-8 text-primary" />
+                <span className="sr-only">SmartBite</span>
+            </Link>
+            <div className="flex-1"></div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="icon" className="rounded-full">
+                        <CircleUser className="h-5 w-5" />
+                        <span className="sr-only">Toggle user menu</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Settings</DropdownMenuItem>
+                    <DropdownMenuItem>Support</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/login" className="text-destructive focus:text-destructive">Logout</Link>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">

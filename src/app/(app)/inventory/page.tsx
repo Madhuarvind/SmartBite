@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload } from "lucide-react";
+import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload, Wand2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scanIngredients } from "@/ai/flows/scan-ingredients";
+import { predictExpiryDate } from "@/ai/flows/predict-expiry-date";
 import { useToast } from "@/hooks/use-toast";
 import type { DetectedIngredient } from "@/ai/schemas";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -24,6 +25,7 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState(initialInventory);
   const [scannedIngredients, setScannedIngredients] = useState<DetectedIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPredicting, setIsPredicting] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -34,6 +36,7 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("");
+  const [newItemPurchaseDate, setNewItemPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [newItemExpiry, setNewItemExpiry] = useState("");
 
 
@@ -110,6 +113,34 @@ export default function InventoryPage() {
       reader.readAsDataURL(file);
     }
   };
+  
+  const handlePredictExpiry = async () => {
+    if (!newItemName) {
+      toast({
+        variant: "destructive",
+        title: "Missing Ingredient Name",
+        description: "Please enter an ingredient name to predict its expiry date.",
+      });
+      return;
+    }
+    setIsPredicting(true);
+    try {
+        const result = await predictExpiryDate({
+            ingredientName: newItemName,
+            purchaseDate: newItemPurchaseDate,
+        });
+        setNewItemExpiry(result.expiryDate);
+    } catch(e) {
+        console.error("Error predicting expiry date:", e);
+        toast({
+            variant: "destructive",
+            title: "Prediction Failed",
+            description: "Could not predict the expiry date. Please enter it manually."
+        });
+    } finally {
+        setIsPredicting(false);
+    }
+  };
 
   const handleAddItem = () => {
     if (!newItemName || !newItemQuantity) {
@@ -130,6 +161,7 @@ export default function InventoryPage() {
     setIsAddDialogOpen(false);
     setNewItemName("");
     setNewItemQuantity("");
+    setNewItemPurchaseDate(new Date().toISOString().split('T')[0]);
     setNewItemExpiry("");
      toast({
         title: "Item Added",
@@ -159,8 +191,18 @@ export default function InventoryPage() {
                         <Input id="item-quantity" value={newItemQuantity} onChange={(e) => setNewItemQuantity(e.target.value)} className="col-span-3" placeholder="e.g. 500g" />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="item-expiry" className="text-right">Expiry</Label>
-                        <Input id="item-expiry" type="date" value={newItemExpiry} onChange={(e) => setNewItemExpiry(e.target.value)} className="col-span-3" />
+                        <Label htmlFor="item-purchase-date" className="text-right">Purchase Date</Label>
+                        <Input id="item-purchase-date" type="date" value={newItemPurchaseDate} onChange={(e) => setNewItemPurchaseDate(e.target.value)} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="item-expiry" className="text-right">Expiry Date</Label>
+                        <div className="col-span-3 grid grid-cols-3 gap-2">
+                             <Input id="item-expiry" type="date" value={newItemExpiry} onChange={(e) => setNewItemExpiry(e.target.value)} className="col-span-2" />
+                             <Button onClick={handlePredictExpiry} disabled={isPredicting} variant="outline" size="sm" className="col-span-1">
+                                {isPredicting ? <Loader className="animate-spin" /> : <Wand2 />}
+                                <span className="sr-only">Predict Expiry</span>
+                             </Button>
+                        </div>
                     </div>
                 </div>
                 <DialogFooter>

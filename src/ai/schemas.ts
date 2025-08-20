@@ -6,6 +6,19 @@
 
 import { z } from 'genkit';
 
+// Schemas for predict-expiry-date.ts
+export const PredictExpiryDateInputSchema = z.object({
+    ingredientName: z.string().describe('The name of the ingredient, e.g., "Tomatoes", "Chicken Breast".'),
+    purchaseDate: z.string().describe('The date the ingredient was purchased, in ISO 8601 format (YYYY-MM-DD).'),
+});
+export type PredictExpiryDateInput = z.infer<typeof PredictExpiryDateInputSchema>;
+
+export const PredictExpiryDateOutputSchema = z.object({
+    expiryDate: z.string().describe('The predicted expiry date for the ingredient, in ISO 8601 format (YYYY-MM-DD).'),
+});
+export type PredictExpiryDateOutput = z.infer<typeof PredictExpiryDateOutputSchema>;
+
+
 // Schemas for generate-recipe-step-image.ts
 export const GenerateRecipeStepImageInputSchema = z.object({
   instruction: z.string().describe('The single recipe instruction to generate an image for.'),

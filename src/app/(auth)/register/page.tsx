@@ -55,10 +55,6 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-        'login_hint': 'user@example.com',
-        'hd': auth.tenantId || 'smartbite-rknzs.firebaseapp.com'
-    });
     try {
         await signInWithPopup(auth, provider);
         toast({ title: "Account Created", description: "Welcome to SmartBite!"});

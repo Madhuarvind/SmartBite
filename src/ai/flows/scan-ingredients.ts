@@ -23,7 +23,7 @@ const prompt = ai.definePrompt({
 Analyze the following image and extract a list of all visible ingredients.
 For each ingredient, you must:
 1.  **Identify the item**: e.g., "Tomatoes", "Eggs", "Milk".
-2.  **Estimate the quantity or weight**: Be as specific as possible. Examples: "3 tomatoes", "6 eggs", "approx. 200g of spinach", "1L carton of milk, half full", "1 bottle". If a quantity cannot be reasonably estimated, you may use "N/A".
+2.  **Estimate the quantity or weight**: Be as specific as possible. Examples: "3 tomatoes", "approx. 200g of spinach", "1L carton of milk, half full", "1 bottle". If a quantity cannot be reasonably estimated, you may use "N/A".
 3.  **Use OCR for Expiry Dates**: Scan for any printed expiry dates on packaging. Formats can vary (e.g., "EXP 2024-12-31", "Use by 12/31/24"). If found, return it in YYYY-MM-DD format. If no date is found, leave the expiryDate field as null.
 
 Return the final result as a JSON array of ingredient objects.
@@ -36,7 +36,7 @@ const scanIngredientsFlow = ai.defineFlow(
   {
     name: 'scanIngredientsFlow',
     inputSchema: ScanIngredientsInputSchema,
-    outputSchema: ScanGraphsOutputSchema,
+    outputSchema: ScanIngredientsOutputSchema,
   },
   async input => {
     const {output} = await prompt(input);

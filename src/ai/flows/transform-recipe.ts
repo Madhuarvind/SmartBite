@@ -96,7 +96,14 @@ const transformRecipeFlow = ai.defineFlow(
 
     } catch (error) {
         console.error(`Failed to generate media for transformed recipe ${output.name}`, error);
-        return output;
+        // Still return the text part of the recipe even if media fails
+        return { 
+          ...output,
+          instructionSteps: output.instructions.split('\n').filter(line => line.trim().length > 0).map((instructionText, index) => ({
+            step: index + 1,
+            text: instructionText.replace(/^\d+\.\s*/, ''),
+          }))
+        };
     }
   }
 );

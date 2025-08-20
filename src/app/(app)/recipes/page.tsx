@@ -155,6 +155,7 @@ export default function RecipesPage() {
         transformation: transformationRequest,
       });
       setTransformedRecipe(result);
+      toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
     } catch (error) {
       console.error("Error transforming recipe:", error);
       toast({ variant: "destructive", title: "Transformation failed. Please try again." });
@@ -263,6 +264,7 @@ export default function RecipesPage() {
                         autoPlay
                         loop
                         muted
+                        playsInline
                       />
                     ) : (
                       <div className="w-full h-full bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
@@ -318,14 +320,37 @@ export default function RecipesPage() {
 
                 <div className="grid md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
                     <div className="md:col-span-2 space-y-4">
-                        <Alert>
-                           <Wand2 className="h-4 w-4" />
-                           <AlertTitle className="text-accent-foreground">Recipe Transformation</AlertTitle>
-                           <AlertDescription>
-                                {transformedRecipe ? "This is the AI-transformed version of the recipe." : "Original recipe is shown below. Use the AI tools on the right to modify it."}
-                           </AlertDescription>
-                       </Alert>
+                        {transformedRecipe && (
+                           <Alert>
+                               <Wand2 className="h-4 w-4" />
+                               <AlertTitle className="text-accent-foreground">This is an AI-Transformed Recipe!</AlertTitle>
+                               <AlertDescription>
+                                   You're viewing a new creation based on your request. The original recipe has been modified.
+                               </AlertDescription>
+                           </Alert>
+                        )}
                         
+                        <div>
+                           <h3 className="font-bold text-lg mb-2">Full Recipe Video</h3>
+                           {currentRecipe.video?.videoDataUri ? (
+                              <video
+                                src={currentRecipe.video.videoDataUri}
+                                controls
+                                className="w-full aspect-video rounded-lg bg-black"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                              />
+                            ) : (
+                              <div className="w-full aspect-video bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center rounded-lg">
+                                  <Film className="w-10 h-10 mb-2 animate-pulse text-primary"/>
+                                  <p className="text-sm font-medium">Preparing your video...</p>
+                                  <p className="text-xs">This can take a moment, especially for new recipes.</p>
+                              </div>
+                            )}
+                        </div>
+
                         <div>
                             <h3 className="font-bold text-lg mb-2">Ingredients</h3>
                             <Table>

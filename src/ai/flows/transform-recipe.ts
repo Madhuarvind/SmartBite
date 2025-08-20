@@ -31,14 +31,14 @@ const prompt = ai.definePrompt({
   output: { schema: TransformRecipeOutputSchema },
   prompt: `You are an expert chef and recipe developer. Your task is to transform a given recipe based on a user's specific request.
 
-You must modify the recipe's name, ingredients, and instructions to reflect the transformation. You also need to recalculate the nutritional information for the new version.
+You must modify the recipe's name, ingredients (including their quantities), and instructions to reflect the transformation. You also need to recalculate the nutritional information for the new version based on the new ingredients.
 
 The instructions should be a single string, with each step separated by a newline character.
 
 Return the entire modified recipe in the specified JSON format.
 
 Original Recipe Name: {{{recipe.name}}}
-Original Recipe Ingredients: {{#each recipe.ingredients}}{{{this}}}, {{/each}}
+Original Recipe Ingredients: {{#each recipe.ingredients}}}{{{this.name}}} ({{{this.quantity}}}), {{/each}}
 Original Recipe Instructions: {{{recipe.instructions}}}
 
 Transformation Request: {{{transformation}}}

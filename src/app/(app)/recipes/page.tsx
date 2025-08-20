@@ -10,21 +10,28 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare } from "lucide-react";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput } from "@/ai/schemas";
+import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient } from "@/ai/schemas";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 
 const availableIngredients = [...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)];
+const userInventory = [...initialInventory, ...pantryEssentials];
+
+type InventoryCheckResult = {
+    ingredient: RecipeIngredient;
+    status: 'available' | 'missing' | 'partial';
+    notes: string;
+}
 
 export default function RecipesPage() {
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>(['Tomatoes', 'Chicken Breast', 'Garlic']);
@@ -46,6 +53,11 @@ export default function RecipesPage() {
   const [transformationRequest, setTransformationRequest] = useState("");
   const [isTransforming, setIsTransforming] = useState(false);
   const [transformedRecipe, setTransformedRecipe] = useState<TransformRecipeOutput | null>(null);
+
+  // State for inventory check
+  const [servings, setServings] = useState(2);
+  const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
+  const [isCheckingInventory, setIsCheckingInventory] = useState(false);
 
 
   const handleIngredientChange = (ingredient: string, checked: boolean | 'indeterminate') => {
@@ -101,6 +113,9 @@ export default function RecipesPage() {
     setMissingIngredient(null);
     setTransformedRecipe(null);
     setTransformationRequest("");
+    setInventoryCheckResults([]);
+    setIsCheckingInventory(false);
+    setServings(2);
   };
   
   const handleFindSubstitutions = async () => {
@@ -146,6 +161,23 @@ export default function RecipesPage() {
     } finally {
       setIsTransforming(false);
     }
+  }
+
+  const handleInventoryCheck = () => {
+      if (!currentRecipe) return;
+      setIsCheckingInventory(true);
+      
+      const results: InventoryCheckResult[] = currentRecipe.ingredients.map(ing => {
+          const inventoryItem = userInventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
+          if (inventoryItem) {
+              return { ingredient: ing, status: 'available', notes: `You have ${inventoryItem.quantity}` };
+          } else {
+              return { ingredient: ing, status: 'missing', notes: 'Not in inventory' };
+          }
+      });
+
+      setInventoryCheckResults(results);
+      setIsCheckingInventory(false);
   }
   
   const currentRecipe = transformedRecipe || selectedRecipe;
@@ -296,9 +328,22 @@ export default function RecipesPage() {
                         
                         <div>
                             <h3 className="font-bold text-lg mb-2">Ingredients</h3>
-                            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                               {currentRecipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
-                            </ul>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Ingredient</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {currentRecipe.ingredients.map(ing => (
+                                        <TableRow key={ing.name}>
+                                            <TableCell>{ing.name}</TableCell>
+                                            <TableCell>{ing.quantity}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </div>
 
                         <Separator/>
@@ -343,22 +388,52 @@ export default function RecipesPage() {
                                     <TableBody>
                                         <TableRow>
                                             <TableCell className="font-medium">Calories</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.calories} kcal</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.calories.toFixed(0)} kcal</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Protein</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.protein}g</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.protein.toFixed(1)}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Carbs</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.carbs}g</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.carbs.toFixed(1)}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Fat</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.fat}g</TableCell>
+                                            <TableCell className="text-right">{currentRecipe.nutrition.fat.toFixed(1)}g</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
+                            </CardContent>
+                        </Card>
+                         <Card className="bg-secondary/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-lg"><CheckSquare className="w-5 h-5 mr-2 text-primary"/> Inventory Check</CardTitle>
+                                <CardDescription>Do you have enough ingredients to cook this?</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Label htmlFor="servings">Servings:</Label>
+                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setServings(s => Math.max(1, s - 1))}><MinusCircle /></Button>
+                                    <span className="font-bold text-lg">{servings}</span>
+                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setServings(s => s + 1)}><PlusCircle /></Button>
+                                </div>
+                                <Button onClick={handleInventoryCheck} disabled={isCheckingInventory} className="w-full">
+                                    {isCheckingInventory ? <><Loader className="mr-2 animate-spin"/> Checking...</> : 'Check My Inventory'}
+                                </Button>
+                                {inventoryCheckResults.length > 0 && (
+                                     <div className="mt-4 space-y-2">
+                                        {inventoryCheckResults.map(res => (
+                                            <Alert key={res.ingredient.name} variant={res.status === 'missing' ? 'destructive' : 'default'}>
+                                                {res.status === 'missing' ? <AlertTriangle className="h-4 w-4"/> : <CheckSquare className="h-4 w-4"/>}
+                                                <AlertTitle className="text-sm">{res.ingredient.name}</AlertTitle>
+                                                <AlertDescription className="text-xs">
+                                                   Required: {res.ingredient.quantity}. {res.notes}
+                                                </AlertDescription>
+                                            </Alert>
+                                        ))}
+                                     </div>
+                                )}
                             </CardContent>
                         </Card>
                         <Card className="bg-secondary/50">
@@ -374,7 +449,7 @@ export default function RecipesPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {selectedRecipe?.ingredients.map(ing => (
-                                            <SelectItem key={ing} value={ing}>{ing}</SelectItem>
+                                            <SelectItem key={ing.name} value={ing.name}>{ing.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>

@@ -147,9 +147,15 @@ export const InstructionStepSchema = z.object({
 });
 export type InstructionStep = z.infer<typeof InstructionStepSchema>;
 
+const RecipeIngredientSchema = z.object({
+  name: z.string().describe('The name of the ingredient.'),
+  quantity: z.string().describe('The quantity of the ingredient (e.g., "200g", "1 cup").'),
+});
+export type RecipeIngredient = z.infer<typeof RecipeIngredientSchema>;
+
 export const RecipeSchema = z.object({
   name: z.string().describe('The name of the recipe.'),
-  ingredients: z.array(z.string()).describe('The ingredients required for the recipe.'),
+  ingredients: z.array(RecipeIngredientSchema).describe('The ingredients required for the recipe.'),
   instructions: z.string().describe('The instructions for the recipe, with each step on a new line.'),
   instructionSteps: z.array(InstructionStepSchema).optional().describe('A structured list of recipe instruction steps, each with an optional image.'),
   dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),

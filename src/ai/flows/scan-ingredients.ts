@@ -3,7 +3,7 @@
 /**
  * @fileOverview This file defines the scanIngredients flow, which uses AI to detect ingredients from an image.
  *
- * - scanIngredients - A function that takes an image data URI as input and returns a list of identified ingredients.
+ * - scanIngredients - A function that takes an image data URI as input and returns a list of identified ingredients with quantities.
  */
 
 import {ai} from '@/ai/genkit';
@@ -21,7 +21,10 @@ const prompt = ai.definePrompt({
   prompt: `You are an AI assistant that identifies ingredients in a photo.
 
   Analyze the following image and extract a list of ingredients.
-  Return the ingredients as a simple list of strings.
+  For each ingredient, identify it and estimate its quantity (e.g., "3", "500g", "1 bottle", "half a carton").
+  If you cannot determine a quantity, you can leave it as "N/A".
+
+  Return the ingredients as an array of objects, each with a "name" and "quantity" property.
 
   Photo: {{media url=photoDataUri}}
   `,

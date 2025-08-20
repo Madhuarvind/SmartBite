@@ -1,18 +1,19 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Upload, MoreHorizontal, Trash2, Pencil } from "lucide-react";
-import Image from "next/image";
+import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scanIngredients } from "@/ai/flows/scan-ingredients";
 import { useToast } from "@/hooks/use-toast";
+import type { DetectedIngredient } from "@/ai/schemas";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const initialInventory = [
   { id: '1', name: 'Tomatoes', quantity: '500g', expiry: '2024-08-15' },
@@ -30,47 +31,68 @@ const pantryEssentials = [
 ];
 
 export default function InventoryPage() {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [scannedIngredients, setScannedIngredients] = useState<string[]>([]);
+  const [scannedIngredients, setScannedIngredients] = useState<DetectedIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-        setScannedIngredients([]);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  useEffect(() => {
+    const getCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setHasCameraPermission(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use this feature.',
+        });
+      }
+    };
+    getCameraPermission();
+  }, [toast]);
   
   const handleScan = async () => {
-    if (!imagePreview) return;
+    if (!videoRef.current) return;
     setIsLoading(true);
-    try {
-      const result = await scanIngredients({ photoDataUri: imagePreview });
-      setScannedIngredients(result.ingredients);
-    } catch (error) {
-      console.error("Error scanning ingredients:", error);
-      toast({
-        variant: "destructive",
-        title: "Scan Failed",
-        description: "Could not detect ingredients from the image. Please try another one.",
-      });
-    } finally {
-      setIsLoading(false);
+    setScannedIngredients([]);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const context = canvas.getContext('2d');
+    if(context) {
+        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const photoDataUri = canvas.toDataURL('image/jpeg');
+
+        try {
+          const result = await scanIngredients({ photoDataUri });
+          setScannedIngredients(result.ingredients);
+        } catch (error) {
+          console.error("Error scanning ingredients:", error);
+          toast({
+            variant: "destructive",
+            title: "Scan Failed",
+            description: "Could not detect ingredients from the image. Please try another one.",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Scan Error",
+            description: "Could not capture an image from the video stream.",
+        });
+        setIsLoading(false);
     }
   };
-
-  const handleClear = () => {
-    setImagePreview(null);
-    setScannedIngredients([]);
-    const fileInput = document.getElementById('picture') as HTMLInputElement;
-    if(fileInput) fileInput.value = '';
-  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -85,36 +107,50 @@ export default function InventoryPage() {
           <div className="grid gap-6 mt-6 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Ingredient Scanner</CardTitle>
-                <CardDescription>Upload a photo to automatically detect ingredients.</CardDescription>
+                <CardTitle>Pantry Scanner</CardTitle>
+                <CardDescription>Point your camera at your fridge or pantry to automatically detect items.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center">
-                  {imagePreview ? (
-                    <Image src={imagePreview} alt="Ingredients preview" layout="fill" objectFit="cover" className="rounded-lg" />
-                  ) : (
-                    <div className="text-center text-muted-foreground">
-                        <Upload className="mx-auto h-10 w-10 mb-2"/>
-                        <p>Click to upload an image</p>
-                    </div>
+                <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary">
+                  <video ref={videoRef} className="w-full aspect-video rounded-md" autoPlay muted playsInline />
+                  {hasCameraPermission === false && (
+                     <Alert variant="destructive" className="absolute m-4">
+                       <AlertTitle>Camera Access Required</AlertTitle>
+                       <AlertDescription>
+                         Please allow camera access in your browser settings to use this feature.
+                       </AlertDescription>
+                     </Alert>
                   )}
-                   <Input id="picture" type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleImageChange}/>
                 </div>
+                 <Button onClick={handleScan} disabled={isLoading || hasCameraPermission === false} className="w-full">
+                    {isLoading ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2" /> Scan What You See</>}
+                </Button>
                 {scannedIngredients.length > 0 && (
                     <div>
                         <h4 className="font-semibold mb-2">Detected Ingredients:</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {scannedIngredients.map(ing => <span key={ing} className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-sm">{ing}</span>)}
-                        </div>
+                         <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Item</TableHead>
+                                    <TableHead>Quantity</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {scannedIngredients.map((ing, index) => (
+                                    <TableRow key={`${ing.name}-${index}`}>
+                                        <TableCell className="font-medium">{ing.name}</TableCell>
+                                        <TableCell>{ing.quantity}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button size="sm" variant="outline">Add to Inventory</Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                         </Table>
                     </div>
                 )}
               </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={handleClear}>Clear</Button>
-                <Button onClick={handleScan} disabled={!imagePreview || isLoading}>
-                    {isLoading ? "Scanning..." : "Scan Ingredients"}
-                </Button>
-              </CardFooter>
             </Card>
 
             <Card>

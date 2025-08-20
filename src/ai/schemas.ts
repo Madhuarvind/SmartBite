@@ -54,8 +54,14 @@ export const ScanIngredientsInputSchema = z.object({
 });
 export type ScanIngredientsInput = z.infer<typeof ScanIngredientsInputSchema>;
 
+export const DetectedIngredientSchema = z.object({
+    name: z.string().describe('The name of the ingredient.'),
+    quantity: z.string().describe('The estimated quantity of the ingredient (e.g., "3", "500g", "1 bottle").'),
+});
+export type DetectedIngredient = z.infer<typeof DetectedIngredientSchema>;
+
 export const ScanIngredientsOutputSchema = z.object({
-  ingredients: z.array(z.string()).describe('A list of ingredients identified in the image.'),
+  ingredients: z.array(DetectedIngredientSchema).describe('A list of ingredients identified in the image, with quantities.'),
 });
 export type ScanIngredientsOutput = z.infer<typeof ScanIngredientsOutputSchema>;
 

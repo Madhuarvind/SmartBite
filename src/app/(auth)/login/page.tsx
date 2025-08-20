@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,16 +14,56 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { Loader } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [email, setEmail] = useState("john.doe@example.com");
+  const [password, setPassword] = useState("password");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const handleLogin = (event: React.FormEvent) => {
+  const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-    // In a real app, you'd have auth logic here.
-    // For this prototype, we'll just redirect.
-    router.push("/dashboard");
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Login Successful", description: "Welcome back!" });
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "An unexpected error occurred.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+        toast({ title: "Login Successful", description: "Welcome!"});
+        router.push("/dashboard");
+    } catch (error: any) {
+        console.error("Google login failed:", error);
+        toast({
+            variant: "destructive",
+            title: "Google Login Failed",
+            description: error.message || "Could not log in with Google. Please try again.",
+        });
+    } finally {
+        setIsGoogleLoading(false);
+    }
+  }
 
   return (
     <Card className="mx-auto max-w-sm w-full">
@@ -41,7 +82,9 @@ export default function LoginPage() {
               type="email"
               placeholder="m@example.com"
               required
-              defaultValue="john.doe@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading || isGoogleLoading}
             />
           </div>
           <div className="grid gap-2">
@@ -51,12 +94,21 @@ export default function LoginPage() {
                 Forgot your password?
               </Link>
             </div>
-            <Input id="password" type="password" required defaultValue="password" />
+            <Input 
+              id="password" 
+              type="password" 
+              required 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading || isGoogleLoading}
+            />
           </div>
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+            {isLoading && <Loader className="mr-2 animate-spin" />}
             Login
           </Button>
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full" type="button" onClick={handleGoogleLogin} disabled={isLoading || isGoogleLoading}>
+            {isGoogleLoading && <Loader className="mr-2 animate-spin" />}
             Login with Google
           </Button>
         </form>

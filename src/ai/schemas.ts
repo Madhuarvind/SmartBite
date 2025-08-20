@@ -95,7 +95,7 @@ export type SuggestSubstitutionsInput = z.infer<
 export const SuggestSubstitutionsOutputSchema = z.object({
   substitutions: z
     .array(z.string())
-    .describe('A list of suggested ingredient substitutions.'),
+    .describe('A list of suggested ingredient substitutions with explanations.'),
 });
 export type SuggestSubstitutionsOutput = z.infer<
   typeof SuggestSubstitutionsOutputSchema
@@ -156,9 +156,23 @@ export const GenerateMealPlanInputSchema = z.object({
 });
 export type GenerateMealPlanInput = z.infer<typeof GenerateMealPlanInputSchema>;
 
+const DayMealPlanSchema = z.object({
+    breakfast: z.string().describe('The name of the breakfast meal.'),
+    lunch: z.string().describe('The name of the lunch meal.'),
+    dinner: z.string().describe('The name of the dinner meal.'),
+});
+
 export const GenerateMealPlanOutputSchema = z.object({
-    mealPlan: z.string().describe("A string containing the 7-day meal plan, with each meal on a new line formatted as 'Day: Meal Type: Meal Name'."),
-    shoppingList: z.string().describe('A comma-separated string of ingredients to buy.'),
+    mealPlan: z.object({
+        monday: DayMealPlanSchema,
+        tuesday: DayMealPlanSchema,
+        wednesday: DayMealPlanSchema,
+        thursday: DayMealPlanSchema,
+        friday: DayMealPlanSchema,
+        saturday: DayMealPlanSchema,
+        sunday: DayMealPlanSchema,
+    }).describe('A 7-day meal plan with breakfast, lunch, and dinner for each day.'),
+    shoppingList: z.array(z.string()).describe('An array of ingredients to buy.'),
 });
 export type GenerateMealPlanOutput = z.infer<typeof GenerateMealPlanOutputSchema>;
 

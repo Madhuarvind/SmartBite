@@ -1,53 +1,52 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { PlusCircle, ShoppingCart, Sparkles, Loader } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { generateMealPlan } from "@/ai/flows/generate-meal-plan";
 import type { GenerateMealPlanOutput } from "@/ai/schemas";
 import { useToast } from "@/hooks/use-toast";
+import { initialInventory, pantryEssentials } from "@/lib/inventory";
 
 const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 const dayTitles = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-// Mock user's available ingredients. In a real app, this would come from the inventory state.
-const availableIngredients = [
-  'Tomatoes', 'Chicken Breast', 'Milk', 'Spinach', 'Eggs', 'Onion', 'Garlic', 'Bread', 'Flour', 'Sugar', 'Butter', 'Olive Oil', 'Salt', 'Pepper'
-];
-
-type ParsedMealPlan = {
-  [day: string]: {
-    [mealType: string]: string | undefined;
-  };
-};
+const availableIngredients = [...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)];
 
 export default function PlannerPage() {
   const [nutritionalGoal, setNutritionalGoal] = useState("balanced");
-  const [rawMealPlan, setRawMealPlan] = useState<string | null>(null);
+  const [dietaryRestrictions, setDietaryRestrictions] = useState("");
+  const [mealPlan, setMealPlan] = useState<GenerateMealPlanOutput['mealPlan'] | null>(null);
   const [shoppingList, setShoppingList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleGeneratePlan = async () => {
     setIsLoading(true);
-    setRawMealPlan(null);
+    setMealPlan(null);
     setShoppingList([]);
 
     try {
-      const dietaryRestrictions = nutritionalGoal === 'vegetarian' ? ['vegetarian'] : [];
+      const restrictionsArray = dietaryRestrictions.split(',').map(s => s.trim()).filter(Boolean);
+      if (nutritionalGoal === 'vegetarian') {
+          restrictionsArray.push('vegetarian');
+      }
+
       const result = await generateMealPlan({
         availableIngredients,
         nutritionalGoal,
-        dietaryRestrictions,
+        dietaryRestrictions: restrictionsArray,
       });
-      setRawMealPlan(result.mealPlan);
-      setShoppingList(result.shoppingList ? result.shoppingList.split(',').map(s => s.trim()) : []);
+      setMealPlan(result.mealPlan);
+      setShoppingList(result.shoppingList || []);
     } catch (error) {
       console.error("Error generating meal plan:", error);
       toast({
@@ -60,29 +59,6 @@ export default function PlannerPage() {
     }
   };
 
-  const mealPlan = useMemo((): ParsedMealPlan | null => {
-    if (!rawMealPlan) return null;
-
-    const parsed: ParsedMealPlan = {};
-    const lines = rawMealPlan.split('\n').filter(line => line.trim() !== '');
-
-    lines.forEach(line => {
-      const parts = line.split(':');
-      if (parts.length >= 3) {
-        const day = parts[0].trim().toLowerCase();
-        const mealType = parts[1].trim().toLowerCase();
-        const mealName = parts.slice(2).join(':').trim();
-        
-        if (!parsed[day]) {
-          parsed[day] = {};
-        }
-        parsed[day][mealType] = mealName;
-      }
-    });
-
-    return parsed;
-  }, [rawMealPlan]);
-
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="This Week's Meal Plan" />
@@ -90,12 +66,13 @@ export default function PlannerPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center"><Sparkles className="w-6 h-6 mr-2 text-primary" /> AI Meal Plan Generator</CardTitle>
-          <CardDescription>Select a nutritional goal and let our AI create a personalized 7-day meal plan and shopping list for you.</CardDescription>
+          <CardDescription>Select your goals and let our AI create a personalized 7-day meal plan and shopping list for you.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="w-full sm:w-auto flex-grow">
-                 <Select onValueChange={setNutritionalGoal} defaultValue={nutritionalGoal}>
-                    <SelectTrigger>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+            <div>
+                <Label htmlFor="nutritional-goal">Nutritional Goal</Label>
+                <Select onValueChange={setNutritionalGoal} defaultValue={nutritionalGoal}>
+                    <SelectTrigger id="nutritional-goal">
                         <SelectValue placeholder="Select a nutritional goal..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -107,10 +84,21 @@ export default function PlannerPage() {
                     </SelectContent>
                 </Select>
             </div>
-            <Button onClick={handleGeneratePlan} disabled={isLoading} className="w-full sm:w-auto">
+            <div>
+                <Label htmlFor="dietary-restrictions">Dietary Restrictions</Label>
+                <Input 
+                    id="dietary-restrictions" 
+                    placeholder="e.g. nut allergy, gluten-free"
+                    value={dietaryRestrictions}
+                    onChange={(e) => setDietaryRestrictions(e.target.value)}
+                />
+            </div>
+        </CardContent>
+        <CardFooter className="flex-col sm:flex-row gap-2">
+             <Button onClick={handleGeneratePlan} disabled={isLoading} className="w-full sm:w-auto">
                 {isLoading ? <><Loader className="mr-2 animate-spin"/> Generating...</> : "Generate Plan"}
             </Button>
-            {shoppingList.length > 0 && (
+            {shoppingList.length > 0 && !isLoading && (
                  <Dialog>
                     <DialogTrigger asChild>
                          <Button variant="outline" className="w-full sm:w-auto">
@@ -131,12 +119,14 @@ export default function PlannerPage() {
                     </DialogContent>
                  </Dialog>
             )}
-        </CardContent>
+        </CardFooter>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-start">
         {dayTitles.map((dayTitle, index) => {
            const dayKey = days[index];
+           const dayPlan = mealPlan ? mealPlan[dayKey] : null;
+
            return (
               <Card key={dayKey} className="w-full">
                 <CardHeader>
@@ -148,10 +138,10 @@ export default function PlannerPage() {
                       <h4 className="font-semibold mb-2 text-primary capitalize">{mealType}</h4>
                       {isLoading ? (
                         <Skeleton className="h-16 w-full" />
-                      ) : mealPlan && mealPlan[dayKey]?.[mealType] ? (
+                      ) : dayPlan && dayPlan[mealType] ? (
                         <Card className="p-2 bg-secondary">
                           <p className="text-sm font-medium text-secondary-foreground text-center">
-                            {mealPlan[dayKey][mealType]}
+                            {dayPlan[mealType]}
                           </p>
                         </Card>
                       ) : (

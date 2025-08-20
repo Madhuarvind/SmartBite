@@ -30,20 +30,13 @@ const prompt = ai.definePrompt({
 The nutritional goal (e.g., 'high protein', 'vegetarian') should guide the overall theme of the meal plan. The dietary restrictions are hard constraints that must be followed.
 
 Create a plan for Breakfast, Lunch, and Dinner for each day of the week (Monday to Sunday).
-Format the meal plan as follows, with each meal on a new line:
-Day: Meal Type: Meal Name
-Example:
-Monday: Breakfast: Scrambled Eggs
-Monday: Lunch: Chicken Salad
-...
+For each day, provide an object with 'breakfast', 'lunch', and 'dinner' keys.
 
 After creating the meal plan, generate a shopping list of all the ingredients required for the week's recipes that are NOT in the user's list of available ingredients.
-Format the shopping list as a comma-separated string.
-Example:
-Quinoa, Black Beans, Avocado, Lime
+Format the shopping list as an array of strings.
 
 Nutritional Goal: {{{nutritionalGoal}}}
-Dietary Restrictions: {{{dietaryRestrictions}}}
+Dietary Restrictions: {{#if dietaryRestrictions}}{{join dietaryRestrictions ", "}}{{else}}None{{/if}}
 Available Ingredients: {{#each availableIngredients}}{{{this}}}, {{/each}}
 
 Respond in the specified JSON format.

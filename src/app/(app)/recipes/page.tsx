@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 
-const availableIngredients = [...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)];
+const availableIngredients = Array.from(new Set([...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)]));
 const userInventory = [...initialInventory, ...pantryEssentials];
 
 type InventoryCheckResult = {
@@ -34,7 +34,7 @@ type InventoryCheckResult = {
 }
 
 export default function RecipesPage() {
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>(['Tomatoes', 'Chicken Breast', 'Garlic']);
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>(['Tomatoes', 'Chicken Breast', 'Garlic', 'Onion']);
   const [dietaryNeeds, setDietaryNeeds] = useState<string>('any');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendedRecipes, setRecommendedRecipes] = useState<Recipe[]>([]);
@@ -476,7 +476,6 @@ export default function RecipesPage() {
                                 <CardDescription>Give this recipe a creative twist with AI.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Label htmlFor="transform-request">How should we change it?</Label>
                                 <Input 
                                   id="transform-request"
                                   className="mt-2"

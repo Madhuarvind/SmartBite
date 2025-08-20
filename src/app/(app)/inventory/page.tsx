@@ -16,9 +16,12 @@ import type { DetectedIngredient } from "@/ai/schemas";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 
 export default function InventoryPage() {
+  const [inventory, setInventory] = useState(initialInventory);
   const [scannedIngredients, setScannedIngredients] = useState<DetectedIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -26,6 +29,13 @@ export default function InventoryPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // State for the Add Item Dialog
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemQuantity, setNewItemQuantity] = useState("");
+  const [newItemExpiry, setNewItemExpiry] = useState("");
+
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -101,9 +111,64 @@ export default function InventoryPage() {
     }
   };
 
+  const handleAddItem = () => {
+    if (!newItemName || !newItemQuantity) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please fill out at least the name and quantity.",
+      });
+      return;
+    }
+    const newItem = {
+      id: (inventory.length + 1).toString(),
+      name: newItemName,
+      quantity: newItemQuantity,
+      expiry: newItemExpiry || 'N/A',
+    };
+    setInventory(prev => [...prev, newItem]);
+    setIsAddDialogOpen(false);
+    setNewItemName("");
+    setNewItemQuantity("");
+    setNewItemExpiry("");
+     toast({
+        title: "Item Added",
+        description: `${newItem.name} has been added to your inventory.`,
+      });
+  };
+
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="My Inventory" action={<Button><PlusCircle className="mr-2"/> Add Item</Button>} />
+      <PageHeader title="My Inventory" action={
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+                <Button><PlusCircle className="mr-2"/> Add Item</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Inventory Item</DialogTitle>
+                    <DialogDescription>Enter the details of your new item below.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="item-name" className="text-right">Name</Label>
+                        <Input id="item-name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} className="col-span-3" placeholder="e.g. Tomatoes"/>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="item-quantity" className="text-right">Quantity</Label>
+                        <Input id="item-quantity" value={newItemQuantity} onChange={(e) => setNewItemQuantity(e.target.value)} className="col-span-3" placeholder="e.g. 500g" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="item-expiry" className="text-right">Expiry</Label>
+                        <Input id="item-expiry" type="date" value={newItemExpiry} onChange={(e) => setNewItemExpiry(e.target.value)} className="col-span-3" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" onClick={handleAddItem}>Save Item</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      } />
       
       <Tabs defaultValue="inventory">
         <TabsList className="grid w-full grid-cols-2">
@@ -186,7 +251,7 @@ export default function InventoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {initialInventory.map((item) => (
+                    {inventory.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
@@ -250,5 +315,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
-    

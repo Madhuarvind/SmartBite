@@ -401,3 +401,12 @@ export const AnalyzeUserSpendingOutputSchema = z.object({
     suggestions: z.array(z.string()).describe('Three actionable suggestions to help the user save money.'),
 });
 export type AnalyzeUserSpendingOutput = z.infer<typeof AnalyzeUserSpendingOutputSchema>;
+
+// Schemas for find-recipe-from-meal.ts
+export const FindRecipeFromMealInputSchema = z.object({
+    mealName: z.string().describe('The name of the meal to find a recipe for (e.g., "Chicken Caesar Salad").'),
+});
+export type FindRecipeFromMealInput = z.infer<typeof FindRecipeFromMealInputSchema>;
+
+export const FindRecipeFromMealOutputSchema = RecipeSchema.describe('A generated recipe for the specified meal.');
+export type FindRecipeFromMealOutput = z.infer<typeof FindRecipeFromMealOutputSchema>;

@@ -9,21 +9,40 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Camera, Loader, Upload, Sparkles } from "lucide-react";
+import { Camera, Loader, Upload, Sparkles, ChefHat, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzePlate } from "@/ai/flows/analyze-plate";
-import type { AnalyzePlateOutput } from "@/ai/schemas";
+import { findRecipeFromMeal } from "@/ai/flows/find-recipe-from-meal";
+import type { AnalyzePlateOutput, Recipe } from "@/ai/schemas";
 import { cn } from "@/lib/utils";
+import { auth, db } from "@/lib/firebase";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
+import type { User } from 'firebase/auth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 export default function PlateScannerPage() {
+  const [user, setUser] = useState<User | null>(null);
   const [analysis, setAnalysis] = useState<AnalyzePlateOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLogging, setIsLogging] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [foundRecipe, setFoundRecipe] = useState<Recipe | null>(null);
+  const [isFindingRecipe, setIsFindingRecipe] = useState(false);
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -128,8 +147,57 @@ export default function PlateScannerPage() {
     }
   }
 
+  const handleLogMeal = async () => {
+      if (!user || !analysis) {
+          toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'You must be logged in and have a meal analyzed.'});
+          return;
+      }
+      setIsLogging(true);
+      try {
+        await addDoc(collection(db, 'users', user.uid, 'activity'), {
+            type: 'mealCooked', // Using 'mealCooked' for simplicity, could be 'mealEaten'
+            recipeName: analysis.mealName,
+            timestamp: Timestamp.now(),
+            calories: analysis.nutrition.calories,
+            protein: analysis.nutrition.protein,
+            carbs: analysis.nutrition.carbs,
+            fat: analysis.nutrition.fat,
+        });
+        toast({
+            title: 'Meal Logged!',
+            description: `${analysis.mealName} has been added to your activity history.`
+        });
+      } catch (error) {
+        console.error("Error logging meal:", error);
+        toast({ variant: 'destructive', title: 'Logging Failed'});
+      } finally {
+        setIsLogging(false);
+      }
+  }
+
+  const handleFindRecipe = async () => {
+    if (!analysis) return;
+    setIsFindingRecipe(true);
+    setFoundRecipe(null);
+    setIsRecipeModalOpen(true);
+    try {
+        const result = await findRecipeFromMeal({ mealName: analysis.mealName });
+        setFoundRecipe(result);
+    } catch (error) {
+        console.error("Error finding recipe:", error);
+        toast({
+            variant: "destructive",
+            title: "Couldn't Find Recipe",
+            description: "The AI was unable to generate a recipe for this meal.",
+        });
+        setIsRecipeModalOpen(false);
+    } finally {
+        setIsFindingRecipe(false);
+    }
+  }
 
   return (
+    <>
     <div className="flex flex-col gap-8 animate-fade-in">
       <PageHeader title="Plate Scanner" />
       
@@ -242,9 +310,60 @@ export default function PlateScannerPage() {
                 </div>
             )}
           </CardContent>
+            {analysis && (
+                 <CardFooter className="flex-col sm:flex-row gap-2">
+                    <Button onClick={handleLogMeal} disabled={isLogging}>
+                        {isLogging ? <Loader className="animate-spin mr-2"/> : <CheckCircle className="mr-2" />} Log This Meal
+                    </Button>
+                    <Button onClick={handleFindRecipe} variant="secondary" disabled={isFindingRecipe}>
+                        <ChefHat className="mr-2" /> Find Recipe For This
+                    </Button>
+                </CardFooter>
+            )}
         </Card>
       </div>
     </div>
+    <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
+        <DialogContent className="max-w-2xl">
+            <DialogHeader>
+                <DialogTitle className="text-2xl">Generated Recipe</DialogTitle>
+                <DialogDescription>Here is an AI-generated recipe for "{analysis?.mealName}".</DialogDescription>
+            </DialogHeader>
+            {isFindingRecipe && (
+                <div className="py-10 flex items-center justify-center text-muted-foreground">
+                    <Loader className="mr-2 animate-spin" />
+                    <p>Generating recipe...</p>
+                </div>
+            )}
+            {foundRecipe && (
+                 <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-4">
+                    <h3 className="font-bold text-lg text-primary">{foundRecipe.name}</h3>
+                    
+                    <Separator/>
+
+                    <div>
+                        <h4 className="font-semibold mb-2">Ingredients</h4>
+                        <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                            {foundRecipe.ingredients.map(ing => (
+                                <li key={ing.name}>{ing.quantity} {ing.name}</li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold mb-2">Instructions</h4>
+                        <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
+                            {foundRecipe.instructions}
+                        </div>
+                    </div>
+                </div>
+            )}
+             <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRecipeModalOpen(false)}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
     

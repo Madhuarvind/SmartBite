@@ -21,3 +21,4 @@ import '@/ai/flows/analyze-health-habits.ts';
 import '@/ai/flows/predictive-suggestions.ts';
 import '@/ai/flows/predict-facial-mood.ts';
 import '@/ai/flows/analyze-user-spending.ts';
+import '@/ai/flows/find-recipe-from-meal.ts';

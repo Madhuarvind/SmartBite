@@ -316,7 +316,7 @@ export default function PlateScannerPage() {
                         {isLogging ? <Loader className="animate-spin mr-2"/> : <CheckCircle className="mr-2" />} Log This Meal
                     </Button>
                     <Button onClick={handleFindRecipe} variant="secondary" disabled={isFindingRecipe}>
-                        <ChefHat className="mr-2" /> Find Recipe For This
+                        {isFindingRecipe ? <Loader className="animate-spin mr-2"/> : <ChefHat className="mr-2" />} Find Recipe For This
                     </Button>
                 </CardFooter>
             )}

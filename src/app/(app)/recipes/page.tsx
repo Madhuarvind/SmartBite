@@ -147,13 +147,21 @@ export default function RecipesPage() {
         toast({ variant: "destructive", title: "Please tell us how you feel."});
         return;
     }
+     if (availableIngredients.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Ingredients Available",
+        description: "Please add items to your inventory first.",
+      });
+      return;
+    }
     setIsSuggestingByMood(true);
     setRecommendedRecipes([]);
     try {
-        const result = await suggestRecipesByMood({ mood });
+        const result = await suggestRecipesByMood({ mood, availableIngredients });
         setRecommendedRecipes(result.recipes);
         if (result.recipes.length === 0) {
-            toast({ title: "No suggestions found", description: "The AI couldn't find recipes for that mood. Try being more descriptive!" });
+            toast({ title: "No suggestions found", description: "The AI couldn't find recipes for that mood with your ingredients. Try adding more items to your pantry!" });
         }
     } catch(e) {
         console.error("Error suggesting recipes by mood:", e);
@@ -326,7 +334,7 @@ export default function RecipesPage() {
             <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
                 <CardHeader>
                     <CardTitle className="flex items-center"><Heart className="mr-2"/> Feeling Inspired?</CardTitle>
-                    <CardDescription>Get recipe suggestions based on your current mood or craving.</CardDescription>
+                    <CardDescription>Get recipe suggestions based on your current mood or craving, using only ingredients you have.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Label htmlFor="mood-input">How are you feeling today?</Label>

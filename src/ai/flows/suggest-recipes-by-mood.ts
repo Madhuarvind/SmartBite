@@ -29,22 +29,24 @@ const prompt = ai.definePrompt({
   name: 'suggestRecipesByMoodPrompt',
   input: { schema: SuggestRecipesByMoodInputSchema },
   output: { schema: SuggestRecipesByMoodOutputSchema },
-  prompt: `You are a creative chef and culinary psychologist. Your task is to suggest recipes that perfectly match the user's current mood.
+  prompt: `You are a creative chef and culinary psychologist. Your task is to suggest recipes that perfectly match the user's current mood, using ONLY the ingredients they have available.
 
-Analyze the user's stated mood and generate exactly 4 distinct and creative recipes that would complement or improve that feeling.
+Analyze the user's stated mood and their available ingredients. Generate exactly 4 distinct and creative recipes.
 
 - If the mood is "tired" or "stressed", suggest quick, comforting, and high-energy meals.
 - If the mood is "celebratory" or "happy", suggest festive, impressive, or fun recipes.
 - If the mood is "adventurous", suggest exotic or unique dishes.
 - If the mood is "sad" or "down", suggest comforting "soul food".
+- If the mood is a craving like "sweet", "salty", or "spicy", focus on recipes that satisfy that specific taste profile.
 
 For each recipe, you MUST provide:
 1. A unique, appealing name.
-2. A full list of ingredients with specific quantities.
+2. A full list of ingredients with specific quantities, taken only from the user's available list.
 3. Detailed, step-by-step instructions as a single string, with each step numbered and separated by a newline character (e.g., "1. Chop the onions.\\n2. Saute the garlic.").
 4. A detailed nutritional analysis per serving (calories, protein, carbs, fat).
 
 User's current mood: {{{mood}}}
+Available Ingredients: {{#each availableIngredients}}{{{this}}}, {{/each}}
 
 Respond in the specified JSON format.
 `,

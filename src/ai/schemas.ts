@@ -1,4 +1,3 @@
-
 // src/ai/schemas.ts
 /**
  * @fileOverview This file contains all the Zod schemas and TypeScript types for the AI flows.
@@ -240,6 +239,7 @@ export type TransformRecipeOutput = z.infer<typeof TransformRecipeOutputSchema>;
 // Schemas for suggest-recipes-by-mood.ts
 export const SuggestRecipesByMoodInputSchema = z.object({
   mood: z.string().describe("The user's current mood or feeling (e.g., 'tired', 'celebratory', 'stressed')."),
+  availableIngredients: z.array(z.string()).describe("A list of ingredients the user has on hand."),
 });
 export type SuggestRecipesByMoodInput = z.infer<typeof SuggestRecipesByMoodInputSchema>;
 

@@ -299,3 +299,16 @@ export const IdentifyAndCheckItemOutputSchema = z.object({
   response: z.string().describe('The AI\'s helpful response to the user\'s query.'),
 });
 export type IdentifyAndCheckItemOutput = z.infer<typeof IdentifyAndCheckItemOutputSchema>;
+
+
+// Schemas for ask-pantry-assistant.ts
+export const AskPantryAssistantInputSchema = z.object({
+  query: z.string().describe('The user\'s question about their pantry.'),
+  userId: z.string().describe('The unique ID of the user asking the question.'),
+});
+export type AskPantryAssistantInput = z.infer<typeof AskPantryAssistantInputSchema>;
+
+export const AskPantryAssistantOutputSchema = z.object({
+  answer: z.string().describe('The AI\'s helpful response to the user\'s query.'),
+});
+export type AskPantryAssistantOutput = z.infer<typeof AskPantryAssistantOutputSchema>;

@@ -16,3 +16,4 @@ import '@/ai/flows/suggest-recipes-by-mood.ts';
 import '@/ai/flows/scan-receipt.ts';
 import '@/ai/flows/analyze-waste-patterns.ts';
 import '@/ai/flows/identify-and-check-item.ts';
+import '@/ai/flows/ask-pantry-assistant.ts';

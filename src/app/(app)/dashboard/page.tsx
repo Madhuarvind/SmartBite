@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ArrowRight, ScanLine, Lightbulb, Loader } from "lucide-react";
+import { ArrowRight, ScanLine, Lightbulb } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -39,14 +39,16 @@ const getExpiringItems = () => {
     }));
 };
 
+// This function now simulates more realistic weekly data.
+// In a real app, this data would come from a database.
 const generateChartData = () => [
-  { day: "Mon", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
-  { day: "Tue", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
-  { day: "Wed", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
-  { day: "Thu", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
-  { day: "Fri", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
-  { day: "Sat", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
-  { day: "Sun", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+  { day: "Mon", meals: Math.floor(Math.random() * 3) + 1, waste: Math.floor(Math.random() * 2) },
+  { day: "Tue", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 2) },
+  { day: "Wed", meals: Math.floor(Math.random() * 5), waste: Math.floor(Math.random() * 1) },
+  { day: "Thu", meals: Math.floor(Math.random() * 3), waste: Math.floor(Math.random() * 3) },
+  { day: "Fri", meals: Math.floor(Math.random() * 6), waste: Math.floor(Math.random() * 1) },
+  { day: "Sat", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 2) },
+  { day: "Sun", meals: Math.floor(Math.random() * 2), waste: Math.floor(Math.random() * 1) },
 ];
 
 
@@ -62,7 +64,8 @@ export default function DashboardPage() {
       setIsLoading(false);
     });
 
-    // Generate chart data on the client-side to ensure it's dynamic
+    // Generate chart data on the client-side to avoid hydration errors
+    // and ensure it looks different on each visit.
     setChartData(generateChartData());
     
     // Refresh expiring items on component mount
@@ -86,7 +89,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Weekly Summary</CardTitle>
-            <CardDescription>Your cooking and waste habits from the last week.</CardDescription>
+            <CardDescription>A summary of your cooking and food waste habits for the past week. This is currently simulated data.</CardDescription>
           </CardHeader>
           <CardContent>
             {chartData.length > 0 ? (

@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ArrowRight, ScanLine, Lightbulb } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
+import { ArrowRight, ScanLine, Lightbulb, TrendingUp } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -20,16 +20,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { InventoryItem } from "@/lib/types";
 
 
-const chartConfig = {
+const weeklyChartConfig = {
   meals: { label: "Meals Cooked", color: "hsl(var(--primary))" },
   waste: { label: "Items Wasted", color: "hsl(var(--destructive))" },
+} satisfies ChartConfig;
+
+const spendingChartConfig = {
+  spending: { label: "Spending", color: "hsl(var(--chart-2))" },
 } satisfies ChartConfig;
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expiringItems, setExpiringItems] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [weeklyChartData, setWeeklyChartData] = useState<any[]>([]);
+  const [spendingChartData, setSpendingChartData] = useState<any[]>([]);
+  const [weeklyTotal, setWeeklyTotal] = useState(0);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
@@ -41,9 +47,9 @@ export default function DashboardPage() {
         const inventoryRef = collection(db, "users", currentUser.uid, "inventory");
         const unsubscribeInventory = onSnapshot(inventoryRef, (snapshot) => {
           const today = new Date();
-          const items = snapshot.docs.map(doc => doc.data() as InventoryItem)
+          const items = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as InventoryItem))
             .map(item => {
-              if (!item.expiry) return { ...item, daysLeft: Infinity };
+              if (!item.expiry || item.expiry === 'N/A') return { ...item, daysLeft: Infinity };
               const expiryDate = parseISO(item.expiry);
               const daysLeft = differenceInDays(expiryDate, today);
               return { ...item, daysLeft };
@@ -55,6 +61,9 @@ export default function DashboardPage() {
               status: item.daysLeft <= 2 ? "Urgent" as const : "Soon" as const,
             }));
           setExpiringItems(items);
+          
+          // Fetch spending data when inventory changes
+          fetchSpendingData(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as InventoryItem));
         });
 
         setIsLoading(false);
@@ -98,8 +107,30 @@ export default function DashboardPage() {
               waste
           });
       }
-      setChartData(weeklyData);
+      setWeeklyChartData(weeklyData);
   }
+
+  const fetchSpendingData = (inventoryItems: InventoryItem[]) => {
+      const today = new Date();
+      const spendingData: { day: string; spending: number }[] = [];
+      let total = 0;
+      
+      for (let i = 6; i >= 0; i--) {
+          const day = subDays(today, i);
+          const dayString = format(day, "yyyy-MM-dd");
+          
+          const dailySpending = inventoryItems
+              .filter(item => item.purchaseDate === dayString && item.price)
+              .reduce((sum, item) => sum + (item.price || 0), 0);
+          
+          total += dailySpending;
+          spendingData.push({ day: format(day, "E"), spending: dailySpending });
+      }
+      
+      setSpendingChartData(spendingData);
+      setWeeklyTotal(total);
+  }
+
 
   const displayName = user?.displayName?.split(' ')[0] || user?.email || "User";
 
@@ -118,9 +149,9 @@ export default function DashboardPage() {
             <CardDescription>A summary of your cooking and food waste habits for the past week, based on your activity.</CardDescription>
           </CardHeader>
           <CardContent>
-            {chartData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                <BarChart accessibilityLayer data={chartData}>
+            {weeklyChartData.length > 0 ? (
+                <ChartContainer config={weeklyChartConfig} className="min-h-[200px] w-full">
+                <BarChart accessibilityLayer data={weeklyChartData}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
                     <YAxis />
@@ -179,21 +210,30 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="flex flex-col justify-between animate-fade-in-slide-up" style={{animationDelay: '0.3s'}}>
+         <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.3s'}}>
           <CardHeader>
-            <ScanLine className="w-12 h-12 text-primary mb-4" />
-            <CardTitle>Scan Your Fridge</CardTitle>
+            <CardTitle className="flex items-center"><TrendingUp className="mr-2" /> Weekly Spending</CardTitle>
+            <CardDescription>Here's a look at your grocery spending over the last 7 days.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Quickly add ingredients by taking a picture of your fridge or pantry.</p>
+            <div className="text-2xl font-bold text-primary">${weeklyTotal.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Total for the last 7 days</p>
+            <div className="h-[120px] mt-4">
+              <ChartContainer config={spendingChartConfig} className="h-full w-full">
+                <LineChart accessibilityLayer data={spendingChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
+                     <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent indicator="line" />}
+                    />
+                    <Line dataKey="spending" type="monotone" stroke="var(--color-spending)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            </div>
           </CardContent>
-          <CardFooter>
-            <Button asChild>
-              <Link href="/inventory">Start Scanning <ArrowRight className="ml-2" /></Link>
-            </Button>
-          </CardFooter>
         </Card>
-        
+
         <Card className="flex flex-col justify-between animate-fade-in-slide-up" style={{animationDelay: '0.4s'}}>
           <CardHeader>
             <Lightbulb className="w-12 h-12 text-primary mb-4" />

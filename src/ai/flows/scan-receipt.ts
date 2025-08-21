@@ -26,11 +26,12 @@ const prompt = ai.definePrompt({
   output: { schema: ScanReceiptOutputSchema },
   prompt: `You are an expert OCR and data extraction AI. Analyze the provided image of a grocery store receipt.
 
-Your task is to extract all the food items listed on the receipt. For each item, you must identify its name and the quantity purchased.
+Your task is to extract all the food items listed on the receipt. For each item, you must identify its name, the quantity purchased, and the price.
 
 - Ignore non-food items, taxes, totals, store information, and other metadata.
 - If a quantity is not explicitly mentioned, assume it is "1".
 - Standardize item names (e.g., "LG ORG MILK" should become "Organic Milk").
+- Extract the price for each item as a number, removing any currency symbols.
 
 Return the result as a JSON object containing an array of the extracted items.
 

@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { scanReceipt } from "@/ai/flows/scan-receipt";
 import type { ScannedItem } from "@/ai/schemas";
 import { auth, db } from "@/lib/firebase";
-import { collection, writeBatch, doc } from "firebase/firestore";
+import { collection, writeBatch, doc, Timestamp } from "firebase/firestore";
 import type { User } from 'firebase/auth';
 import { cn } from "@/lib/utils";
 
@@ -118,12 +118,18 @@ export default function BillScannerPage() {
     try {
         const batch = writeBatch(db);
         const inventoryRef = collection(db, "users", user.uid, "inventory");
+        const today = new Date().toISOString().split('T')[0];
         
         scannedItems.forEach(item => {
             const docRef = doc(inventoryRef);
-            // For now, new items don't have an expiry date set automatically.
-            // This could be a future enhancement with the predictExpiryDate flow.
-            batch.set(docRef, { name: item.name, quantity: item.quantity, expiry: 'N/A' });
+            // This is where we now include price data
+            batch.set(docRef, { 
+                name: item.name, 
+                quantity: item.quantity, 
+                expiry: 'N/A', // Expiry prediction could be a future enhancement
+                price: item.price || 0,
+                purchaseDate: today,
+            });
         });
 
         await batch.commit();
@@ -153,7 +159,7 @@ export default function BillScannerPage() {
         <Card className="animate-fade-in-slide-up">
           <CardHeader>
             <CardTitle>Scan Your Grocery Receipt</CardTitle>
-            <CardDescription>Upload a picture of your shopping receipt to automatically update your pantry.</CardDescription>
+            <CardDescription>Upload a picture of your shopping receipt to automatically update your pantry and track your spending.</CardDescription>
           </CardHeader>
           <CardContent>
             <div 
@@ -203,14 +209,16 @@ export default function BillScannerPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Item Name</TableHead>
-                                <TableHead className="text-right">Quantity</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead className="text-right">Price</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {scannedItems.map((item, index) => (
                                 <TableRow key={`${item.name}-${index}`}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell className="text-right">{item.price ? `$${item.price.toFixed(2)}` : 'N/A'}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -234,5 +242,3 @@ export default function BillScannerPage() {
     </div>
   );
 }
-
-    

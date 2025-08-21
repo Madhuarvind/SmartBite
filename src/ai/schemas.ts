@@ -259,6 +259,7 @@ export type ScanReceiptInput = z.infer<typeof ScanReceiptInputSchema>;
 export const ScannedItemSchema = z.object({
     name: z.string().describe('The name of the grocery item.'),
     quantity: z.string().describe('The quantity of the item (e.g., "1", "500g", "2 lbs").'),
+    price: z.number().optional().describe('The price of the item as a number.'),
 });
 export type ScannedItem = z.infer<typeof ScannedItemSchema>;
 

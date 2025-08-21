@@ -13,6 +13,7 @@ export type InventoryItem = {
   quantity: string;
   expiry: string;
   purchaseDate?: string;
+  price?: number;
 }
 
 export type PantryItem = {

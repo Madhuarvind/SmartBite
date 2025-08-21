@@ -245,3 +245,24 @@ export type SuggestRecipesByMoodInput = z.infer<typeof SuggestRecipesByMoodInput
 
 export const SuggestRecipesByMoodOutputSchema = RecipeOutputSchema;
 export type SuggestRecipesByMoodOutput = z.infer<typeof SuggestRecipesByMoodOutputSchema>;
+
+// Schemas for scan-receipt.ts
+export const ScanReceiptInputSchema = z.object({
+  receiptDataUri: z
+    .string()
+    .describe(
+      "A photo of a grocery receipt, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+});
+export type ScanReceiptInput = z.infer<typeof ScanReceiptInputSchema>;
+
+export const ScannedItemSchema = z.object({
+    name: z.string().describe('The name of the grocery item.'),
+    quantity: z.string().describe('The quantity of the item (e.g., "1", "500g", "2 lbs").'),
+});
+export type ScannedItem = z.infer<typeof ScannedItemSchema>;
+
+export const ScanReceiptOutputSchema = z.object({
+  items: z.array(ScannedItemSchema).describe('A list of items identified on the receipt.'),
+});
+export type ScanReceiptOutput = z.infer<typeof ScanReceiptOutputSchema>;

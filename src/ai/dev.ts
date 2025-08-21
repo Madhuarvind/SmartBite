@@ -13,3 +13,4 @@ import '@/ai/flows/generate-recipe-step-image.ts';
 import '@/ai/flows/predict-expiry-date.ts';
 import '@/ai/flows/analyze-plate.ts';
 import '@/ai/flows/suggest-recipes-by-mood.ts';
+import '@/ai/flows/scan-receipt.ts';

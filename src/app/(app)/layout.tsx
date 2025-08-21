@@ -13,6 +13,7 @@ import {
   PanelLeft,
   Utensils,
   LogOut,
+  ReceiptText,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -32,6 +33,7 @@ import {
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/inventory", label: "Inventory", icon: Refrigerator },
+  { href: "/bill-scanner", label: "Bill Scanner", icon: ReceiptText },
   { href: "/plate-scanner", label: "Plate Scanner", icon: Utensils },
   { href: "/recipes", label: "Recipes", icon: ChefHat },
   { href: "/planner", label: "Meal Planner", icon: Calendar },

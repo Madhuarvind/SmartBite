@@ -20,10 +20,13 @@ import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, up
 import { Loader } from "lucide-react";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  // Email state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -57,7 +60,15 @@ export default function RegisterPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: `${firstName} ${lastName}`.trim() });
-      await sendEmailVerification(userCredential.user);
+      
+      // Define actionCodeSettings to redirect user after verification
+      const actionCodeSettings = {
+        // URL must be whitelisted in the Firebase Console.
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: true,
+      };
+
+      await sendEmailVerification(userCredential.user, actionCodeSettings);
 
       await populateInitialData(userCredential.user.uid);
       
@@ -107,39 +118,46 @@ export default function RegisterPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-            <form onSubmit={handleRegister} className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                    <Label htmlFor="first-name-email">First name</Label>
-                    <Input id="first-name-email" placeholder="Max" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+          <Tabs defaultValue="email">
+              <TabsList className="grid w-full grid-cols-1">
+                <TabsTrigger value="email">Email & Password</TabsTrigger>
+              </TabsList>
+              <TabsContent value="email" className="pt-4">
+                <form onSubmit={handleRegister} className="grid gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                        <Label htmlFor="first-name-email">First name</Label>
+                        <Input id="first-name-email" placeholder="Max" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                        </div>
+                        <div className="grid gap-2">
+                        <Label htmlFor="last-name-email">Last name</Label>
+                        <Input id="last-name-email" placeholder="Robinson" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                        </div>
                     </div>
                     <div className="grid gap-2">
-                    <Label htmlFor="last-name-email">Last name</Label>
-                    <Input id="last-name-email" placeholder="Robinson" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                        id="email"
+                        type="email"
+                        placeholder="m@example.com"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading || isGoogleLoading}
+                        suppressHydrationWarning
+                        />
                     </div>
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading || isGoogleLoading}
-                    suppressHydrationWarning
-                    />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                    {isLoading ? <Loader className="mr-2 animate-spin" /> : null}
-                    Create an account
-                </Button>
-            </form>
+                    <div className="grid gap-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+                        {isLoading ? <Loader className="mr-2 animate-spin" /> : null}
+                        Create an account
+                    </Button>
+                </form>
+              </TabsContent>
+          </Tabs>
 
         <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">

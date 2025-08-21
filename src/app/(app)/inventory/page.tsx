@@ -19,6 +19,9 @@ import Image from "next/image";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { auth, db } from "@/lib/firebase";
+import { collection, addDoc, Timestamp, doc, deleteDoc, setDoc } from "firebase/firestore";
+import { parseISO, isPast } from "date-fns";
 
 
 export default function InventoryPage() {
@@ -173,6 +176,35 @@ export default function InventoryPage() {
         description: `${newItem.name} has been added to your inventory.`,
       });
   };
+
+  const handleDeleteItem = async (itemId: string, itemName: string, expiry: string) => {
+    const user = auth.currentUser;
+    if (!user) {
+        toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to delete items."});
+        return;
+    }
+    
+    // Log wasted item if expired
+    if (expiry !== 'N/A' && isPast(parseISO(expiry))) {
+        try {
+            await addDoc(collection(db, "users", user.uid, "activity"), {
+                type: 'itemWasted',
+                itemName: itemName,
+                timestamp: Timestamp.now()
+            });
+            toast({ title: "Wasted item logged" });
+        } catch (error) {
+            console.error("Error logging wasted item:", error);
+        }
+    }
+
+    // Remove from local state
+    setInventory(prev => prev.filter(item => item.id !== itemId));
+    
+    // Here you would also delete from Firestore if inventory was stored there
+    toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
+  };
+
 
   const handleShowAddDialogFromScan = (ingredient: DetectedIngredient) => {
     setNewItemName(ingredient.name);
@@ -395,7 +427,9 @@ export default function InventoryPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteItem(item.id, item.name, item.expiry)}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                         </TableCell>
@@ -444,5 +478,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
-    

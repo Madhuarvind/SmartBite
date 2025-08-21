@@ -1,6 +1,7 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   projectId: "smartbite-rknzs",
@@ -21,5 +22,6 @@ if (!getApps().length) {
 }
 
 const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
 
-export { app, auth };
+export { app, auth, db };

@@ -13,9 +13,10 @@ import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { initialInventory } from "@/lib/inventory";
-import { differenceInDays, parseISO } from "date-fns";
-import { auth } from "@/lib/firebase";
+import { differenceInDays, parseISO, format, subDays, startOfDay, endOfDay } from "date-fns";
+import { auth, db } from "@/lib/firebase";
 import type { User } from "firebase/auth";
+import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const chartConfig = {
@@ -39,19 +40,6 @@ const getExpiringItems = () => {
     }));
 };
 
-// This function now simulates more realistic weekly data.
-// In a real app, this data would come from a database.
-const generateChartData = () => [
-  { day: "Mon", meals: Math.floor(Math.random() * 3) + 1, waste: Math.floor(Math.random() * 2) },
-  { day: "Tue", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 2) },
-  { day: "Wed", meals: Math.floor(Math.random() * 5), waste: Math.floor(Math.random() * 1) },
-  { day: "Thu", meals: Math.floor(Math.random() * 3), waste: Math.floor(Math.random() * 3) },
-  { day: "Fri", meals: Math.floor(Math.random() * 6), waste: Math.floor(Math.random() * 1) },
-  { day: "Sat", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 2) },
-  { day: "Sun", meals: Math.floor(Math.random() * 2), waste: Math.floor(Math.random() * 1) },
-];
-
-
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,18 +50,49 @@ export default function DashboardPage() {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       setIsLoading(false);
+      if (currentUser) {
+        fetchWeeklyData(currentUser.uid);
+      }
     });
 
-    // Generate chart data on the client-side to avoid hydration errors
-    // and ensure it looks different on each visit.
-    setChartData(generateChartData());
-    
-    // Refresh expiring items on component mount
     setExpiringItems(getExpiringItems());
 
-    // Clean up subscription on unmount
     return () => unsubscribe();
   }, []);
+  
+  const fetchWeeklyData = async (userId: string) => {
+      const today = new Date();
+      const weeklyData: { day: string, meals: number, waste: number }[] = [];
+      const activityRef = collection(db, "users", userId, "activity");
+
+      for (let i = 6; i >= 0; i--) {
+          const day = subDays(today, i);
+          const dayStart = startOfDay(day);
+          const dayEnd = endOfDay(day);
+
+          const q = query(activityRef, where('timestamp', '>=', Timestamp.fromDate(dayStart)), where('timestamp', '<=', Timestamp.fromDate(dayEnd)));
+          const querySnapshot = await getDocs(q);
+          
+          let meals = 0;
+          let waste = 0;
+
+          querySnapshot.forEach(doc => {
+              const data = doc.data();
+              if (data.type === 'mealCooked') {
+                  meals++;
+              } else if (data.type === 'itemWasted') {
+                  waste++;
+              }
+          });
+
+          weeklyData.push({
+              day: format(day, "E"), // e.g., "Mon", "Tue"
+              meals,
+              waste
+          });
+      }
+      setChartData(weeklyData);
+  }
 
   const displayName = user?.displayName?.split(' ')[0] || user?.email || "User";
 
@@ -89,7 +108,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Weekly Summary</CardTitle>
-            <CardDescription>A summary of your cooking and food waste habits for the past week. This is currently simulated data.</CardDescription>
+            <CardDescription>A summary of your cooking and food waste habits for the past week, based on your activity.</CardDescription>
           </CardHeader>
           <CardContent>
             {chartData.length > 0 ? (
@@ -104,7 +123,9 @@ export default function DashboardPage() {
                 </BarChart>
                 </ChartContainer>
             ) : (
-                <Skeleton className="h-[200px] w-full" />
+                <div className="flex justify-center items-center h-[200px] text-muted-foreground">
+                    <p>No activity recorded yet. Cook some meals or manage your inventory to see your progress!</p>
+                </div>
             )}
           </CardContent>
         </Card>

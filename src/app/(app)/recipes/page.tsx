@@ -25,6 +25,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
 import { Textarea } from "@/components/ui/textarea";
+import { auth, db } from "@/lib/firebase";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
 
 const availableIngredients = Array.from(new Set([...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)]));
 const userInventory = [...initialInventory, ...pantryEssentials];
@@ -191,6 +193,28 @@ export default function RecipesPage() {
       setIsTransforming(false);
     }
   }
+  
+  const handleCookedThis = async (recipeName: string) => {
+    const user = auth.currentUser;
+    if (!user) {
+        toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to track activity."});
+        return;
+    }
+    try {
+        await addDoc(collection(db, "users", user.uid, "activity"), {
+            type: 'mealCooked',
+            recipeName: recipeName,
+            timestamp: Timestamp.now()
+        });
+        toast({
+            title: "Activity Logged!",
+            description: `Great job cooking ${recipeName}! Check your dashboard to see your progress.`
+        });
+    } catch (error) {
+        console.error("Error logging activity:", error);
+        toast({ variant: "destructive", title: "Logging Failed", description: "Could not save your cooking activity." });
+    }
+  };
 
   const handleInventoryCheck = () => {
       if (!currentRecipe) return;
@@ -455,6 +479,16 @@ export default function RecipesPage() {
 
                     </div>
                     <div className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Log Your Progress</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Button className="w-full" onClick={() => handleCookedThis(currentRecipe.name)}>
+                                    <ChefHat className="mr-2"/> I Cooked This!
+                                </Button>
+                            </CardContent>
+                        </Card>
                         <Card className="bg-secondary/50">
                             <CardHeader>
                                 <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Nutritional Info</CardTitle>

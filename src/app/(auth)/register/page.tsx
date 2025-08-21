@@ -30,6 +30,7 @@ export default function RegisterPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
 
@@ -100,11 +101,11 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
         const appVerifier = window.recaptchaVerifier;
-        const formattedPhoneNumber = `+1${phone.replace(/\D/g, '')}`; // Prepend country code and strip non-digits
+        const formattedPhoneNumber = `+${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
         const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
         setConfirmationResult(result);
         setIsOtpSent(true);
-        toast({ title: "OTP Sent", description: "Please enter the verification code sent to your phone." });
+        toast({ title: "OTP Sent", description: `Please enter the verification code sent to ${formattedPhoneNumber}.` });
     } catch (error: any) {
         console.error("Phone sign up failed:", error);
         toast({ variant: "destructive", title: "Failed to Send OTP", description: error.message });
@@ -218,16 +219,30 @@ export default function RegisterPage() {
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="phone">Phone Number</Label>
-                        <Input
-                            id="phone"
-                            type="tel"
-                            placeholder="1234567890"
-                            required
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            disabled={isLoading || isGoogleLoading}
-                            suppressHydrationWarning
-                        />
+                        <div className="flex items-center gap-2">
+                             <Input
+                                id="country-code"
+                                type="text"
+                                placeholder="+91"
+                                required
+                                value={countryCode}
+                                onChange={(e) => setCountryCode(e.target.value)}
+                                className="w-16"
+                                disabled={isLoading || isGoogleLoading}
+                                suppressHydrationWarning
+                            />
+                            <Input
+                                id="phone"
+                                type="tel"
+                                placeholder="1234567890"
+                                required
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="flex-1"
+                                disabled={isLoading || isGoogleLoading}
+                                suppressHydrationWarning
+                            />
+                        </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                         {isLoading ? <Loader className="mr-2 animate-spin" /> : null}

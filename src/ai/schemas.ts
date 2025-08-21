@@ -370,3 +370,18 @@ export type PredictiveSuggestionsInput = z.infer<typeof PredictiveSuggestionsInp
 
 export const PredictiveSuggestionsOutputSchema = RecipeOutputSchema;
 export type PredictiveSuggestionsOutput = z.infer<typeof PredictiveSuggestionsOutputSchema>;
+
+// Schemas for predict-facial-mood.ts
+export const PredictFacialMoodInputSchema = z.object({
+  photoDataUri: z
+    .string()
+    .describe(
+      "A photo of a person's face, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+});
+export type PredictFacialMoodInput = z.infer<typeof PredictFacialMoodInputSchema>;
+
+export const PredictFacialMoodOutputSchema = z.object({
+  mood: z.string().describe('The predicted mood from the facial expression (e.g., "Happy", "Sad", "Stressed").'),
+});
+export type PredictFacialMoodOutput = z.infer<typeof PredictFacialMoodOutputSchema>;

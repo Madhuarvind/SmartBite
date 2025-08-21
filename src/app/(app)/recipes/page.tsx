@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit } from "lucide-react";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
 import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient, SubstitutionSuggestion } from "@/ai/schemas";
@@ -25,6 +25,7 @@ import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
 import { predictiveSuggestions } from "@/ai/flows/predictive-suggestions";
+import { predictFacialMood } from "@/ai/flows/predict-facial-mood";
 import { Textarea } from "@/components/ui/textarea";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp, onSnapshot, query, orderBy, getDocs } from "firebase/firestore";
@@ -61,8 +62,14 @@ export default function RecipesPage() {
   const [servings, setServings] = useState(2);
   const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
+  
+  // Mood-based states
   const [mood, setMood] = useState("");
   const [isSuggestingByMood, setIsSuggestingByMood] = useState(false);
+  const [isScanningMood, setIsScanningMood] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const moodVideoRef = useRef<HTMLVideoElement>(null);
+  
   const [isPredicting, setIsPredicting] = useState(false);
 
   useEffect(() => {
@@ -97,6 +104,24 @@ export default function RecipesPage() {
       }
     });
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const getCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({video: true});
+        setHasCameraPermission(true);
+
+        if (moodVideoRef.current) {
+          moodVideoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+      }
+    };
+
+    getCameraPermission();
   }, []);
 
   const handleGenerateRecipes = async () => {
@@ -167,6 +192,31 @@ export default function RecipesPage() {
     }
   };
   
+  const handleScanMood = async () => {
+    if (!moodVideoRef.current) return;
+    setIsScanningMood(true);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = moodVideoRef.current.videoWidth;
+    canvas.height = moodVideoRef.current.videoHeight;
+    const context = canvas.getContext('2d');
+    if(context) {
+        context.drawImage(moodVideoRef.current, 0, 0, canvas.width, canvas.height);
+        const photoDataUri = canvas.toDataURL('image/jpeg');
+        try {
+            const result = await predictFacialMood({ photoDataUri });
+            setMood(result.mood);
+            toast({ title: "Mood Detected!", description: `The AI thinks you're feeling: ${result.mood}`});
+        } catch (error) {
+            console.error("Error predicting facial mood:", error);
+            toast({ variant: "destructive", title: "Mood Scan Failed", description: "Could not analyze the image."});
+        }
+    } else {
+        toast({ variant: "destructive", title: "Scan Error", description: "Could not capture an image from the video stream."});
+    }
+    setIsScanningMood(false);
+  };
+
   const handlePredictiveSuggestions = async () => {
       if (!user) return;
       setIsPredicting(true);
@@ -378,20 +428,43 @@ export default function RecipesPage() {
             <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
                 <CardHeader>
                     <CardTitle className="flex items-center"><Heart className="mr-2"/> Feeling Inspired?</CardTitle>
-                    <CardDescription>Get recipe suggestions based on your current mood or craving, using only ingredients you have.</CardDescription>
+                    <CardDescription>Use your camera to scan your mood, or just type how you feel to get recipe ideas.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Label htmlFor="mood-input">How are you feeling today?</Label>
-                    <Textarea 
-                        id="mood-input"
-                        placeholder="e.g., 'I'm feeling stressed and need something comforting' or 'I want to cook something adventurous!'"
-                        value={mood}
-                        onChange={(e) => setMood(e.target.value)}
-                        className="mt-2"
-                    />
+                <CardContent className="space-y-4">
+                    <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden">
+                      <video ref={moodVideoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                       {hasCameraPermission === false && (
+                         <Alert variant="destructive" className="absolute m-4">
+                           <AlertTitle>Camera Access Required</AlertTitle>
+                           <AlertDescription>
+                             To use the facial mood scanner, please allow camera access. You can still type your mood.
+                           </AlertDescription>
+                         </Alert>
+                      )}
+                    </div>
+                    <Button onClick={handleScanMood} disabled={isScanningMood || hasCameraPermission === false} className="w-full">
+                      {isScanningMood ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2"/> Scan My Mood</>}
+                    </Button>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">Or type it</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="mood-input" className="sr-only">How are you feeling today?</Label>
+                      <Textarea 
+                          id="mood-input"
+                          placeholder="e.g., 'I'm feeling stressed and need something comforting' or 'I want to cook something adventurous!'"
+                          value={mood}
+                          onChange={(e) => setMood(e.target.value)}
+                      />
+                    </div>
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={handleSuggestByMood} disabled={isSuggestingByMood || availableIngredients.length === 0}>
+                    <Button onClick={handleSuggestByMood} disabled={isSuggestingByMood || availableIngredients.length === 0 || !mood}>
                         {isSuggestingByMood ? <><Loader className="mr-2 animate-spin" /> Suggesting...</> : <>Suggest Recipes</>}
                     </Button>
                 </CardFooter>

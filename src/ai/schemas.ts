@@ -266,3 +266,19 @@ export const ScanReceiptOutputSchema = z.object({
   items: z.array(ScannedItemSchema).describe('A list of items identified on the receipt.'),
 });
 export type ScanReceiptOutput = z.infer<typeof ScanReceiptOutputSchema>;
+
+// Schemas for analyze-waste-patterns.ts
+const WastedItemSchema = z.object({
+  itemName: z.string().describe("The name of the wasted item."),
+});
+export const AnalyzeWastePatternsInputSchema = z.object({
+  wasteHistory: z.array(WastedItemSchema).describe('A list of items the user has marked as wasted.'),
+});
+export type AnalyzeWastePatternsInput = z.infer<typeof AnalyzeWastePatternsInputSchema>;
+
+export const AnalyzeWastePatternsOutputSchema = z.object({
+    mostWastedItem: z.string().describe('The single item that is most frequently wasted.'),
+    keyInsight: z.string().describe('A concise, one-sentence insight into the user\'s waste patterns.'),
+    suggestions: z.array(z.string()).describe('Three actionable suggestions to help the user reduce waste.'),
+});
+export type AnalyzeWastePatternsOutput = z.infer<typeof AnalyzeWastePatternsOutputSchema>;

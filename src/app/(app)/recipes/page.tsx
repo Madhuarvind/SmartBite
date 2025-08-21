@@ -667,14 +667,14 @@ export default function RecipesPage() {
                         </Card>
                          <Card className="bg-secondary/50">
                             <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Wand2 className="w-5 h-5 mr-2 text-primary"/> Transform Recipe</CardTitle>
-                                <CardDescription>Give this recipe a creative twist with AI.</CardDescription>
+                                <CardTitle className="flex items-center text-lg"><Wand2 className="w-5 h-5 mr-2 text-primary"/> AI Taste Predictor</CardTitle>
+                                <CardDescription>Transform this recipe to better match your personal taste.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Input 
+                                <Textarea 
                                   id="transform-request"
                                   className="mt-2"
-                                  placeholder="e.g., 'make it vegan'"
+                                  placeholder="e.g., 'This seems bland, can you make it spicier?' or 'How can I make this vegetarian and lower in fat?'"
                                   value={transformationRequest}
                                   onChange={(e) => setTransformationRequest(e.target.value)}
                                 />

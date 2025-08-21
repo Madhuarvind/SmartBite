@@ -29,9 +29,15 @@ const prompt = ai.definePrompt({
   name: 'transformRecipePrompt',
   input: { schema: TransformRecipeInputSchema },
   output: { schema: TransformRecipeOutputSchema },
-  prompt: `You are an expert chef and recipe developer. Your task is to transform a given recipe based on a user's specific request.
+  prompt: `You are an expert chef and culinary psychologist. Your task is to act as an "AI Taste Predictor". You will transform a given recipe based on a user's specific taste preferences and requests.
 
-You must modify the recipe's name, ingredients (including their quantities), and instructions to reflect the transformation. You also need to recalculate the nutritional information for the new version based on the new ingredients.
+You must deeply analyze the transformation request and modify the recipe accordingly. This might involve:
+- Changing ingredients (e.g., swapping a mild pepper for a hotter one).
+- Adjusting quantities (e.g., adding more garlic).
+- Adding or changing steps in the instructions.
+- Renaming the recipe to reflect its new character (e.g., "Spicy & Garlicky Chicken" instead of "Simple Roast Chicken").
+
+After transforming, you must recalculate the nutritional information for the new version based on the modified ingredients.
 
 The instructions should be a single string, with each step numbered and separated by a newline character (e.g., "1. Chop the onions.\\n2. Saute the garlic.").
 
@@ -41,7 +47,7 @@ Original Recipe Name: {{{recipe.name}}}
 Original Recipe Ingredients: {{#each recipe.ingredients}}}{{{this.name}}} ({{{this.quantity}}}), {{/each}}
 Original Recipe Instructions: {{{recipe.instructions}}}
 
-Transformation Request: {{{transformation}}}
+Transformation Request / Taste Profile: "{{{transformation}}}"
 
 Generate a new, transformed recipe based on this request.
 `,

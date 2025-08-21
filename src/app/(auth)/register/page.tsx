@@ -41,18 +41,6 @@ export default function RegisterPage() {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [isOtpSent, setIsOtpSent] = useState(false);
 
-  // Add a useEffect to initialize RecaptchaVerifier
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
-    }
-  }, []);
-
   const populateInitialData = async (userId: string) => {
       const batch = writeBatch(db);
       
@@ -100,15 +88,22 @@ export default function RegisterPage() {
     event.preventDefault();
     setIsLoading(true);
     try {
-        const appVerifier = window.recaptchaVerifier;
-        const formattedPhoneNumber = `+${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
-        const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
+        const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            'size': 'invisible',
+            'callback': () => {
+              // reCAPTCHA solved
+            }
+        });
+        
+        const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
+        
+        const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, recaptchaVerifier);
         setConfirmationResult(result);
         setIsOtpSent(true);
         toast({ title: "OTP Sent", description: `Please enter the verification code sent to ${formattedPhoneNumber}.` });
     } catch (error: any) {
         console.error("Phone sign up failed:", error);
-        toast({ variant: "destructive", title: "Failed to Send OTP", description: error.message });
+        toast({ variant: "destructive", title: "Failed to Send OTP", description: "Could not send verification code. Please check the phone number and ensure you've authorized 'localhost' in your Firebase console." });
     } finally {
         setIsLoading(false);
     }
@@ -309,3 +304,5 @@ export default function RegisterPage() {
     </>
   )
 }
+
+    

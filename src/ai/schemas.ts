@@ -313,3 +313,15 @@ export const AskPantryAssistantOutputSchema = z.object({
   answer: z.string().describe('The AI\'s helpful response to the user\'s query.'),
 });
 export type AskPantryAssistantOutput = z.infer<typeof AskPantryAssistantOutputSchema>;
+
+// Schemas for calculate-carbon-footprint.ts
+export const CalculateCarbonFootprintInputSchema = z.object({
+  items: z.array(ScannedItemSchema).describe('A list of items scanned from a grocery receipt.'),
+});
+export type CalculateCarbonFootprintInput = z.infer<typeof CalculateCarbonFootprintInputSchema>;
+
+export const CalculateCarbonFootprintOutputSchema = z.object({
+  totalCarbonFootprint: z.number().describe('The total estimated carbon footprint for the items, in kg CO2e.'),
+  suggestions: z.array(z.string()).describe('An array of three actionable, eco-friendly suggestions.'),
+});
+export type CalculateCarbonFootprintOutput = z.infer<typeof CalculateCarbonFootprintOutputSchema>;

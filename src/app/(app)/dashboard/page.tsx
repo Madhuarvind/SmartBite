@@ -1,18 +1,23 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ArrowRight, ScanLine, Lightbulb } from "lucide-react";
+import { ArrowRight, ScanLine, Lightbulb, Loader } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { initialInventory } from "@/lib/inventory";
 import { differenceInDays, parseISO } from "date-fns";
+import { auth } from "@/lib/firebase";
+import type { User } from "firebase/auth";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 const chartData = [
   { day: "Mon", meals: 2, waste: 0 },
@@ -29,25 +34,50 @@ const chartConfig = {
   waste: { label: "Items Wasted", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig;
 
-const today = new Date();
-const expiringItems = initialInventory
-  .map(item => {
-    const expiryDate = parseISO(item.expiry);
-    const daysLeft = differenceInDays(expiryDate, today);
-    return { ...item, daysLeft };
-  })
-  .filter(item => item.daysLeft >= 0 && item.daysLeft <= 7)
-  .sort((a, b) => a.daysLeft - b.daysLeft)
-  .map(item => ({
-    ...item,
-    status: item.daysLeft <= 2 ? "Urgent" as const : "Soon" as const,
-  }));
+const getExpiringItems = () => {
+  const today = new Date();
+  return initialInventory
+    .map(item => {
+      const expiryDate = parseISO(item.expiry);
+      const daysLeft = differenceInDays(expiryDate, today);
+      return { ...item, daysLeft };
+    })
+    .filter(item => item.daysLeft >= 0 && item.daysLeft <= 7)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .map(item => ({
+      ...item,
+      status: item.daysLeft <= 2 ? "Urgent" as const : "Soon" as const,
+    }));
+};
 
 
 export default function DashboardPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [expiringItems, setExpiringItems] = useState(getExpiringItems());
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+      setIsLoading(false);
+    });
+
+    // Refresh expiring items on component mount
+    setExpiringItems(getExpiringItems());
+
+    // Clean up subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  const displayName = user?.displayName?.split(' ')[0] || user?.email || "User";
+
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="Hello, John!" />
+      {isLoading ? (
+         <Skeleton className="h-9 w-48" />
+      ) : (
+        <PageHeader title={`Hello, ${displayName}!`} />
+      )}
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">

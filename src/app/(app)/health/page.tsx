@@ -106,7 +106,11 @@ export default function HealthAndImpactPage() {
   const runHealthAnalysis = async (purchaseHistory: InventoryItem[]) => {
       setIsAnalyzingHealth(true);
       try {
-          const result = await analyzeHealthHabits({ purchaseHistory });
+          const purchaseDataForAnalysis = purchaseHistory.map(item => ({
+              name: item.name,
+              price: item.price
+          }));
+          const result = await analyzeHealthHabits({ purchaseHistory: purchaseDataForAnalysis });
           setHealthAnalysis(result);
       } catch (error) {
           console.error("Error analyzing health habits:", error);

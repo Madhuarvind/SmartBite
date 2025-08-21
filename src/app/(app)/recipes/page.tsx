@@ -638,7 +638,7 @@ export default function RecipesPage() {
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsModalOpen(false)}>Close</Button>
+                    <Button variant="outline" onClick={() => setIsModalOpen(false)}>Close</button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

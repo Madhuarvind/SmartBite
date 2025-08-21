@@ -100,7 +100,8 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
         const appVerifier = window.recaptchaVerifier;
-        const result = await signInWithPhoneNumber(auth, `+${phone}`, appVerifier);
+        const formattedPhoneNumber = `+1${phone.replace(/\D/g, '')}`; // Prepend country code and strip non-digits
+        const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
         setConfirmationResult(result);
         setIsOtpSent(true);
         toast({ title: "OTP Sent", description: "Please enter the verification code sent to your phone." });

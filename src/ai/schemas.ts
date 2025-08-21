@@ -282,3 +282,16 @@ export const AnalyzeWastePatternsOutputSchema = z.object({
     suggestions: z.array(z.string()).describe('Three actionable suggestions to help the user reduce waste.'),
 });
 export type AnalyzeWastePatternsOutput = z.infer<typeof AnalyzeWastePatternsOutputSchema>;
+
+
+// Schemas for shopping-assistant.ts
+export const ShoppingAssistantInputSchema = z.object({
+  query: z.string().describe('The user\'s question about their shopping list or inventory.'),
+  userId: z.string().describe('The unique ID of the user asking the question.'),
+});
+export type ShoppingAssistantInput = z.infer<typeof ShoppingAssistantInputSchema>;
+
+export const ShoppingAssistantOutputSchema = z.object({
+  response: z.string().describe('The AI\'s helpful response to the user\'s query.'),
+});
+export type ShoppingAssistantOutput = z.infer<typeof ShoppingAssistantOutputSchema>;

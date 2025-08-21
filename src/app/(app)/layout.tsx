@@ -14,6 +14,7 @@ import {
   Utensils,
   LogOut,
   ReceiptText,
+  ShoppingCart,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -35,6 +36,7 @@ const menuItems = [
   { href: "/inventory", label: "Inventory", icon: Refrigerator },
   { href: "/bill-scanner", label: "Bill Scanner", icon: ReceiptText },
   { href: "/plate-scanner", label: "Plate Scanner", icon: Utensils },
+  { href: "/shopping-helper", label: "Shopping Helper", icon: ShoppingCart },
   { href: "/recipes", label: "Recipes", icon: ChefHat },
   { href: "/planner", label: "Meal Planner", icon: Calendar },
   { href: "/sustainability", label: "Sustainability", icon: Leaf },

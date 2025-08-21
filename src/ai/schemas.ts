@@ -129,9 +129,15 @@ export type SuggestSubstitutionsInput = z.infer<
   typeof SuggestSubstitutionsInputSchema
 >;
 
+const SubstitutionSuggestionSchema = z.object({
+    name: z.string().describe("The name of the suggested substitute ingredient."),
+    explanation: z.string().describe("A brief, scientific explanation for why the substitution works."),
+});
+export type SubstitutionSuggestion = z.infer<typeof SubstitutionSuggestionSchema>;
+
 export const SuggestSubstitutionsOutputSchema = z.object({
   substitutions: z
-    .array(z.string())
+    .array(SubstitutionSuggestionSchema)
     .describe('A list of suggested ingredient substitutions with explanations.'),
 });
 export type SuggestSubstitutionsOutput = z.infer<
@@ -165,6 +171,7 @@ export const RecipeSchema = z.object({
       carbs: z.number().describe('The estimated grams of carbohydrates per serving.'),
       fat: z.number().describe('The estimated grams of fat per serving.'),
   }).describe('The nutritional information for the recipe.'),
+  rationale: z.string().optional().describe("A brief explanation for why this recipe was suggested."),
   audio: GenerateRecipeAudioOutputSchema.optional(),
   video: GenerateRecipeVideoOutputSchema.optional(),
 });
@@ -346,3 +353,20 @@ export const AnalyzeHealthHabitsOutputSchema = z.object({
     suggestions: z.array(z.string()).describe('Three actionable suggestions to help the user make healthier choices.'),
 });
 export type AnalyzeHealthHabitsOutput = z.infer<typeof AnalyzeHealthHabitsOutputSchema>;
+
+// Schemas for predictive-suggestions.ts
+export const PredictiveSuggestionsInputSchema = z.object({
+  availableIngredients: z.array(z.string()).describe("A list of ingredients the user has on hand."),
+  purchaseHistory: z.array(z.object({
+      name: z.string(),
+      purchaseDate: z.string().optional(),
+  })).describe("The user's recent purchase history."),
+  cookingHistory: z.array(z.object({
+      recipeName: z.string(),
+      date: z.string(),
+  })).describe("The user's recent cooking activity."),
+});
+export type PredictiveSuggestionsInput = z.infer<typeof PredictiveSuggestionsInputSchema>;
+
+export const PredictiveSuggestionsOutputSchema = RecipeOutputSchema;
+export type PredictiveSuggestionsOutput = z.infer<typeof PredictiveSuggestionsOutputSchema>;

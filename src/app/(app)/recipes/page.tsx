@@ -10,10 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart } from "lucide-react";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient } from "@/ai/schemas";
+import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient, SubstitutionSuggestion } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
@@ -24,10 +24,12 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
+import { predictiveSuggestions } from "@/ai/flows/predictive-suggestions";
 import { Textarea } from "@/components/ui/textarea";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, Timestamp, onSnapshot, query } from "firebase/firestore";
+import { collection, addDoc, Timestamp, onSnapshot, query, orderBy, getDocs } from "firebase/firestore";
 import type { User } from "firebase/auth";
+import { format } from "date-fns";
 
 type InventoryCheckResult = {
     ingredient: RecipeIngredient;
@@ -51,7 +53,7 @@ export default function RecipesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [missingIngredient, setMissingIngredient] = useState<string | null>(null);
-  const [substitutions, setSubstitutions] = useState<string[]>([]);
+  const [substitutions, setSubstitutions] = useState<SubstitutionSuggestion[]>([]);
   const [isSubstituting, setIsSubstituting] = useState(false);
   const [transformationRequest, setTransformationRequest] = useState("");
   const [isTransforming, setIsTransforming] = useState(false);
@@ -61,6 +63,7 @@ export default function RecipesPage() {
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
   const [mood, setMood] = useState("");
   const [isSuggestingByMood, setIsSuggestingByMood] = useState(false);
+  const [isPredicting, setIsPredicting] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -163,6 +166,47 @@ export default function RecipesPage() {
         setIsSuggestingByMood(false);
     }
   };
+  
+  const handlePredictiveSuggestions = async () => {
+      if (!user) return;
+      setIsPredicting(true);
+      setRecommendedRecipes([]);
+      try {
+          // Fetch purchase and cooking history
+          const inventoryQuery = query(collection(db, "users", user.uid, "inventory"), orderBy("purchaseDate", "desc"));
+          const activityQuery = query(collection(db, "users", user.uid, "activity"), orderBy("timestamp", "desc"));
+
+          const inventorySnapshot = await getDocs(inventoryQuery);
+          const activitySnapshot = await getDocs(activityQuery);
+
+          const purchaseHistory = inventorySnapshot.docs.map(doc => {
+              const data = doc.data() as InventoryItem;
+              return { name: data.name, purchaseDate: data.purchaseDate };
+          });
+
+          const cookingHistory = activitySnapshot.docs.map(doc => {
+              const data = doc.data();
+              return { recipeName: data.recipeName, date: format(data.timestamp.toDate(), 'yyyy-MM-dd') };
+          }).filter(item => item.recipeName);
+
+          const result = await predictiveSuggestions({
+              availableIngredients,
+              purchaseHistory,
+              cookingHistory
+          });
+          setRecommendedRecipes(result.recipes);
+          if (result.recipes.length === 0) {
+              toast({ title: "No predictions yet", description: "The AI is still learning your habits. Keep using the app!" });
+          }
+
+      } catch (e) {
+          console.error("Error with predictive suggestions:", e);
+          toast({ variant: "destructive", title: "Prediction Failed", description: "Could not generate predictive suggestions." });
+      } finally {
+          setIsPredicting(false);
+      }
+  }
+
 
   const handleViewRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
@@ -275,7 +319,7 @@ export default function RecipesPage() {
       <div className="flex flex-col gap-8 animate-fade-in">
         <PageHeader title="Find Your Next Meal" />
         
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card className="animate-fade-in-slide-up">
               <CardHeader>
                 <CardTitle className="flex items-center"><UtensilsCrossed className="mr-2"/> Recipe Finder</CardTitle>
@@ -352,12 +396,33 @@ export default function RecipesPage() {
                     </Button>
                 </CardFooter>
             </Card>
+
+            <Card className="animate-fade-in-slide-up md:col-span-2 lg:col-span-1" style={{animationDelay: '0.2s'}}>
+                <CardHeader>
+                    <CardTitle className="flex items-center"><BrainCircuit className="mr-2"/> Predictive Suggestions</CardTitle>
+                    <CardDescription>Let our AI predict what you might want to cook next based on your habits and recent purchases.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>This is an experimental feature!</AlertTitle>
+                        <AlertDescription>
+                            The AI will learn and improve its predictions as you use the app more.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+                <CardFooter>
+                    <Button onClick={handlePredictiveSuggestions} disabled={isPredicting || availableIngredients.length === 0}>
+                        {isPredicting ? <><Loader className="mr-2 animate-spin" /> Predicting...</> : <>What Should I Cook?</>}
+                    </Button>
+                </CardFooter>
+            </Card>
         </div>
         
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Recommended For You</h2>
           <div className="grid gap-6 mt-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {(isLoading || isSuggestingByMood) && Array.from({ length: 4 }).map((_, i) => (
+            {(isLoading || isSuggestingByMood || isPredicting) && Array.from({ length: 4 }).map((_, i) => (
                <Card key={i} className="overflow-hidden flex flex-col animate-fade-in-slide-up" style={{animationDelay: `${i * 0.1}s`}}>
                   <CardHeader className="p-0">
                       <Skeleton className="aspect-video w-full" />
@@ -385,24 +450,10 @@ export default function RecipesPage() {
                 </CardHeader>
                 <CardContent className="p-4 flex-grow">
                   <CardTitle className="text-lg mb-2">{recipe.name}</CardTitle>
+                  <p className="text-xs italic text-muted-foreground mb-2">{recipe.rationale}</p>
                   <div className="text-sm text-muted-foreground">
                     <p className="line-clamp-3">{recipe.instructions}</p>
                   </div>
-
-                  {recipe.audio?.audioDataUri ? (
-                    <div className="mt-4">
-                        <Label className="flex items-center mb-2"><Music className="mr-2"/> Audio Narration</Label>
-                        <audio controls src={recipe.audio.audioDataUri} className="w-full h-10" />
-                    </div>
-                  ) : (
-                    <div className="mt-4">
-                      <Label className="flex items-center mb-2 text-muted-foreground"><Music className="mr-2"/> Audio Narration</Label>
-                      <div className="h-10 w-full flex items-center justify-center bg-secondary rounded-md text-sm text-muted-foreground">
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                          <span>Generating...</span>
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
                   <Button className="w-full" onClick={() => handleViewRecipe(recipe)}>
@@ -603,11 +654,13 @@ export default function RecipesPage() {
                                 {substitutions.length > 0 && (
                                     <div className="mt-4">
                                         <h4 className="font-semibold mb-2">Suggested Substitutions:</h4>
-                                        <div className="flex flex-wrap gap-2">
+                                        <ul className="list-disc pl-5 text-muted-foreground space-y-1 mt-2 text-sm">
                                             {substitutions.map(sub => (
-                                                <Badge key={sub} variant="outline">{sub}</Badge>
+                                                <li key={sub.name}>
+                                                   <span className="font-semibold text-foreground">{sub.name}</span>: {sub.explanation}
+                                                </li>
                                             ))}
-                                        </div>
+                                        </ul>
                                     </div>
                                 )}
                             </CardContent>
@@ -642,5 +695,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    

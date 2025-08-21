@@ -25,9 +25,16 @@ The user is missing the following ingredient: **{{{missingIngredient}}}**.
 
 The user has the following ingredients available: {{#each availableIngredients}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
 
-Based on the user's available ingredients, suggest the best possible substitutions. For each suggestion, provide a brief explanation of why it works, considering factors like flavor profile, texture, and its role in a typical recipe. If no good substitutions are available, return an empty array.
+Based on the user's available ingredients, suggest the best possible substitutions. For each suggestion, provide the name of the substitute ingredient and a brief, scientific explanation for why it works, considering factors like flavor profile, texture, and chemical properties. If no good substitutions are available from the list, suggest a common pantry item that would work.
 
-Return a list of substitutions with explanations.
+Example response format for a missing egg:
+[
+  { "name": "Applesauce", "explanation": "Provides moisture and binding, good for cakes." },
+  { "name": "Ground Flaxseed", "explanation": "When mixed with water, forms a gel that mimics the binding properties of an egg." }
+]
+
+
+Return a list of substitutions with explanations in the specified JSON format.
   `,
 });
 

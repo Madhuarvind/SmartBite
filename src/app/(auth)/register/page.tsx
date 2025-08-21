@@ -34,6 +34,14 @@ export default function RegisterPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    // This ensures the origin is only read on the client side, avoiding hydration errors.
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
 
   const populateInitialData = async (userId: string) => {
       const batch = writeBatch(db);
@@ -56,15 +64,22 @@ export default function RegisterPage() {
 
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!origin) {
+        toast({
+            variant: "destructive",
+            title: "Initialization Error",
+            description: "Could not determine the page origin. Please refresh and try again.",
+        });
+        return;
+    }
+
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: `${firstName} ${lastName}`.trim() });
       
-      // Define actionCodeSettings to redirect user after verification
       const actionCodeSettings = {
-        // URL must be whitelisted in the Firebase Console.
-        url: `${window.location.origin}/login`,
+        url: `${origin}/login`,
         handleCodeInApp: true,
       };
 
@@ -151,7 +166,7 @@ export default function RegisterPage() {
                         <Label htmlFor="password">Password</Label>
                         <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading || !origin}>
                         {isLoading ? <Loader className="mr-2 animate-spin" /> : null}
                         Create an account
                     </Button>

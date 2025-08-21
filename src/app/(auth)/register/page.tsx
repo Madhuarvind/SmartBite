@@ -42,19 +42,12 @@ export default function RegisterPage() {
   const [isOtpSent, setIsOtpSent] = useState(false);
 
   useEffect(() => {
-    // This effect ensures there is only one RecaptchaVerifier instance.
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        'recaptcha-container',
-        {
-          size: 'invisible',
-          callback: () => {
-            // reCAPTCHA solved
-          },
-        }
-      );
-    }
+    // Clean up the verifier on component unmount
+    return () => {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
+    };
   }, []);
 
 
@@ -105,24 +98,28 @@ export default function RegisterPage() {
     event.preventDefault();
     setIsLoading(true);
 
-    const recaptchaVerifier = window.recaptchaVerifier;
-    const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
-
     try {
-      // Explicitly render and verify reCAPTCHA
-      const recaptchaWidgetId = await recaptchaVerifier.render();
-      const recaptchaToken = await recaptchaVerifier.verify(recaptchaWidgetId);
+      // Create a new verifier instance on each call
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
+      });
 
-      if (recaptchaToken) {
-          const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, recaptchaVerifier);
-          setConfirmationResult(result);
-          setIsOtpSent(true);
-          toast({ title: "OTP Sent", description: `Please enter the verification code sent to ${formattedPhoneNumber}.` });
-      } else {
-        throw new Error("reCAPTCHA verification failed.");
-      }
+      const recaptchaVerifier = window.recaptchaVerifier;
+      const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
+      
+      const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, recaptchaVerifier);
+      setConfirmationResult(result);
+      setIsOtpSent(true);
+      toast({ title: "OTP Sent", description: `Please enter the verification code sent to ${formattedPhoneNumber}.` });
     } catch (error: any) {
         console.error("Phone sign up failed:", error);
+        // Reset verifier if it fails
+        if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.clear();
+        }
         toast({ variant: "destructive", title: "Failed to Send OTP", description: "Could not send verification code. Please check the phone number and ensure you've authorized 'localhost' in your Firebase console." });
     } finally {
         setIsLoading(false);
@@ -180,6 +177,7 @@ export default function RegisterPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div id="recaptcha-container"></div>
         <Tabs defaultValue="email">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">Email</TabsTrigger>
@@ -289,7 +287,6 @@ export default function RegisterPage() {
         </div>
       </CardContent>
     </Card>
-    <div id="recaptcha-container"></div>
     
      <Dialog open={isOtpSent} onOpenChange={setIsOtpSent}>
         <DialogContent>
@@ -324,3 +321,5 @@ export default function RegisterPage() {
     </>
   )
 }
+
+    

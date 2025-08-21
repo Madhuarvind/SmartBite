@@ -385,3 +385,19 @@ export const PredictFacialMoodOutputSchema = z.object({
   mood: z.string().describe('The predicted mood from the facial expression (e.g., "Happy", "Sad", "Stressed").'),
 });
 export type PredictFacialMoodOutput = z.infer<typeof PredictFacialMoodOutputSchema>;
+
+// Schemas for analyze-user-spending.ts
+export const AnalyzeUserSpendingInputSchema = z.object({
+  purchaseHistory: z.array(PurchasedItemSchema).describe('A list of all items the user has purchased.'),
+});
+export type AnalyzeUserSpendingInput = z.infer<typeof AnalyzeUserSpendingInputSchema>;
+
+export const AnalyzeUserSpendingOutputSchema = z.object({
+    spendingBreakdown: z.array(z.object({
+        category: z.string().describe("The spending category (e.g., 'Fresh Produce', 'Snacks/Processed Foods')."),
+        percentage: z.number().describe("The percentage of total spending for this category."),
+    })).describe("A breakdown of spending by food category."),
+    keyInsight: z.string().describe('A concise, one-sentence insight into the user\'s spending habits.'),
+    suggestions: z.array(z.string()).describe('Three actionable suggestions to help the user save money.'),
+});
+export type AnalyzeUserSpendingOutput = z.infer<typeof AnalyzeUserSpendingOutputSchema>;

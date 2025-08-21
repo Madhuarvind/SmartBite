@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
-import { ArrowRight, ScanLine, Lightbulb, TrendingUp } from "lucide-react";
+import { ArrowRight, Lightbulb, TrendingUp } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,10 @@ export default function DashboardPage() {
         return () => unsubscribeInventory();
       } else {
         setIsLoading(false);
+        setExpiringItems([]);
+        setSpendingChartData([]);
+        setWeeklyChartData([]);
+        setUser(null);
       }
     });
 
@@ -149,7 +153,11 @@ export default function DashboardPage() {
             <CardDescription>A summary of your cooking and food waste habits for the past week, based on your activity.</CardDescription>
           </CardHeader>
           <CardContent>
-            {weeklyChartData.length > 0 ? (
+            {isLoading || weeklyChartData.length === 0 ? (
+                <div className="flex justify-center items-center h-[200px] text-muted-foreground">
+                    <p>No activity recorded yet. Cook some meals or manage your inventory to see your progress!</p>
+                </div>
+            ) : (
                 <ChartContainer config={weeklyChartConfig} className="min-h-[200px] w-full">
                 <BarChart accessibilityLayer data={weeklyChartData}>
                     <CartesianGrid vertical={false} />
@@ -160,10 +168,6 @@ export default function DashboardPage() {
                     <Bar dataKey="waste" fill="var(--color-waste)" radius={4} />
                 </BarChart>
                 </ChartContainer>
-            ) : (
-                <div className="flex justify-center items-center h-[200px] text-muted-foreground">
-                    <p>No activity recorded yet. Cook some meals or manage your inventory to see your progress!</p>
-                </div>
             )}
           </CardContent>
         </Card>
@@ -174,6 +178,7 @@ export default function DashboardPage() {
             <CardDescription>Use these items before they go bad!</CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
+            {isLoading ? <Skeleton className="h-40 w-full" /> : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -183,7 +188,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expiringItems.length > 0 ? expiringItems.map((item) => (
+                {expiringItems.length > 0 ? expiringItems.slice(0, 5).map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.daysLeft} {item.daysLeft === 1 ? 'day' : 'days'}</TableCell>
@@ -195,11 +200,12 @@ export default function DashboardPage() {
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">No items expiring soon.</TableCell>
+                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No items expiring soon. Well done!</TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            )}
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
@@ -216,21 +222,26 @@ export default function DashboardPage() {
             <CardDescription>Here's a look at your grocery spending over the last 7 days.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">${weeklyTotal.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Total for the last 7 days</p>
-            <div className="h-[120px] mt-4">
-              <ChartContainer config={spendingChartConfig} className="h-full w-full">
-                <LineChart accessibilityLayer data={spendingChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
-                     <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent indicator="line" />}
-                    />
-                    <Line dataKey="spending" type="monotone" stroke="var(--color-spending)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ChartContainer>
-            </div>
+            {isLoading ? <Skeleton className="h-28 w-full" /> : (
+                <>
+                    <div className="text-2xl font-bold text-primary">${weeklyTotal.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Total for the last 7 days</p>
+                    <div className="h-[120px] mt-4">
+                      <ChartContainer config={spendingChartConfig} className="h-full w-full">
+                        <LineChart accessibilityLayer data={spendingChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                            <CartesianGrid vertical={false} />
+                            <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
+                            <YAxis tickLine={false} axisLine={false} tickMargin={8} hide />
+                             <ChartTooltip
+                              cursor={false}
+                              content={<ChartTooltipContent indicator="line" />}
+                            />
+                            <Line dataKey="spending" type="monotone" stroke="var(--color-spending)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                    </div>
+                </>
+            )}
           </CardContent>
         </Card>
 

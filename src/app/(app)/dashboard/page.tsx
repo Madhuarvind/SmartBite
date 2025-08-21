@@ -104,7 +104,7 @@ export default function DashboardPage() {
   const displayName = user?.displayName?.split(' ')[0] || user?.email || "User";
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 animate-fade-in">
       {isLoading ? (
          <Skeleton className="h-9 w-48" />
       ) : (
@@ -112,7 +112,7 @@ export default function DashboardPage() {
       )}
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
           <CardHeader>
             <CardTitle>Weekly Summary</CardTitle>
             <CardDescription>A summary of your cooking and food waste habits for the past week, based on your activity.</CardDescription>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col">
+        <Card className="flex flex-col animate-fade-in-slide-up" style={{animationDelay: '0.2s'}}>
           <CardHeader>
             <CardTitle>Expiring Soon</CardTitle>
             <CardDescription>Use these items before they go bad!</CardDescription>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="flex flex-col justify-between">
+        <Card className="flex flex-col justify-between animate-fade-in-slide-up" style={{animationDelay: '0.3s'}}>
           <CardHeader>
             <ScanLine className="w-12 h-12 text-primary mb-4" />
             <CardTitle>Scan Your Fridge</CardTitle>
@@ -194,7 +194,7 @@ export default function DashboardPage() {
           </CardFooter>
         </Card>
         
-        <Card className="flex flex-col justify-between">
+        <Card className="flex flex-col justify-between animate-fade-in-slide-up" style={{animationDelay: '0.4s'}}>
           <CardHeader>
             <Lightbulb className="w-12 h-12 text-primary mb-4" />
             <CardTitle>Get Recipe Ideas</CardTitle>

@@ -264,11 +264,11 @@ export default function RecipesPage() {
 
   return (
     <>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-8 animate-fade-in">
         <PageHeader title="Find Your Next Meal" />
         
         <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+            <Card className="animate-fade-in-slide-up">
               <CardHeader>
                 <CardTitle className="flex items-center"><UtensilsCrossed className="mr-2"/> Recipe Finder</CardTitle>
                 <CardDescription>Select ingredients and preferences to get AI-powered recipe recommendations.</CardDescription>
@@ -323,7 +323,7 @@ export default function RecipesPage() {
               </CardFooter>
             </Card>
             
-            <Card>
+            <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
                 <CardHeader>
                     <CardTitle className="flex items-center"><Heart className="mr-2"/> Feeling Inspired?</CardTitle>
                     <CardDescription>Get recipe suggestions based on your current mood or craving.</CardDescription>
@@ -350,7 +350,7 @@ export default function RecipesPage() {
           <h2 className="text-2xl font-bold tracking-tight">Recommended For You</h2>
           <div className="grid gap-6 mt-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {(isLoading || isSuggestingByMood) && Array.from({ length: 4 }).map((_, i) => (
-               <Card key={i} className="overflow-hidden flex flex-col">
+               <Card key={i} className="overflow-hidden flex flex-col animate-fade-in-slide-up" style={{animationDelay: `${i * 0.1}s`}}>
                   <CardHeader className="p-0">
                       <Skeleton className="aspect-video w-full" />
                   </CardHeader>
@@ -364,7 +364,7 @@ export default function RecipesPage() {
                </Card>
             ))}
             {recommendedRecipes.map((recipe, index) => (
-              <Card key={`${recipe.name}-${index}`} className="overflow-hidden flex flex-col bg-card hover:bg-secondary/50 transition-colors duration-300">
+              <Card key={`${recipe.name}-${index}`} className="overflow-hidden flex flex-col bg-card hover:bg-secondary/50 transition-colors duration-300 animate-fade-in-slide-up" style={{animationDelay: `${index * 0.1}s`}}>
                 <CardHeader className="p-0">
                    <div className="relative aspect-video">
                     {recipe.instructionSteps && recipe.instructionSteps[0]?.image?.imageDataUri ? (

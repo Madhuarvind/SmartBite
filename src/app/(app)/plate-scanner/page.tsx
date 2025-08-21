@@ -91,11 +91,11 @@ export default function PlateScannerPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 animate-fade-in">
       <PageHeader title="Plate Scanner" />
       
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="animate-fade-in-slide-up">
           <CardHeader>
             <CardTitle>Scan Your Meal</CardTitle>
             <CardDescription>Take a picture of your plate to get an instant nutritional analysis from our AI.</CardDescription>
@@ -128,7 +128,7 @@ export default function PlateScannerPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
           <CardHeader>
             <CardTitle className="flex items-center"><Sparkles className="w-5 h-5 mr-2 text-primary"/> AI Analysis</CardTitle>
             <CardDescription>Here's what our AI thinks about your meal. Estimates are per serving.</CardDescription>

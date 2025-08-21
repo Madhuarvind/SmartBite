@@ -325,3 +325,24 @@ export const CalculateCarbonFootprintOutputSchema = z.object({
   suggestions: z.array(z.string()).describe('An array of three actionable, eco-friendly suggestions.'),
 });
 export type CalculateCarbonFootprintOutput = z.infer<typeof CalculateCarbonFootprintOutputSchema>;
+
+
+// Schemas for analyze-health-habits.ts
+const PurchasedItemSchema = z.object({
+  name: z.string().describe("The name of the purchased item."),
+  price: z.number().optional().describe("The price of the item."),
+});
+export const AnalyzeHealthHabitsInputSchema = z.object({
+  purchaseHistory: z.array(PurchasedItemSchema).describe('A list of all items the user has purchased.'),
+});
+export type AnalyzeHealthHabitsInput = z.infer<typeof AnalyzeHealthHabitsInputSchema>;
+
+export const AnalyzeHealthHabitsOutputSchema = z.object({
+    spendingBreakdown: z.array(z.object({
+        category: z.string().describe("The spending category (e.g., 'Fresh Produce', 'Snacks/Processed Foods')."),
+        percentage: z.number().describe("The percentage of total spending for this category."),
+    })).describe("A breakdown of spending by food category."),
+    keyInsight: z.string().describe('A concise, one-sentence insight into the user\'s dietary habits.'),
+    suggestions: z.array(z.string()).describe('Three actionable suggestions to help the user make healthier choices.'),
+});
+export type AnalyzeHealthHabitsOutput = z.infer<typeof AnalyzeHealthHabitsOutputSchema>;

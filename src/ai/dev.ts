@@ -18,3 +18,4 @@ import '@/ai/flows/analyze-waste-patterns.ts';
 import '@/ai/flows/identify-and-check-item.ts';
 import '@/ai/flows/ask-pantry-assistant.ts';
 import '@/ai/flows/calculate-carbon-footprint.ts';
+import '@/ai/flows/analyze-health-habits.ts';

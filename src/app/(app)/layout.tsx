@@ -7,7 +7,7 @@ import {
   Refrigerator,
   ChefHat,
   Calendar,
-  Leaf,
+  HeartPulse,
   Settings,
   CircleUser,
   PanelLeft,
@@ -39,7 +39,7 @@ const menuItems = [
   { href: "/shopping-helper", label: "Shopping Helper", icon: ShoppingCart },
   { href: "/recipes", label: "Recipes", icon: ChefHat },
   { href: "/planner", label: "Meal Planner", icon: Calendar },
-  { href: "/sustainability", label: "Sustainability", icon: Leaf },
+  { href: "/health", label: "Health & Impact", icon: HeartPulse },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

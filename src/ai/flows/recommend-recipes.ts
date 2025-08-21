@@ -28,7 +28,7 @@ Your task is to generate exactly 4 distinct and creative recipes. Prioritize usi
 For each recipe, you MUST provide:
 1. A unique, appealing name.
 2. A full list of ingredients, with a name and a specific quantity for each (e.g., "200g", "1 cup", "2 cloves").
-3. Detailed, step-by-step instructions as a single string, with each step separated by a newline character.
+3. Detailed, step-by-step instructions as a single string, with each step numbered and separated by a newline character (e.g., "1. Chop the onions.\\n2. Saute the garlic.").
 4. A detailed nutritional analysis per serving, including calories, protein, carbs, and fat, based on the specific ingredients and quantities you've listed.
 
 Ingredients: {{{ingredients}}}
@@ -74,7 +74,6 @@ const recommendRecipesFlow = ai.defineFlow(
             })
         );
         
-        // Create an initial recipe object with images that can be returned immediately.
         const recipeWithImages: Recipe = { ...recipe, instructionSteps };
 
         // Now, start the slow audio and video generation but don't wait for it.

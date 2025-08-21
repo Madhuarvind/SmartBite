@@ -157,7 +157,7 @@ export type RecipeIngredient = z.infer<typeof RecipeIngredientSchema>;
 export const RecipeSchema = z.object({
   name: z.string().describe('The name of the recipe.'),
   ingredients: z.array(RecipeIngredientSchema).describe('The ingredients required for the recipe.'),
-  instructions: z.string().describe('The instructions for the recipe, with each step on a new line.'),
+  instructions: z.string().describe('The instructions for the recipe, with each step numbered and on a new line.'),
   instructionSteps: z.array(InstructionStepSchema).optional().describe('A structured list of recipe instruction steps, each with an optional image.'),
   dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),
   nutrition: z.object({

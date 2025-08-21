@@ -41,7 +41,7 @@ Analyze the user's stated mood and generate exactly 4 distinct and creative reci
 For each recipe, you MUST provide:
 1. A unique, appealing name.
 2. A full list of ingredients with specific quantities.
-3. Detailed, step-by-step instructions as a single string, with each step separated by a newline character.
+3. Detailed, step-by-step instructions as a single string, with each step numbered and separated by a newline character (e.g., "1. Chop the onions.\\n2. Saute the garlic.").
 4. A detailed nutritional analysis per serving (calories, protein, carbs, fat).
 
 User's current mood: {{{mood}}}

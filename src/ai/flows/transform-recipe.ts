@@ -33,7 +33,7 @@ const prompt = ai.definePrompt({
 
 You must modify the recipe's name, ingredients (including their quantities), and instructions to reflect the transformation. You also need to recalculate the nutritional information for the new version based on the new ingredients.
 
-The instructions should be a single string, with each step separated by a newline character.
+The instructions should be a single string, with each step numbered and separated by a newline character (e.g., "1. Chop the onions.\\n2. Saute the garlic.").
 
 Return the entire modified recipe in the specified JSON format.
 

@@ -9,7 +9,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";

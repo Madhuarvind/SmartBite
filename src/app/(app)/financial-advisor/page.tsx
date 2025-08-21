@@ -84,7 +84,7 @@ export default function FinancialAdvisorPage() {
     <div className="flex flex-col gap-8 animate-fade-in">
       <PageHeader title="Pantry Financial Advisor" />
       
-       <Card>
+       <Card className="animate-fade-in-slide-up">
           <CardHeader>
             <CardTitle className="flex items-center"><BrainCircuit className="mr-2 text-primary"/> AI Spending Analysis</CardTitle>
             <CardDescription>

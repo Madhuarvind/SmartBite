@@ -323,7 +323,7 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 animate-fade-in">
       <PageHeader title="My Inventory" action={
         <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
             setIsAddDialogOpen(isOpen);
@@ -375,7 +375,7 @@ export default function InventoryPage() {
         </TabsList>
         <TabsContent value="inventory">
           <div className="grid gap-6 mt-6 md:grid-cols-2">
-            <Card>
+            <Card className="animate-fade-in-slide-up">
               <CardHeader>
                 <CardTitle>Pantry Scanner</CardTitle>
                 <CardDescription>Use multimodal input to add items. Scan with your camera, upload a photo, or add items with your voice.</CardDescription>
@@ -438,7 +438,7 @@ export default function InventoryPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
               <CardHeader>
                 <CardTitle>Current Inventory</CardTitle>
                 <CardDescription>All items currently in your fridge and pantry.</CardDescription>
@@ -490,7 +490,7 @@ export default function InventoryPage() {
           </div>
         </TabsContent>
         <TabsContent value="pantry">
-          <Card className="mt-6">
+          <Card className="mt-6 animate-fade-in">
             <CardHeader>
                 <CardTitle>Pantry Essentials</CardTitle>
                 <CardDescription>Items you usually have on hand. These are always considered available for recipes.</CardDescription>

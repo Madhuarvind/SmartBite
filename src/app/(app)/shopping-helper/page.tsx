@@ -143,7 +143,7 @@ export default function ShoppingHelperPage() {
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
       <PageHeader title="Shopping Helper" />
-      <Card>
+      <Card className="animate-fade-in-slide-up">
         <CardHeader>
           <CardTitle>Check Before You Buy</CardTitle>
           <CardDescription>

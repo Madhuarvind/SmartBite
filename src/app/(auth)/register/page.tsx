@@ -41,6 +41,23 @@ export default function RegisterPage() {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [isOtpSent, setIsOtpSent] = useState(false);
 
+  useEffect(() => {
+    // This effect ensures there is only one RecaptchaVerifier instance.
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        'recaptcha-container',
+        {
+          size: 'invisible',
+          callback: () => {
+            // reCAPTCHA solved
+          },
+        }
+      );
+    }
+  }, []);
+
+
   const populateInitialData = async (userId: string) => {
       const batch = writeBatch(db);
       
@@ -88,13 +105,7 @@ export default function RegisterPage() {
     event.preventDefault();
     setIsLoading(true);
     try {
-        const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            'size': 'invisible',
-            'callback': () => {
-              // reCAPTCHA solved
-            }
-        });
-        
+        const recaptchaVerifier = window.recaptchaVerifier;
         const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
         
         const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, recaptchaVerifier);

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -14,20 +14,50 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { generateMealPlan } from "@/ai/flows/generate-meal-plan";
 import type { GenerateMealPlanOutput } from "@/ai/schemas";
 import { useToast } from "@/hooks/use-toast";
-import { initialInventory, pantryEssentials } from "@/lib/inventory";
+import { auth, db } from "@/lib/firebase";
+import { collection, onSnapshot, query } from "firebase/firestore";
+import type { User } from 'firebase/auth';
+import type { InventoryItem, PantryItem } from "@/lib/types";
+
 
 const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 const dayTitles = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const availableIngredients = [...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)];
-
 export default function PlannerPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [availableIngredients, setAvailableIngredients] = useState<string[]>([]);
   const [nutritionalGoal, setNutritionalGoal] = useState("balanced");
   const [dietaryRestrictions, setDietaryRestrictions] = useState("");
   const [mealPlan, setMealPlan] = useState<GenerateMealPlanOutput['mealPlan'] | null>(null);
   const [shoppingList, setShoppingList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+   useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const inventoryQuery = query(collection(db, "users", currentUser.uid, "inventory"));
+        const unsubscribeInventory = onSnapshot(inventoryQuery, (snapshot) => {
+          const items = snapshot.docs.map(doc => (doc.data() as InventoryItem).name);
+          
+          const pantryQuery = query(collection(db, "users", currentUser.uid, "pantry_essentials"));
+          const unsubscribePantry = onSnapshot(pantryQuery, (pantrySnapshot) => {
+              const pantryItems = pantrySnapshot.docs.map(doc => (doc.data() as PantryItem).name);
+              setAvailableIngredients(Array.from(new Set([...items, ...pantryItems])));
+          });
+
+          return () => unsubscribePantry();
+        });
+
+        return () => unsubscribeInventory();
+      } else {
+        setUser(null);
+        setAvailableIngredients([]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleGeneratePlan = async () => {
     setIsLoading(true);
@@ -95,7 +125,7 @@ export default function PlannerPage() {
             </div>
         </CardContent>
         <CardFooter className="flex-col sm:flex-row gap-2">
-             <Button onClick={handleGeneratePlan} disabled={isLoading} className="w-full sm:w-auto">
+             <Button onClick={handleGeneratePlan} disabled={isLoading || availableIngredients.length === 0} className="w-full sm:w-auto">
                 {isLoading ? <><Loader className="mr-2 animate-spin"/> Generating...</> : "Generate Plan"}
             </Button>
             {shoppingList.length > 0 && !isLoading && (

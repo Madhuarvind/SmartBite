@@ -1,3 +1,4 @@
+
 export type Ingredient = {
   id: string;
   name: string;
@@ -5,6 +6,20 @@ export type Ingredient = {
   expiryDate: string;
   category: 'fridge' | 'pantry';
 };
+
+export type InventoryItem = {
+  id: string;
+  name: string;
+  quantity: string;
+  expiry: string;
+  purchaseDate?: string;
+}
+
+export type PantryItem = {
+    id: string;
+    name: string;
+    quantity: string;
+}
 
 export type Recipe = {
   id: string;

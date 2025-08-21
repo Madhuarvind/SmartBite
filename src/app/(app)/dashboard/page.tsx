@@ -12,52 +12,59 @@ import { ArrowRight, ScanLine, Lightbulb } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { initialInventory } from "@/lib/inventory";
 import { differenceInDays, parseISO, format, subDays, startOfDay, endOfDay } from "date-fns";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "firebase/auth";
-import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, Timestamp, onSnapshot } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { InventoryItem } from "@/lib/types";
+
 
 const chartConfig = {
   meals: { label: "Meals Cooked", color: "hsl(var(--primary))" },
   waste: { label: "Items Wasted", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig;
 
-const getExpiringItems = () => {
-  const today = new Date();
-  return initialInventory
-    .map(item => {
-      const expiryDate = parseISO(item.expiry);
-      const daysLeft = differenceInDays(expiryDate, today);
-      return { ...item, daysLeft };
-    })
-    .filter(item => item.daysLeft >= 0 && item.daysLeft <= 7)
-    .sort((a, b) => a.daysLeft - b.daysLeft)
-    .map(item => ({
-      ...item,
-      status: item.daysLeft <= 2 ? "Urgent" as const : "Soon" as const,
-    }));
-};
-
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [expiringItems, setExpiringItems] = useState(getExpiringItems());
+  const [expiringItems, setExpiringItems] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
-      setIsLoading(false);
       if (currentUser) {
         fetchWeeklyData(currentUser.uid);
+        
+        // Set up real-time listener for inventory
+        const inventoryRef = collection(db, "users", currentUser.uid, "inventory");
+        const unsubscribeInventory = onSnapshot(inventoryRef, (snapshot) => {
+          const today = new Date();
+          const items = snapshot.docs.map(doc => doc.data() as InventoryItem)
+            .map(item => {
+              if (!item.expiry) return { ...item, daysLeft: Infinity };
+              const expiryDate = parseISO(item.expiry);
+              const daysLeft = differenceInDays(expiryDate, today);
+              return { ...item, daysLeft };
+            })
+            .filter(item => item.daysLeft >= 0 && item.daysLeft <= 7)
+            .sort((a, b) => a.daysLeft - b.daysLeft)
+            .map(item => ({
+              ...item,
+              status: item.daysLeft <= 2 ? "Urgent" as const : "Soon" as const,
+            }));
+          setExpiringItems(items);
+        });
+
+        setIsLoading(false);
+        return () => unsubscribeInventory();
+      } else {
+        setIsLoading(false);
       }
     });
 
-    setExpiringItems(getExpiringItems());
-
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
   
   const fetchWeeklyData = async (userId: string) => {
@@ -146,7 +153,7 @@ export default function DashboardPage() {
               </TableHeader>
               <TableBody>
                 {expiringItems.length > 0 ? expiringItems.map((item) => (
-                  <TableRow key={item.name}>
+                  <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.daysLeft} {item.daysLeft === 1 ? 'day' : 'days'}</TableCell>
                     <TableCell>

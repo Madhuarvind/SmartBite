@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, 
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
 import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient } from "@/ai/schemas";
+import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { useToast } from "@/hooks/use-toast";
@@ -22,14 +23,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
 import { Textarea } from "@/components/ui/textarea";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-
-const availableIngredients = Array.from(new Set([...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)]));
-const userInventory = [...initialInventory, ...pantryEssentials];
+import { collection, addDoc, Timestamp, onSnapshot, query } from "firebase/firestore";
+import type { User } from "firebase/auth";
 
 type InventoryCheckResult = {
     ingredient: RecipeIngredient;
@@ -38,35 +36,64 @@ type InventoryCheckResult = {
 }
 
 export default function RecipesPage() {
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>(['Tomatoes', 'Chicken Breast', 'Garlic', 'Onion']);
+  const [user, setUser] = useState<User | null>(null);
+  const [userInventory, setUserInventory] = useState<InventoryItem[]>([]);
+  const [pantryEssentials, setPantryEssentials] = useState<PantryItem[]>([]);
+  const [availableIngredients, setAvailableIngredients] = useState<string[]>([]);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(true);
+
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [dietaryNeeds, setDietaryNeeds] = useState<string>('any');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendedRecipes, setRecommendedRecipes] = useState<Recipe[]>([]);
   const { toast } = useToast();
 
-  // State for recipe detail modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
-
-  // State for substitutions
   const [missingIngredient, setMissingIngredient] = useState<string | null>(null);
   const [substitutions, setSubstitutions] = useState<string[]>([]);
   const [isSubstituting, setIsSubstituting] = useState(false);
-
-  // State for transformation
   const [transformationRequest, setTransformationRequest] = useState("");
   const [isTransforming, setIsTransforming] = useState(false);
   const [transformedRecipe, setTransformedRecipe] = useState<TransformRecipeOutput | null>(null);
-
-  // State for inventory check
   const [servings, setServings] = useState(2);
   const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
-  
-  // State for mood-based suggestions
   const [mood, setMood] = useState("");
   const [isSuggestingByMood, setIsSuggestingByMood] = useState(false);
 
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        // Fetch Inventory
+        const inventoryQuery = query(collection(db, "users", currentUser.uid, "inventory"));
+        const unsubscribeInventory = onSnapshot(inventoryQuery, (snapshot) => {
+          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
+          setUserInventory(items);
+          
+          const pantryQuery = query(collection(db, "users", currentUser.uid, "pantry_essentials"));
+          const unsubscribePantry = onSnapshot(pantryQuery, (pantrySnapshot) => {
+              const pantryItems = pantrySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PantryItem[];
+              setPantryEssentials(pantryItems);
+
+              const allIngredients = Array.from(new Set([...items.map(i => i.name), ...pantryItems.map(p => p.name)]));
+              setAvailableIngredients(allIngredients);
+              setIsInventoryLoading(false);
+          });
+          return () => unsubscribePantry();
+        });
+        return () => unsubscribeInventory();
+      } else {
+        setUser(null);
+        setUserInventory([]);
+        setPantryEssentials([]);
+        setAvailableIngredients([]);
+        setIsInventoryLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleIngredientChange = (ingredient: string, checked: boolean | 'indeterminate') => {
     if (checked) {
@@ -93,7 +120,7 @@ export default function RecipesPage() {
       const input = {
         ingredients: selectedIngredients,
         dietaryRestrictions: dietaryNeeds === 'any' ? [] : [dietaryNeeds],
-        expiringIngredients: ['Tomatoes'],
+        expiringIngredients: [], // This could be enhanced later
       };
       const result = await recommendRecipes(input);
       setRecommendedRecipes(result.recipes);
@@ -195,7 +222,6 @@ export default function RecipesPage() {
   }
   
   const handleCookedThis = async (recipeName: string) => {
-    const user = auth.currentUser;
     if (!user) {
         toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to track activity."});
         return;
@@ -220,8 +246,9 @@ export default function RecipesPage() {
       if (!currentRecipe) return;
       setIsCheckingInventory(true);
       
+      const allUserItems = [...userInventory, ...pantryEssentials];
       const results: InventoryCheckResult[] = currentRecipe.ingredients.map(ing => {
-          const inventoryItem = userInventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
+          const inventoryItem = allUserItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
           if (inventoryItem) {
               return { ingredient: ing, status: 'available', notes: `You have ${inventoryItem.quantity}` };
           } else {
@@ -250,18 +277,26 @@ export default function RecipesPage() {
                 <div>
                   <Label>Available Ingredients</Label>
                   <div className="mt-2 p-4 border rounded-md min-h-[120px] bg-background/50">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {availableIngredients.map(ingredient => (
-                        <div key={ingredient} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={ingredient} 
-                            onCheckedChange={(checked) => handleIngredientChange(ingredient, checked)}
-                            checked={selectedIngredients.includes(ingredient)}
-                          />
-                          <Label htmlFor={ingredient} className="font-normal cursor-pointer">{ingredient}</Label>
+                    {isInventoryLoading ? (
+                        <div className="flex items-center justify-center h-[120px]">
+                           <Loader className="animate-spin" />
                         </div>
-                      ))}
-                    </div>
+                    ) : availableIngredients.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                          {availableIngredients.map(ingredient => (
+                            <div key={ingredient} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={ingredient} 
+                                onCheckedChange={(checked) => handleIngredientChange(ingredient, checked)}
+                                checked={selectedIngredients.includes(ingredient)}
+                              />
+                              <Label htmlFor={ingredient} className="font-normal cursor-pointer">{ingredient}</Label>
+                            </div>
+                          ))}
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground text-center">Add items to your inventory to get started.</p>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -282,7 +317,7 @@ export default function RecipesPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button onClick={handleGenerateRecipes} disabled={isLoading}>
+                <Button onClick={handleGenerateRecipes} disabled={isLoading || isInventoryLoading || selectedIngredients.length === 0}>
                   {isLoading ? <><Loader className="mr-2 animate-spin" /> Generating...</> : <> Generate Recipes</>}
                 </Button>
               </CardFooter>

@@ -14,18 +14,22 @@ import { scanIngredients } from "@/ai/flows/scan-ingredients";
 import { predictExpiryDate } from "@/ai/flows/predict-expiry-date";
 import { useToast } from "@/hooks/use-toast";
 import type { DetectedIngredient } from "@/ai/schemas";
+import type { InventoryItem, PantryItem } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
-import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, Timestamp, doc, deleteDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, Timestamp, doc, deleteDoc, onSnapshot, query } from "firebase/firestore";
 import { parseISO, isPast } from "date-fns";
-
+import type { User } from 'firebase/auth';
 
 export default function InventoryPage() {
-  const [inventory, setInventory] = useState(initialInventory);
+  const [user, setUser] = useState<User | null>(null);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [pantryEssentials, setPantryEssentials] = useState<PantryItem[]>([]);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(true);
+
   const [scannedIngredients, setScannedIngredients] = useState<DetectedIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
@@ -36,13 +40,44 @@ export default function InventoryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // State for the Add Item Dialog
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("");
   const [newItemPurchaseDate, setNewItemPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [newItemExpiry, setNewItemExpiry] = useState("");
 
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        // Fetch Inventory
+        const inventoryQuery = query(collection(db, "users", currentUser.uid, "inventory"));
+        const unsubscribeInventory = onSnapshot(inventoryQuery, (snapshot) => {
+          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
+          setInventory(items);
+          setIsInventoryLoading(false);
+        });
+
+        // Fetch Pantry Essentials
+        const pantryQuery = query(collection(db, "users", currentUser.uid, "pantry_essentials"));
+        const unsubscribePantry = onSnapshot(pantryQuery, (snapshot) => {
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PantryItem[];
+            setPantryEssentials(items);
+        });
+
+        return () => {
+          unsubscribeInventory();
+          unsubscribePantry();
+        };
+      } else {
+        setUser(null);
+        setInventory([]);
+        setPantryEssentials([]);
+        setIsInventoryLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -153,8 +188,8 @@ export default function InventoryPage() {
     setNewItemExpiry("");
   }
 
-  const handleAddItem = () => {
-    if (!newItemName || !newItemQuantity) {
+  const handleAddItem = async () => {
+    if (!user || !newItemName || !newItemQuantity) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -163,22 +198,26 @@ export default function InventoryPage() {
       return;
     }
     const newItem = {
-      id: (inventory.length + 1).toString(),
       name: newItemName,
       quantity: newItemQuantity,
       expiry: newItemExpiry || 'N/A',
+      purchaseDate: newItemPurchaseDate,
     };
-    setInventory(prev => [newItem, ...prev]);
-    setIsAddDialogOpen(false);
-    resetAddDialog();
-     toast({
-        title: "Item Added",
-        description: `${newItem.name} has been added to your inventory.`,
-      });
+    try {
+        await addDoc(collection(db, "users", user.uid, "inventory"), newItem);
+        toast({
+            title: "Item Added",
+            description: `${newItem.name} has been added to your inventory.`,
+        });
+        setIsAddDialogOpen(false);
+        resetAddDialog();
+    } catch (error) {
+        console.error("Error adding item to Firestore:", error);
+        toast({ variant: "destructive", title: "Failed to Add Item"});
+    }
   };
 
   const handleDeleteItem = async (itemId: string, itemName: string, expiry: string) => {
-    const user = auth.currentUser;
     if (!user) {
         toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to delete items."});
         return;
@@ -198,11 +237,14 @@ export default function InventoryPage() {
         }
     }
 
-    // Remove from local state
-    setInventory(prev => prev.filter(item => item.id !== itemId));
-    
-    // Here you would also delete from Firestore if inventory was stored there
-    toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
+    // Delete from Firestore
+    try {
+        await deleteDoc(doc(db, "users", user.uid, "inventory", itemId));
+        toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
+    } catch (error) {
+        console.error("Error deleting item from Firestore:", error);
+        toast({ variant: "destructive", title: "Failed to Delete Item"});
+    }
   };
 
 
@@ -412,29 +454,35 @@ export default function InventoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {inventory.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.expiry}</TableCell>
-                        <TableCell className="text-right">
-                           <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteItem(item.id, item.name, item.expiry)}>
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {isInventoryLoading ? (
+                        <TableRow><TableCell colSpan={4} className="text-center"><Loader className="mx-auto animate-spin" /></TableCell></TableRow>
+                    ) : inventory.length === 0 ? (
+                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Your inventory is empty.</TableCell></TableRow>
+                    ) : (
+                        inventory.map((item) => (
+                        <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{item.expiry}</TableCell>
+                            <TableCell className="text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem disabled><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteItem(item.id, item.name, item.expiry)}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -457,20 +505,26 @@ export default function InventoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pantryEssentials.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell className="text-right">
-                           <Button variant="ghost" size="sm">Remove</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {isInventoryLoading ? (
+                        <TableRow><TableCell colSpan={3} className="text-center"><Loader className="mx-auto animate-spin" /></TableCell></TableRow>
+                    ) : pantryEssentials.length === 0 ? (
+                        <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No pantry essentials defined.</TableCell></TableRow>
+                    ) : (
+                        pantryEssentials.map((item) => (
+                        <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" disabled>Remove</Button>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
             </CardContent>
             <CardFooter>
-                <Button variant="outline">Add Essential Item</Button>
+                <Button variant="outline" disabled>Add Essential Item</Button>
             </CardFooter>
           </Card>
         </TabsContent>

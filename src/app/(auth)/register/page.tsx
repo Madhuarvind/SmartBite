@@ -15,10 +15,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
 import { Loader } from "lucide-react";
-
+import { collection, writeBatch, doc } from "firebase/firestore";
+import { initialInventory, pantryEssentials } from "@/lib/inventory";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -31,14 +32,36 @@ export default function RegisterPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
 
+  const populateInitialData = async (userId: string) => {
+      const batch = writeBatch(db);
+      
+      // Populate initial inventory
+      const inventoryRef = collection(db, "users", userId, "inventory");
+      initialInventory.forEach(item => {
+          const docRef = doc(inventoryRef);
+          batch.set(docRef, { name: item.name, quantity: item.quantity, expiry: item.expiry });
+      });
+
+      // Populate pantry essentials
+      const pantryRef = collection(db, "users", userId, "pantry_essentials");
+      pantryEssentials.forEach(item => {
+          const docRef = doc(pantryRef);
+          batch.set(docRef, { name: item.name, quantity: item.quantity });
+      });
+
+      await batch.commit();
+  }
+
+
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: `${firstName} ${lastName}`});
+      await updateProfile(userCredential.user, { displayName: `${firstName} ${lastName}`.trim() });
+      await populateInitialData(userCredential.user.uid);
       
-      toast({ title: "Account Created", description: "Welcome to SmartBite!" });
+      toast({ title: "Account Created", description: "Welcome to SmartBite! We've added some items to your inventory to get you started." });
       router.push("/dashboard");
     } catch (error: any) {
        console.error("Registration failed:", error);
@@ -56,8 +79,11 @@ export default function RegisterPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-        await signInWithPopup(auth, provider);
-        toast({ title: "Account Created", description: "Welcome to SmartBite!"});
+        const userCredential = await signInWithPopup(auth, provider);
+        // This is a simplistic check; in a real app, you'd check if the user is truly new.
+        await populateInitialData(userCredential.user.uid);
+
+        toast({ title: "Account Created", description: "Welcome to SmartBite! We've added some items to your inventory to get you started."});
         router.push("/dashboard");
     } catch (error: any) {
         console.error("Google sign up failed:", error);

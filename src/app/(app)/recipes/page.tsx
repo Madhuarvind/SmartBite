@@ -40,6 +40,7 @@ export default function RecipesPage() {
   const [userInventory, setUserInventory] = useState<InventoryItem[]>([]);
   const [pantryEssentials, setPantryEssentials] = useState<PantryItem[]>([]);
   const [availableIngredients, setAvailableIngredients] = useState<string[]>([]);
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [isInventoryLoading, setIsInventoryLoading] = useState(true);
 
   const [dietaryNeeds, setDietaryNeeds] = useState<string>('any');
@@ -78,6 +79,7 @@ export default function RecipesPage() {
 
               const allIngredients = Array.from(new Set([...items.map(i => i.name), ...pantryItems.map(p => p.name)]));
               setAvailableIngredients(allIngredients);
+              setSelectedIngredients(allIngredients); // Select all by default
               setIsInventoryLoading(false);
           });
           return () => unsubscribePantry();
@@ -95,11 +97,11 @@ export default function RecipesPage() {
   }, []);
 
   const handleGenerateRecipes = async () => {
-    if (availableIngredients.length === 0) {
+    if (selectedIngredients.length === 0) {
       toast({
         variant: "destructive",
-        title: "No Ingredients Available",
-        description: "Please add items to your inventory to get recommendations.",
+        title: "No Ingredients Selected",
+        description: "Please select some ingredients to get recommendations.",
       });
       return;
     }
@@ -109,7 +111,7 @@ export default function RecipesPage() {
 
     try {
       const input = {
-        ingredients: availableIngredients,
+        ingredients: selectedIngredients,
         dietaryRestrictions: dietaryNeeds === 'any' ? [] : [dietaryNeeds],
         expiringIngredients: [], // This could be enhanced later
       };
@@ -118,7 +120,7 @@ export default function RecipesPage() {
       if (result.recipes.length === 0) {
         toast({
           title: "No Recipes Found",
-          description: "We couldn't find any recipes with your available ingredients.",
+          description: "We couldn't find any recipes with your selected ingredients.",
         });
       }
     } catch (error) {
@@ -261,6 +263,13 @@ export default function RecipesPage() {
   
   const currentRecipe = transformedRecipe || selectedRecipe;
 
+  const handleIngredientSelection = (ingredient: string, checked: boolean | 'indeterminate') => {
+    setSelectedIngredients(prev => 
+      checked ? [...prev, ingredient] : prev.filter(i => i !== ingredient)
+    );
+  };
+
+
   return (
     <>
       <div className="flex flex-col gap-8 animate-fade-in">
@@ -270,9 +279,34 @@ export default function RecipesPage() {
             <Card className="animate-fade-in-slide-up">
               <CardHeader>
                 <CardTitle className="flex items-center"><UtensilsCrossed className="mr-2"/> Recipe Finder</CardTitle>
-                <CardDescription>Get AI-powered recipe recommendations based on all the ingredients you have available.</CardDescription>
+                <CardDescription>Select your available ingredients and dietary needs to get recipe recommendations.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
+                <div>
+                  <Label>Available Ingredients</Label>
+                  {isInventoryLoading ? (
+                    <div className="space-y-2 mt-2">
+                      <Skeleton className="h-5 w-full" />
+                      <Skeleton className="h-5 w-full" />
+                      <Skeleton className="h-5 w-full" />
+                    </div>
+                  ) : (
+                    <Card className="mt-2 h-40 overflow-y-auto p-4">
+                      <div className="space-y-2">
+                        {availableIngredients.map((ingredient) => (
+                          <div key={ingredient} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={ingredient} 
+                              checked={selectedIngredients.includes(ingredient)}
+                              onCheckedChange={(checked) => handleIngredientSelection(ingredient, checked)}
+                            />
+                            <Label htmlFor={ingredient} className="font-normal">{ingredient}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
                 <div>
                   <Label htmlFor="dietary-needs">Dietary Needs</Label>
                   <Select onValueChange={setDietaryNeeds} value={dietaryNeeds}>
@@ -291,7 +325,7 @@ export default function RecipesPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button onClick={handleGenerateRecipes} disabled={isLoading || isInventoryLoading || availableIngredients.length === 0}>
+                <Button onClick={handleGenerateRecipes} disabled={isLoading || isInventoryLoading || selectedIngredients.length === 0}>
                   {isLoading ? <><Loader className="mr-2 animate-spin" /> Generating...</> : <> Generate Recipes</>}
                 </Button>
               </CardFooter>

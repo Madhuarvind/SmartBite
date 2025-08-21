@@ -24,10 +24,9 @@ const generateRecipeVideoFlow = ai.defineFlow(
   },
   async ({ recipeName }) => {
     let { operation } = await ai.generate({
-      model: googleAI.model('veo-2.0-generate-001'),
-      prompt: `A cinematic, appetizing shot of ${recipeName}, beautifully plated and ready to eat.`,
+      model: googleAI.model('veo-3.0-generate-preview'),
+      prompt: `A cinematic, appetizing shot of ${recipeName}, beautifully plated and ready to eat. Include appropriate sound.`,
       config: {
-        durationSeconds: 5,
         aspectRatio: '16:9',
       },
     });

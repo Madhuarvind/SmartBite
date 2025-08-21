@@ -22,6 +22,8 @@ import { collection, writeBatch, doc } from "firebase/firestore";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -42,6 +44,15 @@ export default function RegisterPage() {
   const [isOtpSent, setIsOtpSent] = useState(false);
 
   useEffect(() => {
+    // This effect ensures a single RecaptchaVerifier is initialized and cleaned up.
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
+      });
+    }
     // Clean up the verifier on component unmount
     return () => {
       if (window.recaptchaVerifier) {
@@ -99,14 +110,6 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Create a new verifier instance on each call
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
-
       const recaptchaVerifier = window.recaptchaVerifier;
       const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
       
@@ -119,6 +122,8 @@ export default function RegisterPage() {
         // Reset verifier if it fails
         if (window.recaptchaVerifier) {
             window.recaptchaVerifier.clear();
+             // Re-initialize for the next attempt
+             window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {'size': 'invisible'});
         }
         toast({ variant: "destructive", title: "Failed to Send OTP", description: "Could not send verification code. Please check the phone number and ensure you've authorized 'localhost' in your Firebase console." });
     } finally {
@@ -219,6 +224,13 @@ export default function RegisterPage() {
                 </form>
             </TabsContent>
             <TabsContent value="phone" className="pt-4">
+                <Alert className="mb-4">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>For Development</AlertTitle>
+                    <AlertDescription>
+                        To test phone sign-in, use the test number <strong>+1 650-555-3434</strong> and the verification code <strong>123456</strong>.
+                    </AlertDescription>
+                </Alert>
                 <form onSubmit={handlePhoneSignUp} className="grid gap-4">
                      <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
@@ -321,5 +333,3 @@ export default function RegisterPage() {
     </>
   )
 }
-
-    

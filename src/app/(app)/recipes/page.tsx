@@ -42,7 +42,6 @@ export default function RecipesPage() {
   const [availableIngredients, setAvailableIngredients] = useState<string[]>([]);
   const [isInventoryLoading, setIsInventoryLoading] = useState(true);
 
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [dietaryNeeds, setDietaryNeeds] = useState<string>('any');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendedRecipes, setRecommendedRecipes] = useState<Recipe[]>([]);
@@ -95,20 +94,12 @@ export default function RecipesPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleIngredientChange = (ingredient: string, checked: boolean | 'indeterminate') => {
-    if (checked) {
-      setSelectedIngredients(prev => [...prev, ingredient]);
-    } else {
-      setSelectedIngredients(prev => prev.filter(item => item !== ingredient));
-    }
-  };
-
   const handleGenerateRecipes = async () => {
-    if (selectedIngredients.length === 0) {
+    if (availableIngredients.length === 0) {
       toast({
         variant: "destructive",
-        title: "No Ingredients Selected",
-        description: "Please select at least one ingredient to get recommendations.",
+        title: "No Ingredients Available",
+        description: "Please add items to your inventory to get recommendations.",
       });
       return;
     }
@@ -118,7 +109,7 @@ export default function RecipesPage() {
 
     try {
       const input = {
-        ingredients: selectedIngredients,
+        ingredients: availableIngredients,
         dietaryRestrictions: dietaryNeeds === 'any' ? [] : [dietaryNeeds],
         expiringIngredients: [], // This could be enhanced later
       };
@@ -127,7 +118,7 @@ export default function RecipesPage() {
       if (result.recipes.length === 0) {
         toast({
           title: "No Recipes Found",
-          description: "We couldn't find any recipes with the selected ingredients. Try selecting more items!",
+          description: "We couldn't find any recipes with your available ingredients.",
         });
       }
     } catch (error) {
@@ -193,7 +184,7 @@ export default function RecipesPage() {
       try {
           const result = await suggestSubstitutions({
               missingIngredient: missingIngredient,
-              availableIngredients: selectedIngredients
+              availableIngredients: availableIngredients
           });
           setSubstitutions(result.substitutions);
            if (result.substitutions.length === 0) {
@@ -279,34 +270,9 @@ export default function RecipesPage() {
             <Card className="animate-fade-in-slide-up">
               <CardHeader>
                 <CardTitle className="flex items-center"><UtensilsCrossed className="mr-2"/> Recipe Finder</CardTitle>
-                <CardDescription>Select ingredients and preferences to get AI-powered recipe recommendations.</CardDescription>
+                <CardDescription>Get AI-powered recipe recommendations based on all the ingredients you have available.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
-                <div>
-                  <Label>Available Ingredients</Label>
-                  <div className="mt-2 p-4 border rounded-md min-h-[120px] bg-background/50">
-                    {isInventoryLoading ? (
-                        <div className="flex items-center justify-center h-[120px]">
-                           <Loader className="animate-spin" />
-                        </div>
-                    ) : availableIngredients.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                          {availableIngredients.map(ingredient => (
-                            <div key={ingredient} className="flex items-center space-x-2">
-                              <Checkbox 
-                                id={ingredient} 
-                                onCheckedChange={(checked) => handleIngredientChange(ingredient, checked)}
-                                checked={selectedIngredients.includes(ingredient)}
-                              />
-                              <Label htmlFor={ingredient} className="font-normal cursor-pointer">{ingredient}</Label>
-                            </div>
-                          ))}
-                        </div>
-                    ) : (
-                        <p className="text-muted-foreground text-center">Add items to your inventory to get started.</p>
-                    )}
-                  </div>
-                </div>
                 <div>
                   <Label htmlFor="dietary-needs">Dietary Needs</Label>
                   <Select onValueChange={setDietaryNeeds} value={dietaryNeeds}>
@@ -325,7 +291,7 @@ export default function RecipesPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button onClick={handleGenerateRecipes} disabled={isLoading || isInventoryLoading || selectedIngredients.length === 0}>
+                <Button onClick={handleGenerateRecipes} disabled={isLoading || isInventoryLoading || availableIngredients.length === 0}>
                   {isLoading ? <><Loader className="mr-2 animate-spin" /> Generating...</> : <> Generate Recipes</>}
                 </Button>
               </CardFooter>
@@ -347,7 +313,7 @@ export default function RecipesPage() {
                     />
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={handleSuggestByMood} disabled={isSuggestingByMood}>
+                    <Button onClick={handleSuggestByMood} disabled={isSuggestingByMood || availableIngredients.length === 0}>
                         {isSuggestingByMood ? <><Loader className="mr-2 animate-spin" /> Suggesting...</> : <>Suggest Recipes</>}
                     </Button>
                 </CardFooter>
@@ -642,3 +608,5 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    

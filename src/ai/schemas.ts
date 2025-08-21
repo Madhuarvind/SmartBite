@@ -284,14 +284,18 @@ export const AnalyzeWastePatternsOutputSchema = z.object({
 export type AnalyzeWastePatternsOutput = z.infer<typeof AnalyzeWastePatternsOutputSchema>;
 
 
-// Schemas for shopping-assistant.ts
-export const ShoppingAssistantInputSchema = z.object({
-  query: z.string().describe('The user\'s question about their shopping list or inventory.'),
+// Schemas for identify-and-check-item.ts
+export const IdentifyAndCheckItemInputSchema = z.object({
+  photoDataUri: z
+    .string()
+    .describe(
+      "A photo of a grocery item, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
   userId: z.string().describe('The unique ID of the user asking the question.'),
 });
-export type ShoppingAssistantInput = z.infer<typeof ShoppingAssistantInputSchema>;
+export type IdentifyAndCheckItemInput = z.infer<typeof IdentifyAndCheckItemInputSchema>;
 
-export const ShoppingAssistantOutputSchema = z.object({
+export const IdentifyAndCheckItemOutputSchema = z.object({
   response: z.string().describe('The AI\'s helpful response to the user\'s query.'),
 });
-export type ShoppingAssistantOutput = z.infer<typeof ShoppingAssistantOutputSchema>;
+export type IdentifyAndCheckItemOutput = z.infer<typeof IdentifyAndCheckItemOutputSchema>;

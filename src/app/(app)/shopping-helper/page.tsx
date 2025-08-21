@@ -2,149 +2,161 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Mic, Loader, User, Bot } from 'lucide-react';
+import { Camera, Loader, Sparkles, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { shoppingAssistant } from '@/ai/flows/shopping-assistant';
-import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
-
-type Message = {
-  id: string;
-  text: string;
-  sender: 'user' | 'bot';
-};
+import { identifyAndCheckItem } from '@/ai/flows/identify-and-check-item';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export default function ShoppingHelperPage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [scannedImage, setScannedImage] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
-      if(currentUser) {
-        setMessages([
-          { id: 'initial', text: "Welcome to your smart shopping assistant! Ask me if you need to buy an item, and I'll check your pantry. For example: 'Do I need milk?'", sender: 'bot' }
-        ]);
-      }
     });
     return () => unsubscribe();
   }, []);
-
+  
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        scrollAreaRef.current.scrollTo({
-            top: scrollAreaRef.current.scrollHeight,
-            behavior: 'smooth'
+    const getCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setHasCameraPermission(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use the Smart Shopping Lens.',
         });
+      }
+    };
+
+    getCameraPermission();
+  }, [toast]);
+  
+  const processImage = async (photoDataUri: string) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'You must be logged in.' });
+        return;
     }
-  }, [messages]);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !user) return;
-
-    const userMessage: Message = { id: Date.now().toString(), text: input, sender: 'user' };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    
     setIsLoading(true);
+    setScannedImage(photoDataUri);
+    setAnalysisResult(null);
 
     try {
-      const result = await shoppingAssistant({ query: input, userId: user.uid });
-      const botMessage: Message = { id: `${Date.now()}-bot`, text: result.response, sender: 'bot' };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Error with shopping assistant:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Assistant Error',
-        description: 'I had trouble checking your inventory. Please try again.',
-      });
-      const errorMessage: Message = { id: `${Date.now()}-error`, text: "Sorry, I couldn't process that. Please try again.", sender: 'bot' };
-      setMessages(prev => [...prev, errorMessage]);
+        const result = await identifyAndCheckItem({ photoDataUri, userId: user.uid });
+        setAnalysisResult(result.response);
+    } catch(error) {
+        console.error("Error identifying item:", error);
+        toast({
+            variant: "destructive",
+            title: "Analysis Failed",
+            description: "Could not identify the item from the image. Please try again.",
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
+    }
+  }
+
+  const handleScanFromCamera = async () => {
+    if (!videoRef.current) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const photoDataUri = canvas.toDataURL('image/jpeg');
+      processImage(photoDataUri);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Scan Error",
+        description: "Could not capture an image from the video stream.",
+      });
     }
   };
 
+  const handleReset = () => {
+    setScannedImage(null);
+    setAnalysisResult(null);
+  };
+
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-120px)] gap-8">
-      <PageHeader title="Smart Shopping Helper" />
-      <Card className="flex-1 flex flex-col">
+    <div className="flex flex-col gap-8 animate-fade-in">
+      <PageHeader title="Smart Shopping Lens" />
+      <Card>
         <CardHeader>
-          <CardTitle>Shopping Assistant</CardTitle>
+          <CardTitle>Check Before You Buy</CardTitle>
           <CardDescription>
-            Ask if you need to buy an item before you add it to your cart.
+            Point your camera at a grocery item and scan it. The AI will check your pantry to see if you already have it at home.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
-          <ScrollArea className="flex-1 space-y-4 pr-4" ref={scrollAreaRef}>
-            {messages.map(message => (
-              <div
-                key={message.id}
-                className={cn(
-                  'flex items-start gap-3 my-4 animate-fade-in-slide-up',
-                  message.sender === 'user' ? 'justify-end' : 'justify-start'
+        <CardContent className="flex flex-col items-center gap-4">
+            <div className="relative w-full max-w-lg aspect-[4/3] border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden">
+                {scannedImage && !isLoading ? (
+                    <Image src={scannedImage} alt="Scanned item" layout="fill" objectFit="contain" />
+                ) : (
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                 )}
-              >
-                {message.sender === 'bot' && (
-                  <Avatar className="w-8 h-8 border-2 border-primary">
-                    <AvatarFallback><Bot /></AvatarFallback>
-                  </Avatar>
+
+                {hasCameraPermission === false && !scannedImage && (
+                    <Alert variant="destructive" className="absolute m-4">
+                    <AlertTitle>Camera Access Required</AlertTitle>
+                    <AlertDescription>
+                        To use the Smart Shopping Lens, please allow camera access in your browser settings.
+                    </AlertDescription>
+                    </Alert>
                 )}
-                <div
-                  className={cn(
-                    'max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg',
-                    message.sender === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground'
-                  )}
-                >
-                  <p className="text-sm">{message.text}</p>
-                </div>
-                {message.sender === 'user' && (
-                  <Avatar className="w-8 h-8">
-                     <AvatarFallback><User /></AvatarFallback>
-                  </Avatar>
+                
+                {isLoading && (
+                    <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center text-primary gap-4">
+                        <Loader className="w-16 h-16 animate-spin" />
+                        <p className="font-semibold text-lg">Analyzing...</p>
+                    </div>
                 )}
-              </div>
-            ))}
-             {isLoading && (
-              <div className="flex items-start gap-3 my-4 justify-start">
-                <Avatar className="w-8 h-8 border-2 border-primary">
-                    <AvatarFallback><Bot /></AvatarFallback>
-                </Avatar>
-                <div className="bg-secondary text-secondary-foreground p-3 rounded-lg">
-                    <Loader className="w-5 h-5 animate-spin" />
-                </div>
-              </div>
-            )}
-          </ScrollArea>
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2 pt-4 border-t">
-            <Input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="e.g., Should I buy eggs?"
-              className="flex-1"
-              disabled={isLoading}
-            />
-            <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-              <Send />
-            </Button>
-            <Button type="button" variant="outline" size="icon" disabled>
-              <Mic />
-            </Button>
-          </form>
+
+                {analysisResult && (
+                    <div className="absolute inset-x-4 bottom-4 bg-background/90 p-4 rounded-lg border-2 border-primary shadow-2xl animate-fade-in-slide-up">
+                         <div className="flex items-start gap-3">
+                             <Sparkles className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
+                             <p className="text-foreground font-medium">{analysisResult}</p>
+                         </div>
+                    </div>
+                )}
+            </div>
+            
+            <div className="flex gap-4">
+                {!analysisResult ? (
+                    <Button onClick={handleScanFromCamera} disabled={isLoading || hasCameraPermission === false} size="lg">
+                        <Camera className="mr-2" /> Scan Item
+                    </Button>
+                ) : (
+                    <Button onClick={handleReset} size="lg" variant="outline">
+                        <X className="mr-2" /> Scan Another Item
+                    </Button>
+                )}
+            </div>
+
         </CardContent>
       </Card>
     </div>

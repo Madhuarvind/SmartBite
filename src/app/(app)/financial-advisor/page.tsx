@@ -20,6 +20,7 @@ export default function FinancialAdvisorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<AnalyzeUserSpendingOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(true);
+  const [purchaseHistory, setPurchaseHistory] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -39,13 +40,13 @@ export default function FinancialAdvisorPage() {
     setIsLoading(true);
     setIsAnalyzing(true);
     
-    // Fetch purchase history for analysis
     const inventoryQuery = query(collection(db, "users", userId, "inventory"));
     const inventorySnapshot = await getDocs(inventoryQuery);
-    const purchaseHistory = inventorySnapshot.docs.map(doc => doc.data() as InventoryItem);
+    const history = inventorySnapshot.docs.map(doc => doc.data() as InventoryItem);
+    setPurchaseHistory(history);
 
-    if (purchaseHistory.length > 0) {
-        runAnalysis(purchaseHistory);
+    if (history.length > 0) {
+        runAnalysis(history);
     } else {
         setIsAnalyzing(false);
     }
@@ -53,10 +54,10 @@ export default function FinancialAdvisorPage() {
     setIsLoading(false);
   }
   
-  const runAnalysis = async (purchaseHistory: InventoryItem[]) => {
+  const runAnalysis = async (history: InventoryItem[]) => {
       setIsAnalyzing(true);
       try {
-          const purchaseDataForAnalysis = purchaseHistory
+          const purchaseDataForAnalysis = history
             .filter(item => item.price && item.price > 0)
             .map(item => ({
               name: item.name,
@@ -106,15 +107,17 @@ export default function FinancialAdvisorPage() {
                         <div>
                             <h4 className="font-semibold text-lg mb-2">Spending Breakdown</h4>
                             <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={analysis.spendingBreakdown} layout="vertical" margin={{ left: 100, right: 50 }}>
+                                <BarChart data={analysis.spendingBreakdown} layout="vertical" margin={{ left: 120, right: 50, top: 5, bottom: 5 }}>
                                     <XAxis type="number" hide />
                                     <YAxis 
                                         type="category" 
                                         dataKey="category" 
                                         axisLine={false} 
                                         tickLine={false} 
-                                        width={100}
+                                        width={120}
                                         tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                                        style={{ textAnchor: 'start' }}
+                                        dx={-115}
                                     />
                                     <Bar dataKey="percentage" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} background={{ fill: 'hsl(var(--secondary))' }}>
                                         <LabelList dataKey="percentage" position="right" formatter={(value: number) => `${value.toFixed(0)}%`} className="fill-foreground font-semibold" />
@@ -145,13 +148,9 @@ export default function FinancialAdvisorPage() {
                             <CardContent>
                                 <p className="text-3xl font-bold text-primary">
                                     ${
-                                        (user &&
-                                        (purchaseHistory => {
-                                            if (!purchaseHistory) return '0.00';
-                                            const total = purchaseHistory.reduce((acc, item) => acc + (item.price || 0), 0);
-                                            return total.toFixed(2);
-                                        })(null) // This needs to be updated with actual data
-                                     ) || '0.00'
+                                      purchaseHistory
+                                        .reduce((acc, item) => acc + (item.price || 0), 0)
+                                        .toFixed(2)
                                     }
                                 </p>
                                 <p className="text-sm text-muted-foreground">Based on all scanned receipts with prices.</p>

@@ -36,6 +36,7 @@ const menuItems = [
   { href: "/recipes", label: "Recipes", icon: ChefHat },
   { href: "/planner", label: "Meal Planner", icon: Calendar },
   { href: "/sustainability", label: "Sustainability", icon: Leaf },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -79,17 +80,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
             <div className="mt-auto p-4 border-t">
                <nav className="grid gap-2 text-lg font-medium">
-                  <Link
-                    href="#"
-                    onClick={() => setIsSheetOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                  >
-                    <Settings className="h-5 w-5" />
-                    Settings
-                  </Link>
                    <Link
                     href="/login"
-                    onClick={() => setIsSheetOpen(false)}
+                    onClick={() => {
+                        setIsSheetOpen(false)
+                        // Add Firebase logout logic here if needed
+                    }}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-all hover:bg-destructive/10"
                   >
                     <LogOut className="h-5 w-5" />
@@ -115,8 +111,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>Settings</DropdownMenuItem>
-                    <DropdownMenuItem>Support</DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings">Settings</Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/login" className="text-destructive focus:text-destructive">Logout</Link>

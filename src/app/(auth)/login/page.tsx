@@ -58,7 +58,7 @@ export default function LoginPage() {
         toast({
             variant: "destructive",
             title: "Google Login Failed",
-            description: error.message || "Could not log in with Google. Please try again.",
+            description: "Please ensure your domain is authorized in the Firebase Console. " + (error.message || "Could not log in with Google."),
         });
     } finally {
         setIsGoogleLoading(false);
@@ -110,7 +110,7 @@ export default function LoginPage() {
             Login
           </Button>
           <Button variant="outline" className="w-full" type="button" onClick={handleGoogleLogin} disabled={isLoading || isGoogleLoading}>
-            {isGoogleLoading && <Loader className="mr-2 animate-spin" />}
+            {isGoogleLoading ? <Loader className="mr-2 animate-spin" /> : <svg className="mr-2" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" height="18" width="18"><title>Google</title><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.3 1.62-3.92 1.62-3.08 0-5.61-2.3-5.61-5.18s2.53-5.18 5.61-5.18c1.5 0 2.72.48 3.76 1.48l2.84-2.76C19.31 2.91 16.33 2 12.48 2 7.4 2 3.43 5.44 3.43 10.4s3.97 8.4 9.05 8.4c2.39 0 4.49-.79 6-2.16 1.62-1.45 2.4-3.66 2.4-6.24 0-.55-.05-1.05-.14-1.55H12.48z" fill="currentColor"></path></svg>}
             Login with Google
           </Button>
         </form>
@@ -122,5 +122,5 @@ export default function LoginPage() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

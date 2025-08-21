@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, ChangeEvent, useEffect } from "react";
+import { useState, useRef, ChangeEvent, useEffect, DragEvent } from "react";
 import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import type { ScannedItem } from "@/ai/schemas";
 import { auth, db } from "@/lib/firebase";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import type { User } from 'firebase/auth';
+import { cn } from "@/lib/utils";
 
 export default function BillScannerPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -23,6 +24,7 @@ export default function BillScannerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -32,6 +34,23 @@ export default function BillScannerPage() {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleFile = (file: File) => {
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const photoDataUri = e.target?.result as string;
+        processImage(photoDataUri);
+      };
+      reader.readAsDataURL(file);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid File Type",
+            description: "Please upload an image file.",
+        });
+    }
+  }
 
   const processImage = async (photoDataUri: string) => {
     setIsLoading(true);
@@ -61,14 +80,33 @@ export default function BillScannerPage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const photoDataUri = e.target?.result as string;
-        processImage(photoDataUri);
-      };
-      reader.readAsDataURL(file);
+      handleFile(file);
     }
   };
+  
+  const handleDragEvents = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(true);
+  }
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(false);
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+        handleFile(file);
+    }
+  }
 
   const handleAddToInventory = async () => {
     if (!user || scannedItems.length === 0) {
@@ -119,15 +157,22 @@ export default function BillScannerPage() {
           </CardHeader>
           <CardContent>
             <div 
-              className="relative aspect-[9/16] w-full max-w-sm mx-auto border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer"
+              className={cn(
+                "relative aspect-[9/16] w-full max-w-sm mx-auto border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer transition-colors",
+                isDragging && "bg-primary/10 border-primary"
+              )}
               onClick={() => fileInputRef.current?.click()}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragEvents}
+              onDrop={handleDrop}
             >
               {receiptImage ? (
                 <Image src={receiptImage} alt="Scanned receipt" layout="fill" objectFit="contain" />
               ) : (
                 <div className="text-center text-muted-foreground p-4">
                   <ReceiptText className="w-16 h-16 mx-auto mb-2" />
-                  <p>Click to upload your receipt</p>
+                  <p>Click or drag & drop to upload</p>
                 </div>
               )}
             </div>
@@ -189,3 +234,5 @@ export default function BillScannerPage() {
     </div>
   );
 }
+
+    

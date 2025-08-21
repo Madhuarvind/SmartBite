@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent } from "react";
+import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
 import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,14 @@ import { Camera, Loader, Upload, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzePlate } from "@/ai/flows/analyze-plate";
 import type { AnalyzePlateOutput } from "@/ai/schemas";
+import { cn } from "@/lib/utils";
 
 export default function PlateScannerPage() {
   const [analysis, setAnalysis] = useState<AnalyzePlateOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [scannedImage, setScannedImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -38,6 +40,23 @@ export default function PlateScannerPage() {
     };
     getCameraPermission();
   }, []);
+
+  const handleFile = (file: File) => {
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const photoDataUri = e.target?.result as string;
+            processImage(photoDataUri);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid File Type",
+            description: "Please upload an image file.",
+        });
+      }
+  }
 
   const processImage = async (photoDataUri: string) => {
     setIsLoading(true);
@@ -81,14 +100,34 @@ export default function PlateScannerPage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const photoDataUri = e.target?.result as string;
-        processImage(photoDataUri);
-      };
-      reader.readAsDataURL(file);
+      handleFile(file);
     }
   };
+  
+  const handleDragEvents = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(true);
+  }
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(false);
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+        handleFile(file);
+    }
+  }
+
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
@@ -101,13 +140,23 @@ export default function PlateScannerPage() {
             <CardDescription>Take a picture of your plate to get an instant nutritional analysis from our AI.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden">
-              {scannedImage && !hasCameraPermission ? (
+            <div 
+              className={cn(
+                "relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer transition-colors",
+                isDragging && "bg-primary/10 border-primary"
+              )}
+              onClick={() => fileInputRef.current?.click()}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragEvents}
+              onDrop={handleDrop}
+            >
+              {scannedImage ? (
                 <Image src={scannedImage} alt="Scanned meal" layout="fill" objectFit="contain" />
               ) : (
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
               )}
-               {hasCameraPermission === false && (
+               {hasCameraPermission === false && !scannedImage && (
                  <Alert variant="destructive" className="absolute m-4">
                    <AlertTitle>Camera Access Required</AlertTitle>
                    <AlertDescription>
@@ -198,3 +247,5 @@ export default function PlateScannerPage() {
     </div>
   );
 }
+
+    

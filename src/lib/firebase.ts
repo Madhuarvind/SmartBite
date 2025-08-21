@@ -1,6 +1,6 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
+import { getAuth, Auth, RecaptchaVerifier, ConfirmationResult } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -12,6 +12,15 @@ const firebaseConfig = {
   measurementId: "",
   messagingSenderId: "380749375700"
 };
+
+// Extend the Window interface
+declare global {
+    interface Window {
+        recaptchaVerifier: RecaptchaVerifier;
+        confirmationResult?: ConfirmationResult;
+    }
+}
+
 
 // Initialize Firebase
 let app: FirebaseApp;

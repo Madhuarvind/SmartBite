@@ -104,14 +104,23 @@ export default function RegisterPage() {
   const handlePhoneSignUp = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
+
+    const recaptchaVerifier = window.recaptchaVerifier;
+    const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
+
     try {
-        const recaptchaVerifier = window.recaptchaVerifier;
-        const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
-        
-        const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, recaptchaVerifier);
-        setConfirmationResult(result);
-        setIsOtpSent(true);
-        toast({ title: "OTP Sent", description: `Please enter the verification code sent to ${formattedPhoneNumber}.` });
+      // Explicitly render and verify reCAPTCHA
+      const recaptchaWidgetId = await recaptchaVerifier.render();
+      const recaptchaToken = await recaptchaVerifier.verify(recaptchaWidgetId);
+
+      if (recaptchaToken) {
+          const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, recaptchaVerifier);
+          setConfirmationResult(result);
+          setIsOtpSent(true);
+          toast({ title: "OTP Sent", description: `Please enter the verification code sent to ${formattedPhoneNumber}.` });
+      } else {
+        throw new Error("reCAPTCHA verification failed.");
+      }
     } catch (error: any) {
         console.error("Phone sign up failed:", error);
         toast({ variant: "destructive", title: "Failed to Send OTP", description: "Could not send verification code. Please check the phone number and ensure you've authorized 'localhost' in your Firebase console." });
@@ -315,5 +324,3 @@ export default function RegisterPage() {
     </>
   )
 }
-
-    

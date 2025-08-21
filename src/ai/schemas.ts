@@ -83,9 +83,24 @@ export type GenerateRecipeVideoOutput = z.infer<typeof GenerateRecipeVideoOutput
 export const ScanIngredientsInputSchema = z.object({
   photoDataUri: z
     .string()
+    .optional()
     .describe(
       "A photo of ingredients, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  textQuery: z.string().optional().describe("A natural language query about ingredients, e.g., 'add 2 eggs and a carrot'"),
+}).superRefine((data, ctx) => {
+    if (!data.photoDataUri && !data.textQuery) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Either photoDataUri or textQuery must be provided.",
+        });
+    }
+    if(data.photoDataUri && data.textQuery) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Provide either photoDataUri or textQuery, not both.",
+        });
+    }
 });
 export type ScanIngredientsInput = z.infer<typeof ScanIngredientsInputSchema>;
 
@@ -97,7 +112,7 @@ export const DetectedIngredientSchema = z.object({
 export type DetectedIngredient = z.infer<typeof DetectedIngredientSchema>;
 
 export const ScanIngredientsOutputSchema = z.object({
-  ingredients: z.array(DetectedIngredientSchema).describe('A list of ingredients identified in the image, with quantities.'),
+  ingredients: z.array(DetectedIngredientSchema).describe('A list of ingredients identified in the image or text query.'),
 });
 export type ScanIngredientsOutput = z.infer<typeof ScanIngredientsOutputSchema>;
 
@@ -230,3 +245,5 @@ export type SuggestRecipesByMoodInput = z.infer<typeof SuggestRecipesByMoodInput
 
 export const SuggestRecipesByMoodOutputSchema = RecipeOutputSchema;
 export type SuggestRecipesByMoodOutput = z.infer<typeof SuggestRecipesByMoodOutputSchema>;
+
+    

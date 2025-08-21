@@ -199,34 +199,37 @@ export default function InventoryPage() {
     recognition.maxAlternatives = 1;
 
     setIsListening(true);
+    setScannedIngredients([]);
+    setUploadedImage(null);
 
     recognition.start();
 
-    recognition.onresult = (event) => {
+    recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
       toast({
         title: "You said:",
         description: transcript,
       });
       
-      // Super simple NLP: look for keywords like "add" or "I have"
-      const keywords = ["add", "I have", "I've got", "also"];
-      const foundKeyword = keywords.some(k => transcript.toLowerCase().includes(k));
-      
-      if(foundKeyword) {
-         let itemsToAdd = transcript.toLowerCase();
-         keywords.forEach(k => itemsToAdd = itemsToAdd.replace(k, ''));
-         itemsToAdd = itemsToAdd.replace(/ and /g, ',');
-         const items = itemsToAdd.split(',').map(i => i.trim()).filter(Boolean);
-
-         const newDetected: DetectedIngredient[] = items.map(item => ({
-             name: item.charAt(0).toUpperCase() + item.slice(1), // Capitalize
-             quantity: '1',
-             expiryDate: null,
-         }));
-         setScannedIngredients(prev => [...prev, ...newDetected]);
-      } else {
-         toast({ title: "Didn't catch that.", description: "Try saying 'Add apples' or 'I have carrots'."});
+      setIsLoading(true);
+      try {
+        const result = await scanIngredients({ textQuery: transcript });
+        setScannedIngredients(result.ingredients);
+         if(result.ingredients.length === 0) {
+            toast({
+                title: "No ingredients detected",
+                description: "The AI couldn't understand the ingredients in your request. Please try again.",
+            });
+        }
+      } catch (error) {
+         console.error("Error parsing voice input:", error);
+         toast({
+          variant: "destructive",
+          title: "Scan Failed",
+          description: "Could not process your voice request. Please try again.",
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -326,7 +329,7 @@ export default function InventoryPage() {
                     <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={isLoading}>
                         <Upload className="mr-2" /> Upload Image
                     </Button>
-                     <Button onClick={handleVoiceInput} variant="outline" disabled={isListening}>
+                     <Button onClick={handleVoiceInput} variant="outline" disabled={isListening || isLoading}>
                         {isListening ? <><Loader className="mr-2 animate-spin"/> Listening...</> : <><Mic className="mr-2" /> Add by Voice</>}
                     </Button>
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
@@ -441,3 +444,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    

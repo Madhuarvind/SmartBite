@@ -16,12 +16,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification } from "firebase/auth";
 import { Loader } from "lucide-react";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -30,23 +28,9 @@ export default function RegisterPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [countryCode, setCountryCode] = useState("+91");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isOtpLoading, setIsOtpLoading] = useState(false);
-  
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [isOtpSent, setIsOtpSent] = useState(false);
-
-  useEffect(() => {
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-    }
-  }, []);
-
 
   const populateInitialData = async (userId: string) => {
       const batch = writeBatch(db);
@@ -91,50 +75,6 @@ export default function RegisterPage() {
     }
   };
 
-  const handlePhoneSignUp = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setIsLoading(true);
-
-    try {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-      });
-      const recaptchaVerifier = window.recaptchaVerifier;
-      const formattedPhoneNumber = `${countryCode.startsWith('+') ? '' : '+'}${countryCode.replace(/\D/g, '')}${phone.replace(/\D/g, '')}`;
-      
-      const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, recaptchaVerifier);
-      setConfirmationResult(result);
-      setIsOtpSent(true);
-      toast({ title: "OTP Sent", description: `Please enter the verification code sent to ${formattedPhoneNumber}.` });
-    } catch (error: any) {
-        console.error("Phone sign up failed:", error);
-        if (window.recaptchaVerifier) {
-            window.recaptchaVerifier.clear();
-        }
-        toast({ variant: "destructive", title: "Failed to Send OTP", description: "Could not send verification code. Please check the phone number and ensure you've authorized 'localhost' in your Firebase console API Key settings." });
-    } finally {
-        setIsLoading(false);
-    }
-  }
-
-  const handleOtpVerify = async () => {
-      if (!confirmationResult) return;
-      setIsOtpLoading(true);
-      try {
-          const userCredential = await confirmationResult.confirm(otp);
-          await updateProfile(userCredential.user, { displayName: `${firstName} ${lastName}`.trim() });
-          await populateInitialData(userCredential.user.uid);
-          toast({ title: "Account Created!", description: "You have successfully registered with your phone number." });
-          router.push("/dashboard");
-      } catch (error: any) {
-          console.error("OTP verification failed:", error);
-          toast({ variant: "destructive", title: "Invalid Code", description: "The OTP you entered is incorrect. Please try again." });
-      } finally {
-          setIsOtpLoading(false);
-      }
-  }
-
-
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
@@ -164,97 +104,43 @@ export default function RegisterPage() {
       <CardHeader>
         <CardTitle className="text-xl">Sign Up</CardTitle>
         <CardDescription>
-          Enter your information to create an account
+          Enter your information to create an account with your email and password.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div id="recaptcha-container"></div>
-        <Tabs defaultValue="email">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="email">Email</TabsTrigger>
-                <TabsTrigger value="phone">Phone</TabsTrigger>
-            </TabsList>
-            <TabsContent value="email" className="pt-4">
-                <form onSubmit={handleRegister} className="grid gap-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                        <Label htmlFor="first-name-email">First name</Label>
-                        <Input id="first-name-email" placeholder="Max" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
-                        </div>
-                        <div className="grid gap-2">
-                        <Label htmlFor="last-name-email">Last name</Label>
-                        <Input id="last-name-email" placeholder="Robinson" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
-                        </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                        id="email"
-                        type="email"
-                        placeholder="m@example.com"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        disabled={isLoading || isGoogleLoading}
-                        suppressHydrationWarning
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? <Loader className="mr-2 animate-spin" /> : null}
-                        Create an account
-                    </Button>
-                </form>
-            </TabsContent>
-            <TabsContent value="phone" className="pt-4">
-                <form onSubmit={handlePhoneSignUp} className="grid gap-4">
-                     <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                        <Label htmlFor="first-name-phone">First name</Label>
-                        <Input id="first-name-phone" placeholder="Max" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
-                        </div>
-                        <div className="grid gap-2">
-                        <Label htmlFor="last-name-phone">Last name</Label>
-                        <Input id="last-name-phone" placeholder="Robinson" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
-                        </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <div className="flex items-center gap-2">
-                             <Input
-                                id="country-code"
-                                type="text"
-                                placeholder="+91"
-                                required
-                                value={countryCode}
-                                onChange={(e) => setCountryCode(e.target.value)}
-                                className="w-16"
-                                disabled={isLoading || isGoogleLoading}
-                                suppressHydrationWarning
-                            />
-                            <Input
-                                id="phone"
-                                type="tel"
-                                placeholder="1234567890"
-                                required
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="flex-1"
-                                disabled={isLoading || isGoogleLoading}
-                                suppressHydrationWarning
-                            />
-                        </div>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? <Loader className="mr-2 animate-spin" /> : null}
-                        Send Verification Code
-                    </Button>
-                </form>
-            </TabsContent>
-        </Tabs>
+        <form onSubmit={handleRegister} className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                <Label htmlFor="first-name-email">First name</Label>
+                <Input id="first-name-email" placeholder="Max" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                </div>
+                <div className="grid gap-2">
+                <Label htmlFor="last-name-email">Last name</Label>
+                <Input id="last-name-email" placeholder="Robinson" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                </div>
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading || isGoogleLoading}
+                suppressHydrationWarning
+                />
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+                {isLoading ? <Loader className="mr-2 animate-spin" /> : null}
+                Create an account
+            </Button>
+        </form>
 
         <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
@@ -278,37 +164,6 @@ export default function RegisterPage() {
         </div>
       </CardContent>
     </Card>
-    
-     <Dialog open={isOtpSent} onOpenChange={setIsOtpSent}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enter Verification Code</DialogTitle>
-            <DialogDescription>
-              We've sent a 6-digit code to your phone number. Please enter it below to complete your registration.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="otp" className="text-right">
-                OTP
-              </Label>
-              <Input
-                id="otp"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="col-span-3"
-                placeholder="123456"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleOtpVerify} disabled={isOtpLoading}>
-                {isOtpLoading && <Loader className="mr-2 animate-spin" />}
-                Verify and Sign Up
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

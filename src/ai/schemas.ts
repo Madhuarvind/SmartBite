@@ -245,5 +245,3 @@ export type SuggestRecipesByMoodInput = z.infer<typeof SuggestRecipesByMoodInput
 
 export const SuggestRecipesByMoodOutputSchema = RecipeOutputSchema;
 export type SuggestRecipesByMoodOutput = z.infer<typeof SuggestRecipesByMoodOutputSchema>;
-
-    

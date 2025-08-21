@@ -16,13 +16,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification } from "firebase/auth";
 import { Loader } from "lucide-react";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,22 +31,6 @@ export default function RegisterPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-
-  // Phone Auth State
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [isPhoneLoading, setIsPhoneLoading] = useState(false);
-  
-  useEffect(() => {
-    // This effect ensures the reCAPTCHA verifier is cleaned up when the component unmounts.
-    return () => {
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-      }
-    };
-  }, []);
-
 
   const populateInitialData = async (userId: string) => {
       const batch = writeBatch(db);
@@ -116,82 +97,16 @@ export default function RegisterPage() {
     }
   }
 
-  const handlePhoneSignUp = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setIsPhoneLoading(true);
-
-    try {
-      // Create a new invisible reCAPTCHA verifier on each sign-up attempt.
-      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
-      window.recaptchaVerifier = recaptchaVerifier;
-
-      const confirmationResult = await signInWithPhoneNumber(auth, phone, recaptchaVerifier);
-      window.confirmationResult = confirmationResult;
-      setIsOtpSent(true);
-      toast({ title: "Verification Code Sent", description: `An OTP has been sent to ${phone}.` });
-    } catch (error: any) {
-      console.error("Failed to send OTP:", error);
-      toast({
-        variant: "destructive",
-        title: "Failed to Send OTP",
-        description: error.message || "Please check your phone number and ensure your browser can display reCAPTCHA.",
-      });
-    } finally {
-      setIsPhoneLoading(false);
-    }
-  };
-  
-  const handleVerifyOtp = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!window.confirmationResult) {
-        toast({ variant: 'destructive', title: 'Verification failed', description: 'No confirmation result found. Please try sending the code again.'})
-        return;
-    }
-
-    setIsPhoneLoading(true);
-    try {
-      const result = await window.confirmationResult.confirm(otp);
-      const user = result.user;
-      
-      await populateInitialData(user.uid);
-
-      toast({ title: "Account Created", description: "You've successfully signed up with your phone number." });
-      router.push("/dashboard");
-
-    } catch (error: any) {
-       console.error("OTP Verification failed:", error);
-       toast({
-        variant: "destructive",
-        title: "Verification Failed",
-        description: error.message || "The OTP was incorrect. Please try again.",
-      });
-    } finally {
-        setIsPhoneLoading(false);
-    }
-  };
-
-
   return (
     <>
     <Card className="mx-auto max-w-sm w-full">
       <CardHeader>
         <CardTitle className="text-xl">Sign Up</CardTitle>
         <CardDescription>
-          Choose your preferred method to create an account.
+          Enter your information to create an account.
         </CardDescription>
       </CardHeader>
       <CardContent>
-         <Tabs defaultValue="email">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="email">Email</TabsTrigger>
-            <TabsTrigger value="phone">Phone</TabsTrigger>
-          </TabsList>
-          <TabsContent value="email" className="pt-4">
             <form onSubmit={handleRegister} className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
@@ -225,55 +140,6 @@ export default function RegisterPage() {
                     Create an account
                 </Button>
             </form>
-         </TabsContent>
-         <TabsContent value="phone" className="pt-4">
-             {!isOtpSent ? (
-                <form onSubmit={handlePhoneSignUp} className="grid gap-4">
-                     <div id="recaptcha-container"></div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <Input
-                            id="phone"
-                            type="tel"
-                            placeholder="+1 123 456 7890"
-                            required
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            disabled={isPhoneLoading}
-                            suppressHydrationWarning
-                        />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isPhoneLoading}>
-                        {isPhoneLoading && <Loader className="mr-2 animate-spin" />}
-                        Send Verification Code
-                    </Button>
-                </form>
-             ) : (
-                <form onSubmit={handleVerifyOtp} className="grid gap-4">
-                     <div className="grid gap-2">
-                        <Label htmlFor="otp">Verification Code</Label>
-                        <Input
-                            id="otp"
-                            type="text"
-                            placeholder="Enter the 6-digit code"
-                            required
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
-                            disabled={isPhoneLoading}
-                            suppressHydrationWarning
-                        />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isPhoneLoading}>
-                        {isPhoneLoading && <Loader className="mr-2 animate-spin" />}
-                        Verify & Sign Up
-                    </Button>
-                    <Button variant="link" size="sm" className="mt-2" onClick={() => setIsOtpSent(false)} disabled={isPhoneLoading}>
-                        Entered the wrong number?
-                    </Button>
-                </form>
-             )}
-         </TabsContent>
-        </Tabs>
 
         <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
@@ -286,6 +152,7 @@ export default function RegisterPage() {
 
         <Button variant="outline" className="w-full" type="button" onClick={handleGoogleLogin} disabled={isLoading || isGoogleLoading}>
             {isGoogleLoading && <Loader className="mr-2 animate-spin" />}
+             <svg className="mr-2" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" height="18" width="18"><title>Google</title><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.3 1.62-3.92 1.62-3.08 0-5.61-2.3-5.61-5.18s2.53-5.18 5.61-5.18c1.5 0 2.72.48 3.76 1.48l2.84-2.76C19.31 2.91 16.33 2 12.48 2 7.4 2 3.43 5.44 3.43 10.4s3.97 8.4 9.05 8.4c2.39 0 4.49-.79 6-2.16 1.62-1.45 2.4-3.66 2.4-6.24 0-.55-.05-1.05-.14-1.55H12.48z" fill="currentColor"></path></svg>
             Sign up with Google
         </Button>
 
@@ -300,5 +167,3 @@ export default function RegisterPage() {
     </>
   )
 }
-
-    

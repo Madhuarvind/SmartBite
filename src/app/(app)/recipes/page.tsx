@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle } from "lucide-react";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
 import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient } from "@/ai/schemas";
@@ -23,6 +23,8 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
+import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
+import { Textarea } from "@/components/ui/textarea";
 
 const availableIngredients = Array.from(new Set([...initialInventory.map(i => i.name), ...pantryEssentials.map(i => i.name)]));
 const userInventory = [...initialInventory, ...pantryEssentials];
@@ -58,6 +60,10 @@ export default function RecipesPage() {
   const [servings, setServings] = useState(2);
   const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
+  
+  // State for mood-based suggestions
+  const [mood, setMood] = useState("");
+  const [isSuggestingByMood, setIsSuggestingByMood] = useState(false);
 
 
   const handleIngredientChange = (ingredient: string, checked: boolean | 'indeterminate') => {
@@ -85,6 +91,7 @@ export default function RecipesPage() {
       const input = {
         ingredients: selectedIngredients,
         dietaryRestrictions: dietaryNeeds === 'any' ? [] : [dietaryNeeds],
+        expiringIngredients: ['Tomatoes'],
       };
       const result = await recommendRecipes(input);
       setRecommendedRecipes(result.recipes);
@@ -103,6 +110,27 @@ export default function RecipesPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleSuggestByMood = async () => {
+    if (!mood) {
+        toast({ variant: "destructive", title: "Please tell us how you feel."});
+        return;
+    }
+    setIsSuggestingByMood(true);
+    setRecommendedRecipes([]);
+    try {
+        const result = await suggestRecipesByMood({ mood });
+        setRecommendedRecipes(result.recipes);
+        if (result.recipes.length === 0) {
+            toast({ title: "No suggestions found", description: "The AI couldn't find recipes for that mood. Try being more descriptive!" });
+        }
+    } catch(e) {
+        console.error("Error suggesting recipes by mood:", e);
+        toast({ variant: "destructive", title: "Suggestion Failed", description: "There was an error. Please try again." });
+    } finally {
+        setIsSuggestingByMood(false);
     }
   };
 
@@ -188,57 +216,81 @@ export default function RecipesPage() {
       <div className="flex flex-col gap-8">
         <PageHeader title="Find Your Next Meal" />
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Recipe Finder</CardTitle>
-            <CardDescription>Select ingredients and preferences to get AI-powered recipe recommendations.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-3">
-            <div className="md:col-span-2">
-              <Label>Available Ingredients</Label>
-              <div className="mt-2 p-4 border rounded-md min-h-[120px] bg-background/50">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {availableIngredients.map(ingredient => (
-                    <div key={ingredient} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={ingredient} 
-                        onCheckedChange={(checked) => handleIngredientChange(ingredient, checked)}
-                        checked={selectedIngredients.includes(ingredient)}
-                      />
-                      <Label htmlFor={ingredient} className="font-normal cursor-pointer">{ingredient}</Label>
+        <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><UtensilsCrossed className="mr-2"/> Recipe Finder</CardTitle>
+                <CardDescription>Select ingredients and preferences to get AI-powered recipe recommendations.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-6">
+                <div>
+                  <Label>Available Ingredients</Label>
+                  <div className="mt-2 p-4 border rounded-md min-h-[120px] bg-background/50">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {availableIngredients.map(ingredient => (
+                        <div key={ingredient} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={ingredient} 
+                            onCheckedChange={(checked) => handleIngredientChange(ingredient, checked)}
+                            checked={selectedIngredients.includes(ingredient)}
+                          />
+                          <Label htmlFor={ingredient} className="font-normal cursor-pointer">{ingredient}</Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="dietary-needs">Dietary Needs</Label>
-              <Select onValueChange={setDietaryNeeds} value={dietaryNeeds}>
-                <SelectTrigger id="dietary-needs" className="mt-2">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any</SelectItem>
-                  <SelectItem value="diabetes-friendly">Diabetes-Friendly</SelectItem>
-                  <SelectItem value="vegan">Vegan</SelectItem>
-                  <SelectItem value="vegetarian">Vegetarian</SelectItem>
-                  <SelectItem value="gluten-free">Gluten-Free</SelectItem>
-                  <SelectItem value="low-carb">Low-Carb</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={handleGenerateRecipes} disabled={isLoading}>
-              {isLoading ? <><Loader className="mr-2 animate-spin" /> Generating...</> : <><UtensilsCrossed className="mr-2" /> Generate Recipes</>}
-            </Button>
-          </CardFooter>
-        </Card>
+                <div>
+                  <Label htmlFor="dietary-needs">Dietary Needs</Label>
+                  <Select onValueChange={setDietaryNeeds} value={dietaryNeeds}>
+                    <SelectTrigger id="dietary-needs" className="mt-2">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any</SelectItem>
+                      <SelectItem value="diabetes-friendly">Diabetes-Friendly</SelectItem>
+                      <SelectItem value="vegan">Vegan</SelectItem>
+                      <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                      <SelectItem value="gluten-free">Gluten-Free</SelectItem>
+                      <SelectItem value="low-carb">Low-Carb</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handleGenerateRecipes} disabled={isLoading}>
+                  {isLoading ? <><Loader className="mr-2 animate-spin" /> Generating...</> : <> Generate Recipes</>}
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center"><Heart className="mr-2"/> Feeling Inspired?</CardTitle>
+                    <CardDescription>Get recipe suggestions based on your current mood or craving.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Label htmlFor="mood-input">How are you feeling today?</Label>
+                    <Textarea 
+                        id="mood-input"
+                        placeholder="e.g., 'I'm feeling stressed and need something comforting' or 'I want to cook something adventurous!'"
+                        value={mood}
+                        onChange={(e) => setMood(e.target.value)}
+                        className="mt-2"
+                    />
+                </CardContent>
+                <CardFooter>
+                    <Button onClick={handleSuggestByMood} disabled={isSuggestingByMood}>
+                        {isSuggestingByMood ? <><Loader className="mr-2 animate-spin" /> Suggesting...</> : <>Suggest Recipes</>}
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
         
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Recommended For You</h2>
           <div className="grid gap-6 mt-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {isLoading && Array.from({ length: 4 }).map((_, i) => (
+            {(isLoading || isSuggestingByMood) && Array.from({ length: 4 }).map((_, i) => (
                <Card key={i} className="overflow-hidden flex flex-col">
                   <CardHeader className="p-0">
                       <Skeleton className="aspect-video w-full" />
@@ -344,7 +396,7 @@ export default function RecipesPage() {
                               />
                             ) : (
                               <div className="w-full aspect-video bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center rounded-lg">
-                                  <Film className="w-10 h-10 mb-2 animate-pulse text-primary"/>
+                                  <Loader className="w-10 h-10 mb-2 animate-pulse text-primary"/>
                                   <p className="text-sm font-medium">Preparing your video...</p>
                                   <p className="text-xs">This can take a moment, especially for new recipes.</p>
                               </div>
@@ -525,5 +577,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    

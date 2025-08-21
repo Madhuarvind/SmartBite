@@ -1,3 +1,4 @@
+
 // src/ai/schemas.ts
 /**
  * @fileOverview This file contains all the Zod schemas and TypeScript types for the AI flows.
@@ -124,22 +125,7 @@ export type SuggestSubstitutionsOutput = z.infer<
 >;
 
 
-// Schemas for recommend-recipes.ts
-export const RecommendRecipesInputSchema = z.object({
-  ingredients: z
-    .array(z.string())
-    .describe('A list of ingredients the user has available.'),
-  dietaryRestrictions: z
-    .array(z.string())
-    .optional()
-    .describe('A list of dietary restrictions the user has.'),
-  expiringIngredients: z
-    .array(z.string())
-    .optional()
-    .describe('A list of ingredients that are about to expire.'),
-});
-export type RecommendRecipesInput = z.infer<typeof RecommendRecipesInputSchema>;
-
+// Schemas for recommend-recipes.ts and other recipe-generating flows
 export const InstructionStepSchema = z.object({
     step: z.number().describe('The step number.'),
     text: z.string().describe('The text of the instruction.'),
@@ -170,9 +156,29 @@ export const RecipeSchema = z.object({
 });
 export type Recipe = z.infer<typeof RecipeSchema>;
 
-export const RecommendRecipesOutputSchema = z.object({
+export const RecipeOutputSchema = z.object({
   recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
 });
+export type RecipeOutput = z.infer<typeof RecipeOutputSchema>;
+
+
+// Schemas for recommend-recipes.ts
+export const RecommendRecipesInputSchema = z.object({
+  ingredients: z
+    .array(z.string())
+    .describe('A list of ingredients the user has available.'),
+  dietaryRestrictions: z
+    .array(z.string())
+    .optional()
+    .describe('A list of dietary restrictions the user has.'),
+  expiringIngredients: z
+    .array(z.string())
+    .optional()
+    .describe('A list of ingredients that are about to expire.'),
+});
+export type RecommendRecipesInput = z.infer<typeof RecommendRecipesInputSchema>;
+
+export const RecommendRecipesOutputSchema = RecipeOutputSchema;
 export type RecommendRecipesOutput = z.infer<typeof RecommendRecipesOutputSchema>;
 
 
@@ -214,3 +220,13 @@ export type TransformRecipeInput = z.infer<typeof TransformRecipeInputSchema>;
 
 export const TransformRecipeOutputSchema = RecipeSchema.describe('The new, transformed recipe.');
 export type TransformRecipeOutput = z.infer<typeof TransformRecipeOutputSchema>;
+
+
+// Schemas for suggest-recipes-by-mood.ts
+export const SuggestRecipesByMoodInputSchema = z.object({
+  mood: z.string().describe("The user's current mood or feeling (e.g., 'tired', 'celebratory', 'stressed')."),
+});
+export type SuggestRecipesByMoodInput = z.infer<typeof SuggestRecipesByMoodInputSchema>;
+
+export const SuggestRecipesByMoodOutputSchema = RecipeOutputSchema;
+export type SuggestRecipesByMoodOutput = z.infer<typeof SuggestRecipesByMoodOutputSchema>;

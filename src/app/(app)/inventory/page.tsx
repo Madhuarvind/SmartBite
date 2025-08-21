@@ -354,7 +354,7 @@ export default function InventoryPage() {
                         <Label htmlFor="item-expiry" className="text-right">Expiry Date</Label>
                         <div className="col-span-3 grid grid-cols-3 gap-2">
                              <Input id="item-expiry" type="date" value={newItemExpiry} onChange={(e) => setNewItemExpiry(e.target.value)} className="col-span-2" />
-                             <Button onClick={handlePredictExpiry} disabled={isPredicting} variant="outline" size="sm" className="col-span-1">
+                             <Button onClick={handlePredictExpiry} disabled={isPredicting || !newItemName} variant="outline" size="sm" className="col-span-1">
                                 {isPredicting ? <Loader className="animate-spin" /> : <Wand2 />}
                                 <span className="sr-only">Predict Expiry</span>
                              </Button>

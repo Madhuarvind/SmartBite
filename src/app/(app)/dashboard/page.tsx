@@ -18,17 +18,6 @@ import { auth } from "@/lib/firebase";
 import type { User } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
-const chartData = [
-  { day: "Mon", meals: 2, waste: 0 },
-  { day: "Tue", meals: 3, waste: 1 },
-  { day: "Wed", meals: 2, waste: 0 },
-  { day: "Thu", meals: 2, waste: 0 },
-  { day: "Fri", meals: 3, waste: 0 },
-  { day: "Sat", meals: 1, waste: 2 },
-  { day: "Sun", meals: 2, waste: 0 },
-];
-
 const chartConfig = {
   meals: { label: "Meals Cooked", color: "hsl(var(--primary))" },
   waste: { label: "Items Wasted", color: "hsl(var(--destructive))" },
@@ -50,11 +39,22 @@ const getExpiringItems = () => {
     }));
 };
 
+const generateChartData = () => [
+  { day: "Mon", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+  { day: "Tue", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+  { day: "Wed", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+  { day: "Thu", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+  { day: "Fri", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+  { day: "Sat", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+  { day: "Sun", meals: Math.floor(Math.random() * 4), waste: Math.floor(Math.random() * 3) },
+];
+
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expiringItems, setExpiringItems] = useState(getExpiringItems());
+  const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -62,6 +62,9 @@ export default function DashboardPage() {
       setIsLoading(false);
     });
 
+    // Generate chart data on the client-side to ensure it's dynamic
+    setChartData(generateChartData());
+    
     // Refresh expiring items on component mount
     setExpiringItems(getExpiringItems());
 
@@ -86,16 +89,20 @@ export default function DashboardPage() {
             <CardDescription>Your cooking and waste habits from the last week.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-              <BarChart accessibilityLayer data={chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="meals" fill="var(--color-meals)" radius={4} />
-                <Bar dataKey="waste" fill="var(--color-waste)" radius={4} />
-              </BarChart>
-            </ChartContainer>
+            {chartData.length > 0 ? (
+                <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                <BarChart accessibilityLayer data={chartData}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="meals" fill="var(--color-meals)" radius={4} />
+                    <Bar dataKey="waste" fill="var(--color-waste)" radius={4} />
+                </BarChart>
+                </ChartContainer>
+            ) : (
+                <Skeleton className="h-[200px] w-full" />
+            )}
           </CardContent>
         </Card>
 

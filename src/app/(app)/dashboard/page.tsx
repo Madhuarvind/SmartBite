@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PageHeader } from "@/components/page-header";
@@ -10,6 +11,8 @@ import { ArrowRight, ScanLine, Lightbulb } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { initialInventory } from "@/lib/inventory";
+import { differenceInDays, parseISO } from "date-fns";
 
 const chartData = [
   { day: "Mon", meals: 2, waste: 0 },
@@ -26,12 +29,20 @@ const chartConfig = {
   waste: { label: "Items Wasted", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig;
 
-const expiringItems = [
-  { name: "Tomatoes", daysLeft: 1, status: "Urgent" as const },
-  { name: "Chicken Breast", daysLeft: 2, status: "Urgent" as const },
-  { name: "Milk", daysLeft: 3, status: "Soon" as const },
-  { name: "Spinach", daysLeft: 4, status: "Soon" as const },
-];
+const today = new Date();
+const expiringItems = initialInventory
+  .map(item => {
+    const expiryDate = parseISO(item.expiry);
+    const daysLeft = differenceInDays(expiryDate, today);
+    return { ...item, daysLeft };
+  })
+  .filter(item => item.daysLeft >= 0 && item.daysLeft <= 7)
+  .sort((a, b) => a.daysLeft - b.daysLeft)
+  .map(item => ({
+    ...item,
+    status: item.daysLeft <= 2 ? "Urgent" as const : "Soon" as const,
+  }));
+
 
 export default function DashboardPage() {
   return (
@@ -73,17 +84,21 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expiringItems.map((item) => (
+                {expiringItems.length > 0 ? expiringItems.map((item) => (
                   <TableRow key={item.name}>
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.daysLeft} days</TableCell>
+                    <TableCell>{item.daysLeft} {item.daysLeft === 1 ? 'day' : 'days'}</TableCell>
                     <TableCell>
                       <Badge variant={item.status === 'Urgent' ? 'destructive' : 'secondary'}>
                         {item.status}
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">No items expiring soon.</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PageHeader } from "@/components/page-header";
@@ -9,11 +10,12 @@ import type { ChartConfig } from "@/components/ui/chart";
 import { Trophy, FirstBadge } from "@/components/icons";
 
 const sustainabilityData = [
-  { week: '1', saved: 5 },
-  { week: '2', saved: 7 },
-  { week: '3', saved: 6 },
-  { week: '4', saved: 10 },
-  { week: '5', saved: 9 },
+  { week: '1', saved: 4 },
+  { week: '2', saved: 6 },
+  { week: '3', saved: 5 },
+  { week: '4', saved: 8 },
+  { week: '5', saved: 11 },
+  { week: '6', saved: 9 },
 ];
 
 const chartConfig = {

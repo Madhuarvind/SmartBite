@@ -367,22 +367,10 @@ export default function RecipesPage() {
               <Card key={`${recipe.name}-${index}`} className="overflow-hidden flex flex-col bg-card hover:bg-secondary/50 transition-colors duration-300">
                 <CardHeader className="p-0">
                    <div className="relative aspect-video">
-                    {recipe.video?.videoDataUri ? (
-                      <video
-                        src={recipe.video.videoDataUri}
-                        controls
-                        className="w-full h-full object-cover"
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                      />
+                    {recipe.instructionSteps && recipe.instructionSteps[0]?.image?.imageDataUri ? (
+                        <Image src={recipe.instructionSteps[0].image.imageDataUri} alt={recipe.name} layout="fill" objectFit="cover" className="bg-secondary"/>
                     ) : (
-                      <div className="w-full h-full bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
-                          <Loader className="w-10 h-10 mb-2 animate-spin text-primary"/>
-                          <p className="text-sm font-medium">Preparing your video...</p>
-                          <p className="text-xs">This can take a moment.</p>
-                      </div>
+                       <Skeleton className="w-full h-full" />
                     )}
                     <Badge variant="secondary" className="absolute top-2 right-2">Recommended</Badge>
                   </div>
@@ -638,7 +626,7 @@ export default function RecipesPage() {
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsModalOpen(false)}>Close</button>
+                    <Button variant="outline" onClick={() => setIsModalOpen(false)}>Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

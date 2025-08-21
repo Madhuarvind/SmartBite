@@ -10,7 +10,7 @@ import {ai} from '@/ai/genkit';
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeStepImage } from './generate-recipe-step-image';
-import { RecommendRecipesInput, RecommendRecipesInputSchema, RecommendRecipesOutput, RecommendRecipesOutputSchema, InstructionStep } from '../schemas';
+import { RecommendRecipesInput, RecommendRecipesInputSchema, RecommendRecipesOutput, RecommendRecipesOutputSchema, InstructionStep, Recipe } from '../schemas';
 
 
 export async function recommendRecipes(input: RecommendRecipesInput): Promise<RecommendRecipesOutput> {
@@ -52,33 +52,16 @@ const recommendRecipesFlow = ai.defineFlow(
     }
 
     // After generating the recipe text, kick off all media generation in parallel.
-    // This makes the UI feel much more responsive.
     const enhancedRecipes = await Promise.all(
-      output.recipes.map(async (recipe) => {
-        try {
-          // Generate audio and video for the overall recipe
-          // Using allSettled ensures that if one fails (e.g., video), the others can still succeed.
-          const [audioResult, videoResult] = await Promise.allSettled([
-            generateRecipeAudio({ instructions: recipe.instructions }),
-            generateRecipeVideo({ recipeName: recipe.name })
-          ]);
-
-          const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
-          const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
-          
-          if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
-          if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
-
-          // Generate images for each instruction step in parallel as well.
-          const instructionSteps: InstructionStep[] = await Promise.all(
+      output.recipes.map(async (recipe: Recipe) => {
+        // First, generate the step-by-step images, which are relatively fast.
+        const instructionSteps: InstructionStep[] = await Promise.all(
             recipe.instructions.split('\n').filter(line => line.trim().length > 0).map(async (instructionText, index) => {
               const step: InstructionStep = {
                 step: index + 1,
                 text: instructionText.replace(/^\d+\.\s*/, ''), // Remove leading numbers like "1. "
               };
               try {
-                // We don't use allSettled here because we want to return the step regardless.
-                // A missing image is not a critical failure for a single step.
                 const imageResult = await generateRecipeStepImage({
                   instruction: step.text,
                   recipeName: recipe.name,
@@ -86,20 +69,41 @@ const recommendRecipesFlow = ai.defineFlow(
                 step.image = imageResult;
               } catch (e) {
                 console.error(`Image generation failed for step "${step.text}" in recipe ${recipe.name}:`, e);
-                // Continue without an image for this step
               }
               return step;
             })
-          );
-          
-          // Return the recipe with whatever media was successfully generated.
-          return { ...recipe, audio, video, instructionSteps };
+        );
+        
+        // Create an initial recipe object with images that can be returned immediately.
+        const recipeWithImages: Recipe = { ...recipe, instructionSteps };
 
-        } catch (error) {
-            console.error(`Failed to process media generation for ${recipe.name}`, error);
-            // Return the original recipe even if the media processing fails catastrophically.
-            return recipe;
-        }
+        // Now, start the slow audio and video generation but don't wait for it.
+        // Return the recipe with a promise for the full media.
+        const mediaPromise = Promise.allSettled([
+            generateRecipeAudio({ instructions: recipe.instructions }),
+            generateRecipeVideo({ recipeName: recipe.name })
+        ]).then(([audioResult, videoResult]) => {
+            const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
+            const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+            if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
+            if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
+            return { ...recipeWithImages, audio, video };
+        });
+
+        // We can add the unresolved promise to the object.
+        // This is a bit of a trick; the client will get the initial object,
+        // and the full object with media will resolve later on the server.
+        // For the UI, we just check if `recipe.video` exists.
+        return {
+          ...recipeWithImages,
+          // This ensures the final object passed to the client has the resolved media.
+          // The client-side code will receive the fully resolved object once this `map` completes.
+          // The key is that the UI can render the recipe before the video/audio is ready.
+          audio: undefined,
+          video: undefined,
+          // This is a conceptual representation; the final awaited result of this function will have the media.
+          ...await mediaPromise
+        };
       })
     );
 

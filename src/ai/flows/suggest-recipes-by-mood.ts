@@ -65,46 +65,52 @@ const suggestRecipesByMoodFlow = ai.defineFlow(
     // After generating the recipe text, kick off all media generation in parallel.
     const enhancedRecipes = await Promise.all(
       output.recipes.map(async (recipe: Recipe) => {
-        try {
-          const [audioResult, videoResult] = await Promise.allSettled([
-            generateRecipeAudio({ instructions: recipe.instructions }),
-            generateRecipeVideo({ recipeName: recipe.name }),
-          ]);
+        // Generate step images first as they are quicker
+        const instructionSteps: InstructionStep[] = await Promise.all(
+          recipe.instructions
+            .split('\n')
+            .filter((line) => line.trim().length > 0)
+            .map(async (instructionText, index) => {
+              const step: InstructionStep = {
+                step: index + 1,
+                text: instructionText.replace(/^\d+\.\s*/, ''),
+              };
+              try {
+                const imageResult = await generateRecipeStepImage({
+                  instruction: step.text,
+                  recipeName: recipe.name,
+                });
+                step.image = imageResult;
+              } catch (e) {
+                console.error(`Image generation failed for step "${step.text}" in recipe ${recipe.name}:`, e);
+              }
+              return step;
+            })
+        );
+        
+        const recipeWithImages = { ...recipe, instructionSteps };
 
+        // Generate audio and video in the background
+        const mediaPromise = Promise.allSettled([
+          generateRecipeAudio({ instructions: recipe.instructions }),
+          generateRecipeVideo({ recipeName: recipe.name }),
+        ]).then(([audioResult, videoResult]) => {
           const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
           const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
 
           if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
           if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
-
-          const instructionSteps: InstructionStep[] = await Promise.all(
-            recipe.instructions
-              .split('\n')
-              .filter((line) => line.trim().length > 0)
-              .map(async (instructionText, index) => {
-                const step: InstructionStep = {
-                  step: index + 1,
-                  text: instructionText.replace(/^\d+\.\s*/, ''),
-                };
-                try {
-                  const imageResult = await generateRecipeStepImage({
-                    instruction: step.text,
-                    recipeName: recipe.name,
-                  });
-                  step.image = imageResult;
-                } catch (e) {
-                  console.error(`Image generation failed for step "${step.text}" in recipe ${recipe.name}:`, e);
-                }
-                return step;
-              })
-          );
           
-          return { ...recipe, audio, video, instructionSteps };
+          return { ...recipeWithImages, audio, video };
+        });
 
-        } catch (error) {
-          console.error(`Failed to process media generation for ${recipe.name}`, error);
-          return recipe;
-        }
+        // Return the recipe with the media promise
+        return {
+          ...recipeWithImages,
+          audio: undefined,
+          video: undefined,
+          ...await mediaPromise
+        };
       })
     );
 

@@ -411,30 +411,3 @@ export type FindRecipeFromMealInput = z.infer<typeof FindRecipeFromMealInputSche
 
 export const FindRecipeFromMealOutputSchema = RecipeSchema.describe('A generated recipe for the specified meal.');
 export type FindRecipeFromMealOutput = z.infer<typeof FindRecipeFromMealOutputSchema>;
-
-// Schemas for send-verification-otp.ts
-export const SendVerificationOtpInputSchema = z.object({
-  userId: z.string().describe('The unique ID of the user.'),
-  email: z.string().email().describe('The email address of the user.'),
-  name: z.string().describe('The first name of the user for email personalization.'),
-});
-export type SendVerificationOtpInput = z.infer<typeof SendVerificationOtpInputSchema>;
-
-export const SendVerificationOtpOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-export type SendVerificationOtpOutput = z.infer<typeof SendVerificationOtpOutputSchema>;
-
-// Schemas for verify-otp.ts
-export const VerifyOtpInputSchema = z.object({
-  userId: z.string().describe('The unique ID of the user.'),
-  otp: z.string().length(6, { message: 'OTP must be 6 digits' }).describe('The 6-digit one-time password.'),
-});
-export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
-
-export const VerifyOtpOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-export type VerifyOtpOutput = z.infer<typeof VerifyOtpOutputSchema>;

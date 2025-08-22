@@ -21,7 +21,6 @@ import { Loader } from "lucide-react";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { sendVerificationOtp } from "@/ai/flows/send-verification-otp";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -62,20 +61,16 @@ export default function RegisterPage() {
       const user = userCredential.user;
       await updateProfile(user, { displayName: `${firstName} ${lastName}`.trim() });
       
-      // Standard email verification link
       const actionCodeSettings = {
         url: `${window.location.origin}/login`,
         handleCodeInApp: true,
       };
       await sendEmailVerification(user, actionCodeSettings);
 
-      // New OTP verification email
-      await sendVerificationOtp({ userId: user.uid, email: user.email!, name: firstName });
-
       await populateInitialData(user.uid);
       
-      toast({ title: "Registration Successful!", description: "We've sent a verification code to your email." });
-      router.push(`/verify-otp?userId=${user.uid}`);
+      toast({ title: "Registration Successful!", description: "We've sent a verification link to your email. Please verify before logging in." });
+      router.push(`/login`);
 
     } catch (error: any) {
        console.error("Registration failed:", error);

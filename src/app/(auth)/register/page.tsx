@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,7 @@ import { Loader } from "lucide-react";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { sendVerificationOtp } from "@/ai/flows/send-verification-otp";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -59,19 +59,24 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: `${firstName} ${lastName}`.trim() });
+      const user = userCredential.user;
+      await updateProfile(user, { displayName: `${firstName} ${lastName}`.trim() });
       
+      // Standard email verification link
       const actionCodeSettings = {
         url: `${window.location.origin}/login`,
         handleCodeInApp: true,
       };
+      await sendEmailVerification(user, actionCodeSettings);
 
-      await sendEmailVerification(userCredential.user, actionCodeSettings);
+      // New OTP verification email
+      await sendVerificationOtp({ userId: user.uid, email: user.email!, name: firstName });
 
-      await populateInitialData(userCredential.user.uid);
+      await populateInitialData(user.uid);
       
-      toast({ title: "Verification Email Sent", description: "Please check your inbox to verify your email address before logging in." });
-      router.push("/login");
+      toast({ title: "Registration Successful!", description: "We've sent a verification code to your email." });
+      router.push(`/verify-otp?userId=${user.uid}`);
+
     } catch (error: any) {
        console.error("Registration failed:", error);
        toast({

@@ -1,4 +1,3 @@
-
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth, RecaptchaVerifier, ConfirmationResult } from "firebase/auth";
@@ -21,7 +20,6 @@ declare global {
         confirmationResult?: ConfirmationResult;
     }
 }
-
 
 // Initialize Firebase
 const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();

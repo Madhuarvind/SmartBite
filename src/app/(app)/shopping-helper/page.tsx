@@ -29,6 +29,7 @@ export default function ShoppingHelperPage() {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatQuery, setChatQuery] = useState("");
@@ -42,27 +43,33 @@ export default function ShoppingHelperPage() {
   }, []);
   
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-        const getCameraPermission = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            setHasCameraPermission(true);
-            if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            }
-        } catch (error) {
-            console.error('Error accessing camera:', error);
-            setHasCameraPermission(false);
-            toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please enable camera permissions in your browser settings to use the Smart Shopping Lens.',
-            });
+    const getCameraPermission = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setHasCameraPermission(false);
+        return;
+      }
+      try {
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(cameraStream);
+        setHasCameraPermission(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = cameraStream;
         }
-        };
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use the Smart Shopping Lens.',
+        });
+      }
+    };
+    getCameraPermission();
 
-        getCameraPermission();
-    }
+    return () => {
+      stream?.getTracks().forEach(track => track.stop());
+    };
   }, [toast]);
   
   const processImage = async (photoDataUri: string) => {
@@ -101,6 +108,8 @@ export default function ShoppingHelperPage() {
       context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const photoDataUri = canvas.toDataURL('image/jpeg');
       processImage(photoDataUri);
+      stream?.getTracks().forEach(track => track.stop());
+      setStream(null);
     } else {
       toast({
         variant: "destructive",
@@ -135,9 +144,18 @@ export default function ShoppingHelperPage() {
       }
   }
 
-  const handleResetLens = () => {
+  const handleResetLens = async () => {
     setScannedImage(null);
     setAnalysisResult(null);
+    try {
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(cameraStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = cameraStream;
+        }
+    } catch(e) {
+        console.error("Error re-activating camera", e);
+    }
   };
 
   return (
@@ -251,3 +269,5 @@ export default function ShoppingHelperPage() {
     </div>
   );
 }
+
+    

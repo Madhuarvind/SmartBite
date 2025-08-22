@@ -32,6 +32,7 @@ export default function PlateScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
   const [foundRecipe, setFoundRecipe] = useState<Recipe | null>(null);
@@ -46,11 +47,16 @@ export default function PlateScannerPage() {
 
   useEffect(() => {
     const getCameraPermission = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setHasCameraPermission(false);
+        return;
+      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(cameraStream);
         setHasCameraPermission(true);
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          videoRef.current.srcObject = cameraStream;
         }
       } catch (error) {
         console.error('Error accessing camera:', error);
@@ -58,6 +64,10 @@ export default function PlateScannerPage() {
       }
     };
     getCameraPermission();
+
+    return () => {
+        stream?.getTracks().forEach(track => track.stop());
+    };
   }, []);
 
   const handleFile = (file: File) => {
@@ -107,6 +117,8 @@ export default function PlateScannerPage() {
       context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const photoDataUri = canvas.toDataURL('image/jpeg');
       processImage(photoDataUri);
+      stream?.getTracks().forEach(track => track.stop());
+      setStream(null);
     } else {
       toast({
         variant: "destructive",
@@ -366,4 +378,6 @@ export default function PlateScannerPage() {
     </>
   );
 }
+    
+
     

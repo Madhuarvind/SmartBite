@@ -108,10 +108,14 @@ export default function RecipesPage() {
 
   useEffect(() => {
     const getCameraPermission = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setHasCameraPermission(false);
+        return;
+      }
       try {
         const cameraStream = await navigator.mediaDevices.getUserMedia({video: true});
-        setHasCameraPermission(true);
         setStream(cameraStream);
+        setHasCameraPermission(true);
 
         if (moodVideoRef.current) {
           moodVideoRef.current.srcObject = cameraStream;
@@ -126,9 +130,7 @@ export default function RecipesPage() {
 
     return () => {
         // Cleanup function to stop the stream when the component unmounts
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
+        stream?.getTracks().forEach(track => track.stop());
     }
   }, []);
 
@@ -219,7 +221,6 @@ export default function RecipesPage() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 setStream(null);
-                setHasCameraPermission(null); // Reset permission to allow re-activating
             }
         } catch (error) {
             console.error("Error predicting facial mood:", error);
@@ -782,3 +783,5 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    

@@ -39,6 +39,7 @@ export default function InventoryPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState("");
@@ -81,11 +82,16 @@ export default function InventoryPage() {
 
   useEffect(() => {
     const getCameraPermission = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setHasCameraPermission(false);
+        return;
+      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(cameraStream);
         setHasCameraPermission(true);
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          videoRef.current.srcObject = cameraStream;
         }
       } catch (error) {
         console.error('Error accessing camera:', error);
@@ -93,6 +99,10 @@ export default function InventoryPage() {
       }
     };
     getCameraPermission();
+
+    return () => {
+      stream?.getTracks().forEach(track => track.stop());
+    };
   }, []);
   
   const processImage = async (photoDataUri: string) => {
@@ -131,6 +141,11 @@ export default function InventoryPage() {
         context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         const photoDataUri = canvas.toDataURL('image/jpeg');
         processImage(photoDataUri);
+
+        // Stop the camera stream
+        stream?.getTracks().forEach(track => track.stop());
+        setStream(null);
+
     } else {
         toast({
             variant: "destructive",
@@ -532,3 +547,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    

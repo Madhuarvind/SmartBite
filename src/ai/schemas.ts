@@ -172,6 +172,7 @@ export const RecipeSchema = z.object({
       carbs: z.number().describe('The estimated grams of carbohydrates per serving.'),
       fat: z.number().describe('The estimated grams of fat per serving.'),
   }).describe('The nutritional information for the recipe.'),
+  estimatedCost: z.number().optional().describe('The estimated cost of the ingredients for this recipe.'),
   rationale: z.string().optional().describe("A brief explanation for why this recipe was suggested."),
   audio: GenerateRecipeAudioOutputSchema.optional(),
   video: GenerateRecipeVideoOutputSchema.optional(),
@@ -411,3 +412,18 @@ export type FindRecipeFromMealInput = z.infer<typeof FindRecipeFromMealInputSche
 
 export const FindRecipeFromMealOutputSchema = RecipeSchema.describe('A generated recipe for the specified meal.');
 export type FindRecipeFromMealOutput = z.infer<typeof FindRecipeFromMealOutputSchema>;
+
+
+// Schemas for invent-recipe.ts
+const PricedIngredientSchema = z.object({
+    name: z.string().describe('The name of the ingredient.'),
+    price: z.number().optional().describe('The price of the ingredient.'),
+});
+
+export const InventRecipeInputSchema = z.object({
+    ingredients: z.array(PricedIngredientSchema).describe('A list of ingredients the user has available, including their price if known.'),
+});
+export type InventRecipeInput = z.infer<typeof InventRecipeInputSchema>;
+
+export const InventRecipeOutputSchema = RecipeSchema.describe('A new, invented recipe based on the provided ingredients.');
+export type InventRecipeOutput = z.infer<typeof InventRecipeOutputSchema>;

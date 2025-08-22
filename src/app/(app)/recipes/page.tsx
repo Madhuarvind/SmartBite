@@ -25,6 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
 import { predictiveSuggestions } from "@/ai/flows/predictive-suggestions";
 import { predictFacialMood } from "@/ai/flows/predict-facial-mood";
+import { inventRecipe } from "@/ai/flows/invent-recipe";
 import { Textarea } from "@/components/ui/textarea";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp, onSnapshot, query, orderBy, getDocs } from "firebase/firestore";
@@ -71,6 +72,7 @@ export default function RecipesPage() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   
   const [isPredicting, setIsPredicting] = useState(false);
+  const [isInventing, setIsInventing] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -272,6 +274,38 @@ export default function RecipesPage() {
       }
   }
 
+    const handleInventRecipe = async () => {
+    if (selectedIngredients.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Ingredients Selected",
+        description: "Please select some ingredients for the AI to get creative with.",
+      });
+      return;
+    }
+    setIsInventing(true);
+    setRecommendedRecipes([]);
+    try {
+      const allItems = [...userInventory, ...pantryEssentials];
+      const pricedIngredients = selectedIngredients.map(name => {
+        const item = allItems.find(i => i.name === name);
+        return { name, price: item && 'price' in item ? item.price : undefined };
+      });
+
+      const result = await inventRecipe({ ingredients: pricedIngredients });
+      setRecommendedRecipes([result]);
+    } catch (error) {
+      console.error("Error inventing recipe:", error);
+      toast({
+        variant: "destructive",
+        title: "Invention Failed",
+        description: "The Creative Chef AI had some trouble. Please try again.",
+      });
+    } finally {
+      setIsInventing(false);
+    }
+  };
+
 
   const handleViewRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
@@ -384,8 +418,8 @@ export default function RecipesPage() {
       <div className="flex flex-col gap-8 animate-fade-in">
         <PageHeader title="Find Your Next Meal" />
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="animate-fade-in-slide-up">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="animate-fade-in-slide-up lg:col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center"><UtensilsCrossed className="mr-2"/> Recipe Finder</CardTitle>
                 <CardDescription>Select your available ingredients and dietary needs to get recipe recommendations.</CardDescription>
@@ -440,7 +474,7 @@ export default function RecipesPage() {
               </CardFooter>
             </Card>
             
-            <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
+            <Card className="animate-fade-in-slide-up lg:col-span-1" style={{animationDelay: '0.1s'}}>
                 <CardHeader>
                     <CardTitle className="flex items-center"><Heart className="mr-2"/> Feeling Inspired?</CardTitle>
                     <CardDescription>Use your camera to scan your mood, or just type how you feel to get recipe ideas.</CardDescription>
@@ -485,7 +519,7 @@ export default function RecipesPage() {
                 </CardFooter>
             </Card>
 
-            <Card className="animate-fade-in-slide-up md:col-span-2 lg:col-span-1" style={{animationDelay: '0.2s'}}>
+            <Card className="animate-fade-in-slide-up lg:col-span-1" style={{animationDelay: '0.2s'}}>
                 <CardHeader>
                     <CardTitle className="flex items-center"><BrainCircuit className="mr-2"/> Predictive Suggestions</CardTitle>
                     <CardDescription>Let our AI predict what you might want to cook next based on your habits and recent purchases.</CardDescription>
@@ -505,12 +539,32 @@ export default function RecipesPage() {
                     </Button>
                 </CardFooter>
             </Card>
+            <Card className="animate-fade-in-slide-up lg:col-span-1" style={{animationDelay: '0.3s'}}>
+                <CardHeader>
+                    <CardTitle className="flex items-center"><Sparkles className="mr-2"/> Creative Chef AI</CardTitle>
+                    <CardDescription>Don't just get recipes, invent them! The AI will create a new dish from your ingredients.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <Alert>
+                        <Wand2 className="h-4 w-4" />
+                        <AlertTitle>Feeling Adventurous?</AlertTitle>
+                        <AlertDescription>
+                           Select your ingredients in the "Recipe Finder" card and click below to invent a brand new recipe.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+                <CardFooter>
+                    <Button onClick={handleInventRecipe} disabled={isInventing || selectedIngredients.length === 0}>
+                        {isInventing ? <><Loader className="mr-2 animate-spin" /> Inventing...</> : <>Invent a Recipe</>}
+                    </Button>
+                </CardFooter>
+            </Card>
         </div>
         
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Recommended For You</h2>
           <div className="grid gap-6 mt-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {(isLoading || isSuggestingByMood || isPredicting) && Array.from({ length: 4 }).map((_, i) => (
+            {(isLoading || isSuggestingByMood || isPredicting || isInventing) && Array.from({ length: 4 }).map((_, i) => (
                <Card key={i} className="overflow-hidden flex flex-col animate-fade-in-slide-up" style={{animationDelay: `${i * 0.1}s`}}>
                   <CardHeader className="p-0">
                       <Skeleton className="aspect-video w-full" />
@@ -683,6 +737,12 @@ export default function RecipesPage() {
                                             <TableCell className="font-medium">Fat</TableCell>
                                             <TableCell className="text-right">{currentRecipe.nutrition.fat.toFixed(1)}g</TableCell>
                                         </TableRow>
+                                        {currentRecipe.estimatedCost && (
+                                            <TableRow>
+                                                <TableCell className="font-medium">Est. Cost</TableCell>
+                                                <TableCell className="text-right">${currentRecipe.estimatedCost.toFixed(2)}</TableCell>
+                                            </TableRow>
+                                        )}
                                     </TableBody>
                                 </Table>
                             </CardContent>
@@ -783,5 +843,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    

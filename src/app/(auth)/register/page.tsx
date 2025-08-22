@@ -34,14 +34,6 @@ export default function RegisterPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [origin, setOrigin] = useState("");
-
-  useEffect(() => {
-    // This ensures the origin is only read on the client side, avoiding hydration errors.
-    if (typeof window !== "undefined") {
-      setOrigin(window.location.origin);
-    }
-  }, []);
 
   const populateInitialData = async (userId: string) => {
       const batch = writeBatch(db);
@@ -64,22 +56,13 @@ export default function RegisterPage() {
 
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!origin) {
-        toast({
-            variant: "destructive",
-            title: "Initialization Error",
-            description: "Could not determine the page origin. Please refresh and try again.",
-        });
-        return;
-    }
-
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: `${firstName} ${lastName}`.trim() });
       
       const actionCodeSettings = {
-        url: `${origin}/login`,
+        url: `${window.location.origin}/login`,
         handleCodeInApp: true,
       };
 
@@ -142,11 +125,11 @@ export default function RegisterPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                         <Label htmlFor="first-name-email">First name</Label>
-                        <Input id="first-name-email" placeholder="Max" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                        <Input id="first-name-email" placeholder="Max" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading || isGoogleLoading} />
                         </div>
                         <div className="grid gap-2">
                         <Label htmlFor="last-name-email">Last name</Label>
-                        <Input id="last-name-email" placeholder="Robinson" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                        <Input id="last-name-email" placeholder="Robinson" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading || isGoogleLoading} />
                         </div>
                     </div>
                     <div className="grid gap-2">
@@ -159,14 +142,13 @@ export default function RegisterPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         disabled={isLoading || isGoogleLoading}
-                        suppressHydrationWarning
                         />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="password">Password</Label>
-                        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} suppressHydrationWarning />
+                        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} />
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading || !origin}>
+                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                         {isLoading ? <Loader className="mr-2 animate-spin" /> : null}
                         Create an account
                     </Button>

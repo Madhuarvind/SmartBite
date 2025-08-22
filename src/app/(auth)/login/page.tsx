@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "firebase/auth";
 import { Loader } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 
 
@@ -121,7 +120,6 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading || isGoogleLoading}
-              suppressHydrationWarning
             />
           </div>
           <div className="grid gap-2">
@@ -164,7 +162,6 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading || isGoogleLoading}
-              suppressHydrationWarning
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>

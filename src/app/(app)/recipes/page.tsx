@@ -68,6 +68,7 @@ export default function RecipesPage() {
   const [isScanningMood, setIsScanningMood] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const moodVideoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   
   const [isPredicting, setIsPredicting] = useState(false);
 
@@ -108,11 +109,12 @@ export default function RecipesPage() {
   useEffect(() => {
     const getCameraPermission = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({video: true});
+        const cameraStream = await navigator.mediaDevices.getUserMedia({video: true});
         setHasCameraPermission(true);
+        setStream(cameraStream);
 
         if (moodVideoRef.current) {
-          moodVideoRef.current.srcObject = stream;
+          moodVideoRef.current.srcObject = cameraStream;
         }
       } catch (error) {
         console.error('Error accessing camera:', error);
@@ -121,6 +123,13 @@ export default function RecipesPage() {
     };
 
     getCameraPermission();
+
+    return () => {
+        // Cleanup function to stop the stream when the component unmounts
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    }
   }, []);
 
   const handleGenerateRecipes = async () => {
@@ -206,6 +215,12 @@ export default function RecipesPage() {
             const result = await predictFacialMood({ photoDataUri });
             setMood(result.mood);
             toast({ title: "Mood Detected!", description: `The AI thinks you're feeling: ${result.mood}`});
+            // Stop the camera stream after successful scan
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                setStream(null);
+                setHasCameraPermission(null); // Reset permission to allow re-activating
+            }
         } catch (error) {
             console.error("Error predicting facial mood:", error);
             toast({ variant: "destructive", title: "Mood Scan Failed", description: "Could not analyze the image."});

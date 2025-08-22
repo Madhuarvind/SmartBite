@@ -105,6 +105,7 @@ export default function VerifyOtpPage() {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               disabled={isLoading}
+              suppressHydrationWarning
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || !userId}>
@@ -116,3 +117,4 @@ export default function VerifyOtpPage() {
     </Card>
   );
 }
+

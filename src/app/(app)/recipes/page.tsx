@@ -312,28 +312,35 @@ export default function RecipesPage() {
 
   const handleViewRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
-    setTransformedRecipe(null);
+    setTransformedRecipe(null); // Clear any previous transformations
+    setRecipeMedia({ audio: recipe.audio, video: recipe.video }); // Set initial media
     setIsModalOpen(true);
-    // Reset states for the modal
+
+    // Reset other modal states
     setSubstitutions([]);
     setMissingIngredient(null);
     setTransformationRequest("");
     setInventoryCheckResults([]);
     setIsCheckingInventory(false);
     setServings(2);
-    setRecipeMedia({ audio: recipe.audio, video: recipe.video });
 
-    // Handle asynchronous media
+    // Handle the async media promise
     if (recipe.mediaPromise) {
-      (recipe.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>)
+      (recipe.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput; video?: GenerateRecipeVideoOutput }>)
         .then(media => {
-            // Update the state only if the modal for this recipe is still open
-            if (isModalOpen && selectedRecipe && selectedRecipe.name === recipe.name) {
-                setRecipeMedia(media);
+          // This check is important. It ensures that we only update the media
+          // for the recipe that is currently being viewed.
+          // It compares the name of the recipe that just finished loading media
+          // with the name of the recipe currently in the modal.
+          setSelectedRecipe(currentRecipe => {
+            if (currentRecipe && currentRecipe.name === recipe.name) {
+              setRecipeMedia(media);
             }
+            return currentRecipe; // Return the current state
+          });
         });
     }
-  };
+};
   
   const handleFindSubstitutions = async () => {
       if (!missingIngredient) {
@@ -366,17 +373,21 @@ export default function RecipesPage() {
     }
     setIsTransforming(true);
     setTransformedRecipe(null);
+    setRecipeMedia({}); // Clear old media
     try {
       const result = await transformRecipe({
         recipe: selectedRecipe,
         transformation: transformationRequest,
       });
       setTransformedRecipe(result);
+      toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
+      
+      // Handle the async media promise for the new transformed recipe
       if (result.mediaPromise) {
-          (result.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>)
+        (result.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput; video?: GenerateRecipeVideoOutput }>)
             .then(media => setRecipeMedia(media));
       }
-      toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
+
     } catch (error) {
       console.error("Error transforming recipe:", error);
       toast({ variant: "destructive", title: "Transformation failed. Please try again." });

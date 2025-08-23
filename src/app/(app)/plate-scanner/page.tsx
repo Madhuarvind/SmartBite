@@ -240,29 +240,31 @@ export default function PlateScannerPage() {
       }
   }
 
-    const openRecipeModal = (recipe: Recipe) => {
-        setFoundRecipe(recipe);
-        setTransformedRecipe(null);
-        setIsRecipeModalOpen(true);
-        // Reset states for the modal
-        setSubstitutions([]);
-        setMissingIngredient(null);
-        setTransformationRequest("");
-        setInventoryCheckResults([]);
-        setIsCheckingInventory(false);
-        setServings(2);
-        setRecipeMedia({ audio: recipe.audio, video: recipe.video });
+  const openRecipeModal = (recipe: Recipe) => {
+    setFoundRecipe(recipe);
+    setTransformedRecipe(null);
+    setRecipeMedia({ audio: recipe.audio, video: recipe.video });
+    setIsRecipeModalOpen(true);
+    setSubstitutions([]);
+    setMissingIngredient(null);
+    setTransformationRequest("");
+    setInventoryCheckResults([]);
+    setIsCheckingInventory(false);
+    setServings(2);
 
-        // Handle asynchronous media
-        if (recipe.mediaPromise) {
-        (recipe.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>)
-            .then(media => {
-                if (isRecipeModalOpen && foundRecipe && foundRecipe.name === recipe.name) {
-                    setRecipeMedia(media);
-                }
-            });
-        }
+    if (recipe.mediaPromise) {
+      (recipe.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput; video?: GenerateRecipeVideoOutput }>)
+        .then(media => {
+          setFoundRecipe(currentRecipe => {
+            if (currentRecipe && currentRecipe.name === recipe.name) {
+              setRecipeMedia(media);
+            }
+            return currentRecipe;
+          });
+        });
     }
+  };
+
 
   const handleFindRecipe = async () => {
     if (!analysis) return;
@@ -355,14 +357,16 @@ export default function PlateScannerPage() {
     }
     setIsTransforming(true);
     setTransformedRecipe(null);
+    setRecipeMedia({});
     try {
       const result = await transformRecipe({
         recipe: foundRecipe,
         transformation: transformationRequest,
       });
       setTransformedRecipe(result);
+
       if (result.mediaPromise) {
-          (result.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>)
+        (result.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput; video?: GenerateRecipeVideoOutput }>)
             .then(media => setRecipeMedia(media));
       }
       toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });

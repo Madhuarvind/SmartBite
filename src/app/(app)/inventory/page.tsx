@@ -24,6 +24,8 @@ import { collection, addDoc, Timestamp, doc, deleteDoc, onSnapshot, query, write
 import { parseISO, isPast } from "date-fns";
 import type { User } from 'firebase/auth';
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+
 
 export default function InventoryPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -43,6 +45,10 @@ export default function InventoryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [stream, setStream] = useState<MediaStream | null>(null);
+
+  // State for multi-delete
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+
 
   // State for main inventory item dialog
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -447,6 +453,48 @@ export default function InventoryPage() {
     }
   };
 
+  const handleDeleteSelectedItems = async () => {
+    if (!user || selectedItems.length === 0) return;
+
+    const batch = writeBatch(db);
+    const activityBatch = writeBatch(db);
+    
+    selectedItems.forEach(id => {
+      const itemToDelete = inventory.find(item => item.id === id);
+      if (itemToDelete) {
+        // Log wasted item if it's expired
+        if (itemToDelete.expiry && itemToDelete.expiry !== 'N/A' && isPast(parseISO(itemToDelete.expiry))) {
+          const activityRef = doc(collection(db, "users", user.uid, "activity"));
+          activityBatch.set(activityRef, {
+            type: 'itemWasted',
+            itemName: itemToDelete.name,
+            timestamp: Timestamp.now()
+          });
+        }
+        // Add delete operation to the main batch
+        const docRef = doc(db, "users", user.uid, "inventory", id);
+        batch.delete(docRef);
+      }
+    });
+
+    try {
+      await batch.commit();
+      await activityBatch.commit(); // Commit separately or together, depending on logic
+      toast({
+        variant: "destructive",
+        title: "Items Deleted",
+        description: `${selectedItems.length} items have been removed from your inventory.`,
+      });
+      setSelectedItems([]); // Clear selection
+    } catch (error) {
+      console.error("Error deleting multiple items:", error);
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: "There was an error deleting the selected items.",
+      });
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
@@ -582,13 +630,36 @@ export default function InventoryPage() {
 
             <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
               <CardHeader>
-                <CardTitle>Current Inventory</CardTitle>
-                <CardDescription>All items currently in your fridge and pantry.</CardDescription>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>Current Inventory</CardTitle>
+                        <CardDescription>All items currently in your fridge and pantry.</CardDescription>
+                    </div>
+                    {selectedItems.length > 0 && (
+                        <Button variant="destructive" size="sm" onClick={handleDeleteSelectedItems}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete ({selectedItems.length})
+                        </Button>
+                    )}
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                            checked={inventory.length > 0 && selectedItems.length === inventory.length}
+                            onCheckedChange={(checked) => {
+                                if (checked) {
+                                    setSelectedItems(inventory.map(item => item.id));
+                                } else {
+                                    setSelectedItems([]);
+                                }
+                            }}
+                            aria-label="Select all"
+                         />
+                      </TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Quantity</TableHead>
                       <TableHead>Expires</TableHead>
@@ -597,12 +668,25 @@ export default function InventoryPage() {
                   </TableHeader>
                   <TableBody>
                     {isInventoryLoading ? (
-                        <TableRow><TableCell colSpan={4} className="text-center"><Loader className="mx-auto animate-spin" /></TableCell></TableRow>
+                        <TableRow><TableCell colSpan={5} className="text-center"><Loader className="mx-auto animate-spin" /></TableCell></TableRow>
                     ) : inventory.length === 0 ? (
-                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Your inventory is empty.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Your inventory is empty.</TableCell></TableRow>
                     ) : (
                         inventory.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} data-state={selectedItems.includes(item.id) && "selected"}>
+                            <TableCell>
+                                <Checkbox
+                                    checked={selectedItems.includes(item.id)}
+                                    onCheckedChange={(checked) => {
+                                        setSelectedItems(prev => 
+                                            checked 
+                                                ? [...prev, item.id] 
+                                                : prev.filter(id => id !== item.id)
+                                        );
+                                    }}
+                                    aria-label={`Select ${item.name}`}
+                                />
+                            </TableCell>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>{item.expiry}</TableCell>

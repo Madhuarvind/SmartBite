@@ -108,6 +108,7 @@ export const DetectedIngredientSchema = z.object({
     name: z.string().describe('The name of the ingredient.'),
     quantity: z.string().describe('The estimated quantity of the ingredient (e.g., "3", "500g", "1 bottle").'),
     expiryDate: z.string().nullable().describe('The expiry date found on the package in YYYY-MM-DD format, or null if not found.'),
+    isFresh: z.boolean().describe('Whether the item is a fresh product that needs an expiry date prediction.'),
 });
 export type DetectedIngredient = z.infer<typeof DetectedIngredientSchema>;
 

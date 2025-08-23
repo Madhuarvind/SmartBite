@@ -20,7 +20,7 @@ import Image from "next/image";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, Timestamp, doc, deleteDoc, onSnapshot, query } from "firebase/firestore";
+import { collection, addDoc, Timestamp, doc, deleteDoc, onSnapshot, query, writeBatch } from "firebase/firestore";
 import { parseISO, isPast } from "date-fns";
 import type { User } from 'firebase/auth';
 
@@ -32,6 +32,7 @@ export default function InventoryPage() {
 
   const [scannedIngredients, setScannedIngredients] = useState<DetectedIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -263,11 +264,47 @@ export default function InventoryPage() {
   };
 
 
-  const handleShowAddDialogFromScan = (ingredient: DetectedIngredient) => {
-    setNewItemName(ingredient.name);
-    setNewItemQuantity(ingredient.quantity);
-    setNewItemExpiry(ingredient.expiryDate || "");
-    setIsAddDialogOpen(true);
+  const handleAddAllScannedItems = async () => {
+    if (!user || scannedIngredients.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Nothing to add",
+        description: "No ingredients were scanned.",
+      });
+      return;
+    }
+    setIsAdding(true);
+    try {
+      const batch = writeBatch(db);
+      const inventoryRef = collection(db, "users", user.uid, "inventory");
+      const today = new Date().toISOString().split('T')[0];
+
+      scannedIngredients.forEach(item => {
+        const docRef = doc(inventoryRef);
+        batch.set(docRef, {
+          name: item.name,
+          quantity: item.quantity,
+          expiry: item.expiryDate || 'N/A',
+          purchaseDate: today,
+        });
+      });
+
+      await batch.commit();
+
+      toast({
+        title: "Inventory Updated!",
+        description: `${scannedIngredients.length} items have been added to your inventory.`,
+      });
+
+      setScannedIngredients([]);
+      setUploadedImage(null);
+
+    } catch (error) {
+      console.error("Error adding items to inventory:", error);
+      toast({ variant: "destructive", title: "Failed to Update Inventory" });
+    } finally {
+      setIsAdding(false);
+    }
   };
   
   const handleVoiceInput = () => {
@@ -431,8 +468,7 @@ export default function InventoryPage() {
                                 <TableRow>
                                     <TableHead>Item</TableHead>
                                     <TableHead>Quantity</TableHead>
-                                    <TableHead>Expiry (Detected)</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
+                                    <TableHead>Expiry (Predicted)</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -441,13 +477,13 @@ export default function InventoryPage() {
                                         <TableCell className="font-medium">{ing.name}</TableCell>
                                         <TableCell>{ing.quantity}</TableCell>
                                         <TableCell>{ing.expiryDate || 'N/A'}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button size="sm" variant="outline" onClick={() => handleShowAddDialogFromScan(ing)}>Add</Button>
-                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
                          </Table>
+                         <Button onClick={handleAddAllScannedItems} disabled={isAdding} className="w-full mt-4">
+                            {isAdding ? <><Loader className="animate-spin mr-2" /> Adding...</> : <><PlusCircle className="mr-2" /> Add All to Inventory</>}
+                         </Button>
                     </div>
                 )}
               </CardContent>
@@ -547,5 +583,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
-    

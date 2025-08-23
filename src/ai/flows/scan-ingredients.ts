@@ -2,18 +2,14 @@
 'use server';
 
 /**
- * @fileOverview This file defines the scanIngredients flow, which uses AI to detect ingredients from an image or a text query.
+ * @fileOverview This file defines the scanIngredients flow, which uses AI to detect ingredients from an image or a text query and predict expiry for fresh items.
  *
  * - scanIngredients - A function that takes an image data URI or text query and returns a list of identified ingredients.
  */
 
 import {ai} from '@/ai/genkit';
 import { ScanIngredientsInput, ScanIngredientsInputSchema, ScanIngredientsOutput, ScanIngredientsOutputSchema } from '../schemas';
-
-
-export async function scanIngredients(input: ScanIngredientsInput): Promise<ScanIngredientsOutput> {
-  return scanIngredientsFlow(input);
-}
+import { predictExpiryDate } from './predict-expiry-date';
 
 const prompt = ai.definePrompt({
   name: 'scanIngredientsPrompt',
@@ -26,6 +22,7 @@ For each ingredient, you must:
 1.  **Identify the item**: e.g., "Tomatoes", "Eggs", "Milk".
 2.  **Estimate the quantity or weight**: Be as specific as possible. Examples: "3 tomatoes", "approx. 200g of spinach", "1L carton of milk", "1 bottle". If a quantity cannot be reasonably estimated, use a sensible default like "1" or "N/A".
 3.  **Use OCR for Expiry Dates (for images only)**: If analyzing an image, scan for any printed expiry dates on packaging. If found, return it in YYYY-MM-DD format. If no date is found, leave the expiryDate field as null. For text queries, this will always be null.
+4.  **Identify Freshness**: Determine if the item is a fresh product that requires an expiry date prediction (e.g., fresh produce, meat, dairy). Packaged goods with long shelf lives (like cans, jars, dry pasta) do not need prediction.
 
 Analyze the input provided below. It will either be a photo or a text query.
 
@@ -49,8 +46,31 @@ const scanIngredientsFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      return { ingredients: [] };
+    }
+
+    // After scanning, predict expiry dates for fresh items that don't have one
+    const ingredientsWithPredictions = await Promise.all(
+      output.ingredients.map(async (ingredient) => {
+        // Only predict if no expiry date was found by OCR and the AI marked it as fresh.
+        if (!ingredient.expiryDate && ingredient.isFresh) {
+          try {
+            const prediction = await predictExpiryDate({
+              ingredientName: ingredient.name,
+              purchaseDate: new Date().toISOString().split('T')[0],
+            });
+            return { ...ingredient, expiryDate: prediction.expiryDate };
+          } catch (e) {
+            console.error(`Could not predict expiry for ${ingredient.name}`, e);
+            // If prediction fails, return the original ingredient
+            return ingredient;
+          }
+        }
+        return ingredient;
+      })
+    );
+
+    return { ingredients: ingredientsWithPredictions };
   }
 );
-
-    

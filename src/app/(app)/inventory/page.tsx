@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent } from "react";
+import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp, doc, deleteDoc, onSnapshot, query, writeBatch } from "firebase/firestore";
 import { parseISO, isPast } from "date-fns";
 import type { User } from 'firebase/auth';
+import { cn } from "@/lib/utils";
 
 export default function InventoryPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,6 +38,7 @@ export default function InventoryPage() {
   const [isListening, setIsListening] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -106,6 +108,24 @@ export default function InventoryPage() {
     };
   }, []);
   
+  const handleFile = (file: File) => {
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const photoDataUri = e.target?.result as string;
+        setUploadedImage(photoDataUri);
+        processImage(photoDataUri);
+      };
+      reader.readAsDataURL(file);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid File Type",
+            description: "Please upload an image file.",
+        });
+    }
+  }
+
   const processImage = async (photoDataUri: string) => {
      setIsLoading(true);
      setScannedIngredients([]);
@@ -159,15 +179,33 @@ export default function InventoryPage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const photoDataUri = e.target?.result as string;
-        setUploadedImage(photoDataUri);
-        processImage(photoDataUri);
-      };
-      reader.readAsDataURL(file);
+      handleFile(file);
     }
   };
+
+  const handleDragEvents = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(true);
+  }
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(false);
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e);
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+        handleFile(file);
+    }
+  }
   
   const handlePredictExpiry = async () => {
     if (!newItemName) {
@@ -433,7 +471,17 @@ export default function InventoryPage() {
                 <CardDescription>Use multimodal input to add items. Scan with your camera, upload a photo, or add items with your voice.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden">
+                <div 
+                  className={cn(
+                    "relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer transition-colors",
+                    isDragging && "bg-primary/10 border-primary"
+                  )}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragEvents}
+                  onDrop={handleDrop}
+                >
                   {uploadedImage ? (
                     <Image src={uploadedImage} alt="Uploaded ingredients" layout="fill" objectFit="contain" />
                   ) : (
@@ -446,6 +494,13 @@ export default function InventoryPage() {
                          To use the live scanner, please allow camera access in your browser settings. You can still upload an image.
                        </AlertDescription>
                      </Alert>
+                  )}
+                   {!uploadedImage && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                      <p className="text-white font-semibold">
+                        Click or drag & drop to upload
+                      </p>
+                    </div>
                   )}
                 </div>
                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

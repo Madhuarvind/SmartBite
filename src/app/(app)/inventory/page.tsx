@@ -312,7 +312,7 @@ export default function InventoryPage() {
   };
 
 
-  const handleAddAllScannedItems = async () => {
+  const handleAddAllScannedItems = async (target: 'inventory' | 'essentials') => {
     if (!user || scannedIngredients.length === 0) {
       toast({
         variant: "destructive",
@@ -324,32 +324,40 @@ export default function InventoryPage() {
     setIsAdding(true);
     try {
       const batch = writeBatch(db);
-      const inventoryRef = collection(db, "users", user.uid, "inventory");
+      const collectionName = target === 'inventory' ? 'inventory' : 'pantry_essentials';
+      const itemRef = collection(db, "users", user.uid, collectionName);
       const today = new Date().toISOString().split('T')[0];
 
       scannedIngredients.forEach(item => {
-        const docRef = doc(inventoryRef);
-        batch.set(docRef, {
-          name: item.name,
-          quantity: item.quantity,
-          expiry: item.expiryDate || 'N/A',
-          purchaseDate: today,
-        });
+        const docRef = doc(itemRef);
+        if (target === 'inventory') {
+          batch.set(docRef, {
+            name: item.name,
+            quantity: item.quantity,
+            expiry: item.expiryDate || 'N/A',
+            purchaseDate: today,
+          });
+        } else {
+           batch.set(docRef, {
+            name: item.name,
+            quantity: item.quantity,
+          });
+        }
       });
 
       await batch.commit();
 
       toast({
-        title: "Inventory Updated!",
-        description: `${scannedIngredients.length} items have been added to your inventory.`,
+        title: `${target === 'inventory' ? 'Inventory' : 'Pantry Essentials'} Updated!`,
+        description: `${scannedIngredients.length} items have been added.`,
       });
 
       setScannedIngredients([]);
       setUploadedImage(null);
 
     } catch (error) {
-      console.error("Error adding items to inventory:", error);
-      toast({ variant: "destructive", title: "Failed to Update Inventory" });
+      console.error("Error adding items:", error);
+      toast({ variant: "destructive", title: "Failed to Update List" });
     } finally {
       setIsAdding(false);
     }
@@ -496,6 +504,88 @@ export default function InventoryPage() {
     }
   };
 
+  const renderScannerCard = (target: 'inventory' | 'essentials') => (
+    <Card className="animate-fade-in-slide-up">
+      <CardHeader>
+        <CardTitle>AI Scanner</CardTitle>
+        <CardDescription>Use multimodal input to add items. Scan with your camera, upload a photo, or add items with your voice.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div 
+          className={cn(
+            "relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer transition-colors",
+            isDragging && "bg-primary/10 border-primary"
+          )}
+          onClick={() => fileInputRef.current?.click()}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragEvents}
+          onDrop={handleDrop}
+        >
+          {uploadedImage ? (
+            <Image src={uploadedImage} alt="Uploaded ingredients" layout="fill" objectFit="contain" />
+          ) : (
+            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+          )}
+          {hasCameraPermission === false && !uploadedImage && (
+             <Alert variant="destructive" className="absolute m-4">
+               <AlertTitle>Camera Access Required</AlertTitle>
+               <AlertDescription>
+                 To use the live scanner, please allow camera access in your browser settings. You can still upload an image.
+               </AlertDescription>
+             </Alert>
+          )}
+           {!uploadedImage && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+              <p className="text-white font-semibold">
+                Click or drag & drop to upload
+              </p>
+            </div>
+          )}
+        </div>
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Button onClick={handleScanFromCamera} disabled={isLoading || hasCameraPermission === false} >
+                {isLoading ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2" /> Scan Camera</>}
+            </Button>
+            <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={isLoading}>
+                <Upload className="mr-2" /> Upload Image
+            </Button>
+             <Button onClick={handleVoiceInput} variant="outline" disabled={isListening || isLoading}>
+                {isListening ? <><Loader className="mr-2 animate-spin"/> Listening...</> : <><Mic className="mr-2" /> Add by Voice</>}
+            </Button>
+            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+         </div>
+        {scannedIngredients.length > 0 && (
+            <div>
+                <h4 className="font-semibold mb-2">Detected Ingredients:</h4>
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Item</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            {target === 'inventory' && <TableHead>Expiry (Predicted)</TableHead>}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {scannedIngredients.map((ing, index) => (
+                            <TableRow key={`${ing.name}-${index}`}>
+                                <TableCell className="font-medium">{ing.name}</TableCell>
+                                <TableCell>{ing.quantity}</TableCell>
+                                {target === 'inventory' && <TableCell>{ing.expiryDate || 'N/A'}</TableCell>}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                 </Table>
+                 <Button onClick={() => handleAddAllScannedItems(target)} disabled={isAdding} className="w-full mt-4">
+                    {isAdding ? <><Loader className="animate-spin mr-2" /> Adding...</> : <><PlusCircle className="mr-2" /> Add All to List</>}
+                 </Button>
+            </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
       <PageHeader title="My Inventory" action={
@@ -542,91 +632,14 @@ export default function InventoryPage() {
         </Dialog>
       } />
       
-      <Tabs defaultValue="inventory">
+      <Tabs defaultValue="inventory" onValueChange={() => setScannedIngredients([])}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="inventory">My Items</TabsTrigger>
           <TabsTrigger value="pantry">Pantry Essentials</TabsTrigger>
         </TabsList>
         <TabsContent value="inventory">
           <div className="grid gap-6 mt-6 md:grid-cols-2">
-            <Card className="animate-fade-in-slide-up">
-              <CardHeader>
-                <CardTitle>Pantry Scanner</CardTitle>
-                <CardDescription>Use multimodal input to add items. Scan with your camera, upload a photo, or add items with your voice.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div 
-                  className={cn(
-                    "relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer transition-colors",
-                    isDragging && "bg-primary/10 border-primary"
-                  )}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDragOver={handleDragEvents}
-                  onDrop={handleDrop}
-                >
-                  {uploadedImage ? (
-                    <Image src={uploadedImage} alt="Uploaded ingredients" layout="fill" objectFit="contain" />
-                  ) : (
-                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                  )}
-                  {hasCameraPermission === false && !uploadedImage && (
-                     <Alert variant="destructive" className="absolute m-4">
-                       <AlertTitle>Camera Access Required</AlertTitle>
-                       <AlertDescription>
-                         To use the live scanner, please allow camera access in your browser settings. You can still upload an image.
-                       </AlertDescription>
-                     </Alert>
-                  )}
-                   {!uploadedImage && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-                      <p className="text-white font-semibold">
-                        Click or drag & drop to upload
-                      </p>
-                    </div>
-                  )}
-                </div>
-                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <Button onClick={handleScanFromCamera} disabled={isLoading || hasCameraPermission === false} >
-                        {isLoading ? <><Loader className="mr-2 animate-spin"/> Scanning...</> : <><Camera className="mr-2" /> Scan Camera</>}
-                    </Button>
-                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={isLoading}>
-                        <Upload className="mr-2" /> Upload Image
-                    </Button>
-                     <Button onClick={handleVoiceInput} variant="outline" disabled={isListening || isLoading}>
-                        {isListening ? <><Loader className="mr-2 animate-spin"/> Listening...</> : <><Mic className="mr-2" /> Add by Voice</>}
-                    </Button>
-                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                 </div>
-                {scannedIngredients.length > 0 && (
-                    <div>
-                        <h4 className="font-semibold mb-2">Detected Ingredients:</h4>
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Item</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Expiry (Predicted)</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {scannedIngredients.map((ing, index) => (
-                                    <TableRow key={`${ing.name}-${index}`}>
-                                        <TableCell className="font-medium">{ing.name}</TableCell>
-                                        <TableCell>{ing.quantity}</TableCell>
-                                        <TableCell>{ing.expiryDate || 'N/A'}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                         </Table>
-                         <Button onClick={handleAddAllScannedItems} disabled={isAdding} className="w-full mt-4">
-                            {isAdding ? <><Loader className="animate-spin mr-2" /> Adding...</> : <><PlusCircle className="mr-2" /> Add All to Inventory</>}
-                         </Button>
-                    </div>
-                )}
-              </CardContent>
-            </Card>
+            {renderScannerCard('inventory')}
 
             <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
               <CardHeader>
@@ -716,69 +729,72 @@ export default function InventoryPage() {
           </div>
         </TabsContent>
         <TabsContent value="pantry">
-          <Card className="mt-6 animate-fade-in">
-            <CardHeader>
-                <CardTitle>Pantry Essentials</CardTitle>
-                <CardDescription>Items you usually have on hand. These are always considered available for recipes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-            <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Typical Quantity</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isInventoryLoading ? (
-                        <TableRow><TableCell colSpan={3} className="text-center"><Loader className="mx-auto animate-spin" /></TableCell></TableRow>
-                    ) : pantryEssentials.length === 0 ? (
-                        <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No pantry essentials defined.</TableCell></TableRow>
-                    ) : (
-                        pantryEssentials.map((item) => (
-                        <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveEssentialItem(item.id, item.name)}>
-                                    <Trash2 className="h-4 w-4 text-destructive"/>
-                                    <span className="sr-only">Remove</span>
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-            </CardContent>
-            <CardFooter>
-                 <Dialog open={isEssentialDialogOpen} onOpenChange={setIsEssentialDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline"><PlusCircle className="mr-2" />Add Essential Item</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add Pantry Essential</DialogTitle>
-                            <DialogDescription>Add an item you usually have on hand.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="essential-name" className="text-right">Name</Label>
-                                <Input id="essential-name" value={newEssentialName} onChange={(e) => setNewEssentialName(e.target.value)} className="col-span-3" placeholder="e.g. Olive Oil"/>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="essential-quantity" className="text-right">Quantity</Label>
-                                <Input id="essential-quantity" value={newEssentialQuantity} onChange={(e) => setNewEssentialQuantity(e.target.value)} className="col-span-3" placeholder="e.g. 1 bottle" />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button type="button" onClick={handleAddEssentialItem}>Save Item</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                 </Dialog>
-            </CardFooter>
-          </Card>
+          <div className="grid gap-6 mt-6 md:grid-cols-2">
+            {renderScannerCard('essentials')}
+            <Card className="animate-fade-in">
+              <CardHeader>
+                  <CardTitle>Current Essentials</CardTitle>
+                  <CardDescription>Items you usually have on hand. These are always considered available for recipes.</CardDescription>
+              </CardHeader>
+              <CardContent>
+              <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Typical Quantity</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isInventoryLoading ? (
+                          <TableRow><TableCell colSpan={3} className="text-center"><Loader className="mx-auto animate-spin" /></TableCell></TableRow>
+                      ) : pantryEssentials.length === 0 ? (
+                          <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No pantry essentials defined.</TableCell></TableRow>
+                      ) : (
+                          pantryEssentials.map((item) => (
+                          <TableRow key={item.id}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell>{item.quantity}</TableCell>
+                              <TableCell className="text-right">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveEssentialItem(item.id, item.name)}>
+                                      <Trash2 className="h-4 w-4 text-destructive"/>
+                                      <span className="sr-only">Remove</span>
+                                  </Button>
+                              </TableCell>
+                          </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+              </CardContent>
+              <CardFooter>
+                   <Dialog open={isEssentialDialogOpen} onOpenChange={setIsEssentialDialogOpen}>
+                      <DialogTrigger asChild>
+                          <Button variant="outline"><PlusCircle className="mr-2" />Add Manually</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>Add Pantry Essential</DialogTitle>
+                              <DialogDescription>Add an item you usually have on hand.</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="essential-name" className="text-right">Name</Label>
+                                  <Input id="essential-name" value={newEssentialName} onChange={(e) => setNewEssentialName(e.target.value)} className="col-span-3" placeholder="e.g. Olive Oil"/>
+                              </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="essential-quantity" className="text-right">Quantity</Label>
+                                  <Input id="essential-quantity" value={newEssentialQuantity} onChange={(e) => setNewEssentialQuantity(e.target.value)} className="col-span-3" placeholder="e.g. 1 bottle" />
+                              </div>
+                          </div>
+                          <DialogFooter>
+                              <Button type="button" onClick={handleAddEssentialItem}>Save Item</Button>
+                          </DialogFooter>
+                      </DialogContent>
+                   </Dialog>
+              </CardFooter>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

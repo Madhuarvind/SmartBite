@@ -77,24 +77,21 @@ const findRecipeFromMealFlow = ai.defineFlow(
     const recipeWithImages: Recipe = { ...output, instructionSteps };
 
     // Generate audio and video in parallel in the background
-    const mediaPromise = Promise.allSettled([
+    const mediaResults = await Promise.allSettled([
       generateRecipeAudio({ instructions: recipeWithImages.instructions }),
       generateRecipeVideo({ recipeName: recipeWithImages.name }),
-    ]).then(([audioResult, videoResult]) => {
-      const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
-      const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+    ]);
+    
+    const audio = mediaResults[0].status === 'fulfilled' ? mediaResults[0].value : undefined;
+    const video = mediaResults[1].status === 'fulfilled' ? mediaResults[1].value : undefined;
 
-      if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${output.name}:`, audioResult.reason);
-      if (videoResult.status === 'rejected') console.error(`Video generation failed for ${output.name}:`, videoResult.reason);
-      
-      return { audio, video };
-    });
+    if (mediaResults[0].status === 'rejected') console.error(`Audio generation failed for ${output.name}:`, mediaResults[0].reason);
+    if (mediaResults[1].status === 'rejected') console.error(`Video generation failed for ${output.name}:`, mediaResults[1].reason);
 
     return {
       ...recipeWithImages,
-      audio: undefined,
-      video: undefined,
-      ...await mediaPromise
+      audio,
+      video,
     };
   }
 );

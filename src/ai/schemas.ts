@@ -161,11 +161,10 @@ const RecipeIngredientSchema = z.object({
 });
 export type RecipeIngredient = z.infer<typeof RecipeIngredientSchema>;
 
-export const RecipeSchema = z.object({
+const RecipeSchema = z.object({
   name: z.string().describe('The name of the recipe.'),
   ingredients: z.array(RecipeIngredientSchema).describe('The ingredients required for the recipe.'),
   instructionSteps: z.array(InstructionStepSchema).describe('A structured list of recipe instruction steps, each with an optional image.'),
-  instructions: z.string().optional().describe('The instructions for the recipe as a single string.'),
   dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),
   nutrition: z.object({
       calories: z.number().describe('The estimated number of calories per serving.'),
@@ -179,7 +178,8 @@ export const RecipeSchema = z.object({
   video: GenerateRecipeVideoOutputSchema.optional(),
   mediaPromise: z.any().optional(),
 });
-export type Recipe = z.infer<typeof RecipeSchema>;
+export const Recipe = RecipeSchema;
+export type Recipe = z.infer<typeof Recipe>;
 
 
 // Schemas for recommend-recipes.ts
@@ -199,7 +199,7 @@ export const RecommendRecipesInputSchema = z.object({
 export type RecommendRecipesInput = z.infer<typeof RecommendRecipesInputSchema>;
 
 export const RecommendRecipesOutputSchema = z.object({
-  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
+  recipes: z.array(Recipe).describe('A list of recommended recipes.'),
 });
 export type RecommendRecipesOutput = z.infer<typeof RecommendRecipesOutputSchema>;
 
@@ -235,12 +235,12 @@ export type GenerateMealPlanOutput = z.infer<typeof GenerateMealPlanOutputSchema
 
 // Schemas for transform-recipe.ts
 export const TransformRecipeInputSchema = z.object({
-    recipe: RecipeSchema.describe('The original recipe to be transformed.'),
+    recipe: Recipe.describe('The original recipe to be transformed.'),
     transformation: z.string().describe('The requested transformation (e.g., "make it vegan", "add a spicy twist").'),
 });
 export type TransformRecipeInput = z.infer<typeof TransformRecipeInputSchema>;
 
-export const TransformRecipeOutputSchema = RecipeSchema.describe('The new, transformed recipe.');
+export const TransformRecipeOutputSchema = Recipe.describe('The new, transformed recipe.');
 export type TransformRecipeOutput = z.infer<typeof TransformRecipeOutputSchema>;
 
 
@@ -252,7 +252,7 @@ export const SuggestRecipesByMoodInputSchema = z.object({
 export type SuggestRecipesByMoodInput = z.infer<typeof SuggestRecipesByMoodInputSchema>;
 
 export const SuggestRecipesByMoodOutputSchema = z.object({
-  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
+  recipes: z.array(Recipe).describe('A list of recommended recipes.'),
 });
 export type SuggestRecipesByMoodOutput = z.infer<typeof SuggestRecipesByMoodOutputSchema>;
 
@@ -374,7 +374,7 @@ export const PredictiveSuggestionsInputSchema = z.object({
 export type PredictiveSuggestionsInput = z.infer<typeof PredictiveSuggestionsInputSchema>;
 
 export const PredictiveSuggestionsOutputSchema = z.object({
-  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
+  recipes: z.array(Recipe).describe('A list of recommended recipes.'),
 });
 export type PredictiveSuggestionsOutput = z.infer<typeof PredictiveSuggestionsOutputSchema>;
 
@@ -415,7 +415,7 @@ export const FindRecipeFromMealInputSchema = z.object({
 });
 export type FindRecipeFromMealInput = z.infer<typeof FindRecipeFromMealInputSchema>;
 
-export const FindRecipeFromMealOutputSchema = RecipeSchema.describe('A generated recipe for the specified meal.');
+export const FindRecipeFromMealOutputSchema = Recipe.describe('A generated recipe for the specified meal.');
 export type FindRecipeFromMealOutput = z.infer<typeof FindRecipeFromMealOutputSchema>;
 
 
@@ -430,5 +430,5 @@ export const InventRecipeInputSchema = z.object({
 });
 export type InventRecipeInput = z.infer<typeof InventRecipeInputSchema>;
 
-export const InventRecipeOutputSchema = RecipeSchema.describe('A new, invented recipe based on the provided ingredients.');
+export const InventRecipeOutputSchema = Recipe.describe('A new, invented recipe based on the provided ingredients.');
 export type InventRecipeOutput = z.infer<typeof InventRecipeOutputSchema>;

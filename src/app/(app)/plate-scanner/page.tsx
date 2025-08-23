@@ -365,7 +365,7 @@ export default function PlateScannerPage() {
                     <div>
                         <h4 className="font-semibold mb-2">Instructions</h4>
                         <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
-                            {foundRecipe.instructions}
+                            {foundRecipe.instructionSteps.map(step => `${step.step}. ${step.text}`).join('\n')}
                         </div>
                     </div>
                 </div>

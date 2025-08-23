@@ -28,7 +28,9 @@ For each ingredient, you must:
 1.  **Identify the item**: e.g., "Tomatoes", "Eggs", "Milk".
 2.  **Estimate the quantity or weight**: Be as specific as possible. Examples: "3 tomatoes", "approx. 200g of spinach", "1L carton of milk", "1 bottle". If a quantity cannot be reasonably estimated, use a sensible default like "1" or "N/A".
 3.  **Use OCR for Expiry Dates (for images only)**: If analyzing an image, scan for any printed expiry dates on packaging. If found, return it in YYYY-MM-DD format. If no date is found, leave the expiryDate field as null. For text queries, this will always be null.
-4.  **Identify Freshness**: Determine if the item is a fresh product that requires an expiry date prediction (e.g., fresh produce, meat, dairy). Packaged goods with long shelf lives (like cans, jars, dry pasta) do not need prediction.
+4.  **Identify Freshness**: Determine if the item is a fresh product that requires an expiry date prediction. 
+    - **Fresh items** include fresh produce (fruits, vegetables), meat, dairy, and bakery items. Set isFresh to true for these.
+    - **Packaged/Shelf-stable items** include cans, jars, dry goods like pasta, rice, salt, and spices. Set isFresh to false for these.
 
 Analyze the input provided below. It will either be a photo or a text query.
 
@@ -80,3 +82,4 @@ const scanIngredientsFlow = ai.defineFlow(
     return { ingredients: ingredientsWithPredictions };
   }
 );
+

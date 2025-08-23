@@ -613,9 +613,9 @@ export default function RecipesPage() {
                 <CardContent className="p-4 flex-grow">
                   <CardTitle className="text-lg mb-2">{recipe.name}</CardTitle>
                   <p className="text-xs italic text-muted-foreground mb-2">{recipe.rationale}</p>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {recipe.instructionSteps?.map(step => step.text).join(' ')}
-                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    <p className="line-clamp-3">{recipe.instructionSteps.map(step => step.text).join(' ')}</p>
+                  </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
                   <Button className="w-full" onClick={() => handleViewRecipe(recipe)}>

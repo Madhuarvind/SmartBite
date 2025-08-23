@@ -164,7 +164,8 @@ export type RecipeIngredient = z.infer<typeof RecipeIngredientSchema>;
 export const RecipeSchema = z.object({
   name: z.string().describe('The name of the recipe.'),
   ingredients: z.array(RecipeIngredientSchema).describe('The ingredients required for the recipe.'),
-  instructionSteps: z.array(InstructionStepSchema).describe('A structured list of recipe instruction steps.'),
+  instructionSteps: z.array(InstructionStepSchema).describe('A structured list of recipe instruction steps, each with an optional image.'),
+  instructions: z.string().optional().describe('The instructions for the recipe as a single string.'),
   dietaryInformation: z.array(z.string()).optional().describe('Dietary information about the recipe.'),
   nutrition: z.object({
       calories: z.number().describe('The estimated number of calories per serving.'),
@@ -179,11 +180,6 @@ export const RecipeSchema = z.object({
   mediaPromise: z.any().optional(),
 });
 export type Recipe = z.infer<typeof RecipeSchema>;
-
-export const RecipeOutputSchema = z.object({
-  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
-});
-export type RecipeOutput = z.infer<typeof RecipeOutputSchema>;
 
 
 // Schemas for recommend-recipes.ts
@@ -202,7 +198,9 @@ export const RecommendRecipesInputSchema = z.object({
 });
 export type RecommendRecipesInput = z.infer<typeof RecommendRecipesInputSchema>;
 
-export const RecommendRecipesOutputSchema = RecipeOutputSchema;
+export const RecommendRecipesOutputSchema = z.object({
+  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
+});
 export type RecommendRecipesOutput = z.infer<typeof RecommendRecipesOutputSchema>;
 
 
@@ -242,6 +240,9 @@ export const TransformRecipeInputSchema = z.object({
 });
 export type TransformRecipeInput = z.infer<typeof TransformRecipeInputSchema>;
 
+export const TransformRecipeOutputSchema = RecipeSchema.describe('The new, transformed recipe.');
+export type TransformRecipeOutput = z.infer<typeof TransformRecipeOutputSchema>;
+
 
 // Schemas for suggest-recipes-by-mood.ts
 export const SuggestRecipesByMoodInputSchema = z.object({
@@ -250,7 +251,9 @@ export const SuggestRecipesByMoodInputSchema = z.object({
 });
 export type SuggestRecipesByMoodInput = z.infer<typeof SuggestRecipesByMoodInputSchema>;
 
-export const SuggestRecipesByMoodOutputSchema = RecipeOutputSchema;
+export const SuggestRecipesByMoodOutputSchema = z.object({
+  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
+});
 export type SuggestRecipesByMoodOutput = z.infer<typeof SuggestRecipesByMoodOutputSchema>;
 
 // Schemas for scan-receipt.ts
@@ -370,7 +373,9 @@ export const PredictiveSuggestionsInputSchema = z.object({
 });
 export type PredictiveSuggestionsInput = z.infer<typeof PredictiveSuggestionsInputSchema>;
 
-export const PredictiveSuggestionsOutputSchema = RecipeOutputSchema;
+export const PredictiveSuggestionsOutputSchema = z.object({
+  recipes: z.array(RecipeSchema).describe('A list of recommended recipes.'),
+});
 export type PredictiveSuggestionsOutput = z.infer<typeof PredictiveSuggestionsOutputSchema>;
 
 // Schemas for predict-facial-mood.ts
@@ -410,6 +415,9 @@ export const FindRecipeFromMealInputSchema = z.object({
 });
 export type FindRecipeFromMealInput = z.infer<typeof FindRecipeFromMealInputSchema>;
 
+export const FindRecipeFromMealOutputSchema = RecipeSchema.describe('A generated recipe for the specified meal.');
+export type FindRecipeFromMealOutput = z.infer<typeof FindRecipeFromMealOutputSchema>;
+
 
 // Schemas for invent-recipe.ts
 const PricedIngredientSchema = z.object({
@@ -421,3 +429,6 @@ export const InventRecipeInputSchema = z.object({
     ingredients: z.array(PricedIngredientSchema).describe('A list of ingredients the user has available, including their price if known.'),
 });
 export type InventRecipeInput = z.infer<typeof InventRecipeInputSchema>;
+
+export const InventRecipeOutputSchema = RecipeSchema.describe('A new, invented recipe based on the provided ingredients.');
+export type InventRecipeOutput = z.infer<typeof InventRecipeOutputSchema>;

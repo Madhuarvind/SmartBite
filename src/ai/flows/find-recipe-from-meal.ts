@@ -10,24 +10,24 @@ import { ai } from '@/ai/genkit';
 import {
   FindRecipeFromMealInput,
   FindRecipeFromMealInputSchema,
-  FindRecipeFromMealOutput,
-  FindRecipeFromMealOutputSchema,
+  Recipe,
+  RecipeSchema,
 } from '../schemas';
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeStepImage } from './generate-recipe-step-image';
-import type { InstructionStep, Recipe } from '../schemas';
+import type { InstructionStep } from '../schemas';
 
 export async function findRecipeFromMeal(
   input: FindRecipeFromMealInput
-): Promise<FindRecipeFromMealOutput> {
+): Promise<Recipe> {
   return findRecipeFromMealFlow(input);
 }
 
 const prompt = ai.definePrompt({
   name: 'findRecipeFromMealPrompt',
   input: { schema: FindRecipeFromMealInputSchema },
-  output: { schema: FindRecipeFromMealOutputSchema },
+  output: { schema: RecipeSchema },
   prompt: `You are an expert recipe creator. The user has identified a meal they enjoyed and wants a standard, reliable recipe to recreate it at home.
 
 Generate a complete recipe for the following meal: **{{{mealName}}}**
@@ -35,7 +35,7 @@ Generate a complete recipe for the following meal: **{{{mealName}}}**
 For the recipe, you MUST provide:
 1.  A unique, appealing name (it can be the same as the input meal name if appropriate).
 2.  A full list of ingredients with specific quantities.
-3.  Detailed, step-by-step instructions as a single string, with each step numbered and separated by a newline character.
+3.  Detailed, step-by-step instructions.
 4.  A detailed nutritional analysis per serving (calories, protein, carbs, fat).
 
 Respond in the specified JSON format.
@@ -46,49 +46,49 @@ const findRecipeFromMealFlow = ai.defineFlow(
   {
     name: 'findRecipeFromMealFlow',
     inputSchema: FindRecipeFromMealInputSchema,
-    outputSchema: FindRecipeFromMealOutputSchema,
+    outputSchema: RecipeSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
+    const { output: recipe } = await prompt(input);
+    if (!recipe) {
       throw new Error('Could not generate a recipe for the meal.');
     }
 
     // After generating the recipe text, kick off all media generation in parallel.
     const instructionSteps: InstructionStep[] = await Promise.all(
-        output.instructions.split('\n').filter(line => line.trim().length > 0).map(async (instructionText, index) => {
-          const step: InstructionStep = {
-            step: index + 1,
-            text: instructionText.replace(/^\d+\.\s*/, ''),
-          };
+        (recipe.instructionSteps || []).map(async (step) => {
           try {
             const imageResult = await generateRecipeStepImage({
               instruction: step.text,
-              recipeName: output.name,
+              recipeName: recipe.name,
             });
             step.image = imageResult;
           } catch (e) {
-            console.error(`Image generation failed for step "${step.text}" in recipe ${output.name}:`, e);
+            console.error(`Image generation failed for step "${step.text}" in recipe ${recipe.name}:`, e);
           }
           return step;
         })
     );
     
-    const recipeWithImages: Recipe = { ...output, instructionSteps };
+    const recipeWithImages: Recipe = { ...recipe, instructionSteps };
 
     // Generate audio and video in parallel in the background, but don't wait for them to return the initial recipe object
-    const mediaPromise = Promise.allSettled([
-      generateRecipeAudio({ instructions: recipeWithImages.instructions }),
-      generateRecipeVideo({ recipeName: recipeWithImages.name }),
-    ]).then(([audioResult, videoResult]) => {
-      const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
-      const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+    const mediaPromise = (async () => {
+        const fullInstructions = recipeWithImages.instructionSteps?.map(s => s.text).join('\n') || "";
+        const [audioResult, videoResult] = await Promise.allSettled([
+            generateRecipeAudio({ instructions: fullInstructions }),
+            generateRecipeVideo({ recipeName: recipeWithImages.name }),
+        ]);
 
-      if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${output.name}:`, audioResult.reason);
-      if (videoResult.status === 'rejected') console.error(`Video generation failed for ${output.name}:`, videoResult.reason);
+        const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
+        const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
 
-      return { audio, video };
-    });
+        if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
+        if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
+
+        return { audio, video };
+    })();
+
 
     return {
       ...recipeWithImages,

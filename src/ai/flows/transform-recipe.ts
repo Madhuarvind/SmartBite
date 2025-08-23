@@ -10,25 +10,24 @@ import { ai } from '@/ai/genkit';
 import {
   TransformRecipeInput,
   TransformRecipeInputSchema,
-  TransformRecipeOutput,
-  TransformRecipeOutputSchema,
-  InstructionStep,
   Recipe,
+  RecipeSchema,
 } from '../schemas';
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeStepImage } from './generate-recipe-step-image';
+import type { InstructionStep } from '../schemas';
 
 export async function transformRecipe(
   input: TransformRecipeInput
-): Promise<TransformRecipeOutput> {
+): Promise<Recipe> {
   return transformRecipeFlow(input);
 }
 
 const prompt = ai.definePrompt({
   name: 'transformRecipePrompt',
   input: { schema: TransformRecipeInputSchema },
-  output: { schema: TransformRecipeOutputSchema },
+  output: { schema: RecipeSchema },
   prompt: `You are an expert chef and culinary psychologist. Your task is to act as an "AI Taste Predictor". You will transform a given recipe based on a user's specific taste preferences and requests.
 
 You must deeply analyze the transformation request and modify the recipe accordingly. This might involve:
@@ -39,13 +38,13 @@ You must deeply analyze the transformation request and modify the recipe accordi
 
 After transforming, you must recalculate the nutritional information for the new version based on the modified ingredients.
 
-The instructions should be a single string, with each step numbered and separated by a newline character (e.g., "1. Chop the onions.\\n2. Saute the garlic.").
+The instructions should be provided as a structured list of steps.
 
 Return the entire modified recipe in the specified JSON format.
 
 Original Recipe Name: {{{recipe.name}}}
 Original Recipe Ingredients: {{#each recipe.ingredients}}}{{{this.name}}} ({{{this.quantity}}}), {{/each}}
-Original Recipe Instructions: {{{recipe.instructions}}}
+Original Recipe Instructions: {{#each recipe.instructionSteps}}{{this.step}}. {{{this.text}}}\n{{/each}}
 
 Transformation Request / Taste Profile: "{{{transformation}}}"
 
@@ -57,47 +56,45 @@ const transformRecipeFlow = ai.defineFlow(
   {
     name: 'transformRecipeFlow',
     inputSchema: TransformRecipeInputSchema,
-    outputSchema: TransformRecipeOutputSchema,
+    outputSchema: RecipeSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
+    const { output: recipe } = await prompt(input);
+    if (!recipe) {
       throw new Error('Could not transform recipe.');
     }
     
     // Generate images for each instruction step first
     const instructionSteps: InstructionStep[] = await Promise.all(
-      output.instructions.split('\n').filter(line => line.trim().length > 0).map(async (instructionText, index) => {
-        const step: InstructionStep = {
-          step: index + 1,
-          text: instructionText.replace(/^\d+\.\s*/, ''), // Remove leading numbers
-        };
+      (recipe.instructionSteps || []).map(async (step) => {
         try {
           const imageResult = await generateRecipeStepImage({
             instruction: step.text,
-            recipeName: output.name,
+            recipeName: recipe.name,
           });
           step.image = imageResult;
         } catch (e) {
-          console.error(`Image generation failed for step "${step.text}" in recipe ${output.name}:`, e);
+          console.error(`Image generation failed for step "${step.text}" in recipe ${recipe.name}:`, e);
         }
         return step;
       })
     );
     
-    const recipeWithImages: Recipe = { ...output, instructionSteps };
+    const recipeWithImages: Recipe = { ...recipe, instructionSteps };
 
     // Generate audio and video in the background
-    const mediaPromise = Promise.allSettled([
-      generateRecipeAudio({ instructions: output.instructions }),
-      generateRecipeVideo({ recipeName: output.name })
-    ]).then(([audioResult, videoResult]) => {
-      const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
-      const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
-      if (audioResult.status === 'rejected') console.error(`Audio generation failed for transformed recipe ${output.name}:`, audioResult.reason);
-      if (videoResult.status === 'rejected') console.error(`Video generation failed for transformed recipe ${output.name}:`, videoResult.reason);
-      return { audio, video };
-    });
+    const mediaPromise = (async () => {
+        const fullInstructions = recipeWithImages.instructionSteps?.map(s => s.text).join('\n') || "";
+        const [audioResult, videoResult] = await Promise.allSettled([
+            generateRecipeAudio({ instructions: fullInstructions }),
+            generateRecipeVideo({ recipeName: recipe.name })
+        ]);
+        const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
+        const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+        if (audioResult.status === 'rejected') console.error(`Audio generation failed for transformed recipe ${recipe.name}:`, audioResult.reason);
+        if (videoResult.status === 'rejected') console.error(`Video generation failed for transformed recipe ${recipe.name}:`, videoResult.reason);
+        return { audio, video };
+    })();
 
     return {
       ...recipeWithImages,

@@ -10,14 +10,13 @@ import { ai } from '@/ai/genkit';
 import {
   InventRecipeInput,
   InventRecipeInputSchema,
-  InventRecipeOutput,
-  InventRecipeOutputSchema,
-  InstructionStep,
   Recipe,
+  RecipeSchema,
 } from '../schemas';
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeStepImage } from './generate-recipe-step-image';
+import type { InstructionStep } from '../schemas';
 
 // This is a simplified function to estimate the cost.
 // A real-world application would need a more sophisticated way to handle quantities and units.
@@ -37,14 +36,14 @@ function calculateEstimatedCost(recipeIngredients: { name: string; quantity: str
 
 export async function inventRecipe(
   input: InventRecipeInput
-): Promise<InventRecipeOutput> {
+): Promise<Recipe> {
   return inventRecipeFlow(input);
 }
 
 const prompt = ai.definePrompt({
   name: 'inventRecipePrompt',
   input: { schema: InventRecipeInputSchema },
-  output: { schema: InventRecipeOutputSchema },
+  output: { schema: RecipeSchema },
   prompt: `You are a creative and experimental "Creative Chef AI" with a deep understanding of food science. Your task is to invent a completely new, interesting, and delicious recipe using only the provided list of ingredients.
 
 Do not just find a standard recipe. Create something unique and give it an appealing, creative name. For example, if you are given rice, spinach, and curd, you might create a "Spinach Yogurt Rice Bowl with Spiced Dressing."
@@ -52,7 +51,7 @@ Do not just find a standard recipe. Create something unique and give it an appea
 For the new recipe, you MUST provide:
 1.  A unique, appealing name.
 2.  A full list of ingredients with specific quantities, using only the provided ingredients.
-3.  Detailed, step-by-step instructions as a single string, with each step numbered and separated by a newline character.
+3.  Detailed, step-by-step instructions.
 4.  A detailed nutritional analysis per serving (calories, protein, carbs, fat).
 
 Do not include the estimatedCost field in your JSON output. This will be calculated separately.
@@ -70,25 +69,21 @@ const inventRecipeFlow = ai.defineFlow(
   {
     name: 'inventRecipeFlow',
     inputSchema: InventRecipeInputSchema,
-    outputSchema: InventRecipeOutputSchema,
+    outputSchema: RecipeSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
+    const { output: recipe } = await prompt(input);
+    if (!recipe) {
       throw new Error('Creative Chef AI could not invent a recipe.');
     }
 
     // After generating the recipe, calculate the cost.
-    const estimatedCost = calculateEstimatedCost(output.ingredients, input.ingredients);
-    const recipeWithCost: InventRecipeOutput = { ...output, estimatedCost };
+    const estimatedCost = calculateEstimatedCost(recipe.ingredients, input.ingredients);
+    const recipeWithCost: Recipe = { ...recipe, estimatedCost };
 
     // Generate step images first
     const instructionSteps: InstructionStep[] = await Promise.all(
-      recipeWithCost.instructions.split('\n').filter(line => line.trim().length > 0).map(async (instructionText, index) => {
-        const step: InstructionStep = {
-          step: index + 1,
-          text: instructionText.replace(/^\d+\.\s*/, ''), // Remove leading numbers
-        };
+      (recipeWithCost.instructionSteps || []).map(async (step) => {
         try {
           const imageResult = await generateRecipeStepImage({
             instruction: step.text,
@@ -105,16 +100,18 @@ const inventRecipeFlow = ai.defineFlow(
     const recipeWithImagesAndCost: Recipe = { ...recipeWithCost, instructionSteps };
 
     // Generate audio and video in the background
-    const mediaPromise = Promise.allSettled([
-      generateRecipeAudio({ instructions: recipeWithImagesAndCost.instructions }),
-      generateRecipeVideo({ recipeName: recipeWithImagesAndCost.name })
-    ]).then(([audioResult, videoResult]) => {
-      const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
-      const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
-      if (audioResult.status === 'rejected') console.error(`Audio generation failed for invented recipe ${recipeWithImagesAndCost.name}:`, audioResult.reason);
-      if (videoResult.status === 'rejected') console.error(`Video generation failed for invented recipe ${recipeWithImagesAndCost.name}:`, videoResult.reason);
-      return { audio, video };
-    });
+    const mediaPromise = (async () => {
+        const fullInstructions = recipeWithImagesAndCost.instructionSteps?.map(s => s.text).join('\n') || "";
+        const [audioResult, videoResult] = await Promise.allSettled([
+            generateRecipeAudio({ instructions: fullInstructions }),
+            generateRecipeVideo({ recipeName: recipeWithImagesAndCost.name })
+        ]);
+        const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
+        const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+        if (audioResult.status === 'rejected') console.error(`Audio generation failed for invented recipe ${recipeWithImagesAndCost.name}:`, audioResult.reason);
+        if (videoResult.status === 'rejected') console.error(`Video generation failed for invented recipe ${recipeWithImagesAndCost.name}:`, videoResult.reason);
+        return { audio, video };
+    })();
 
     return {
       ...recipeWithImagesAndCost,

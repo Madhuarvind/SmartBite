@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput } from "@/ai/schemas";
+import type { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
@@ -58,7 +58,7 @@ export default function RecipesPage() {
   const [isSubstituting, setIsSubstituting] = useState(false);
   const [transformationRequest, setTransformationRequest] = useState("");
   const [isTransforming, setIsTransforming] = useState(false);
-  const [transformedRecipe, setTransformedRecipe] = useState<TransformRecipeOutput | null>(null);
+  const [transformedRecipe, setTransformedRecipe] = useState<Recipe | null>(null);
   const [servings, setServings] = useState(2);
   const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
@@ -613,9 +613,9 @@ export default function RecipesPage() {
                 <CardContent className="p-4 flex-grow">
                   <CardTitle className="text-lg mb-2">{recipe.name}</CardTitle>
                   <p className="text-xs italic text-muted-foreground mb-2">{recipe.rationale}</p>
-                  <div className="text-sm text-muted-foreground">
-                    <p className="line-clamp-3">{recipe.instructions}</p>
-                  </div>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {recipe.instructionSteps?.map(step => step.text).join(' ')}
+                  </p>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
                   <Button className="w-full" onClick={() => handleViewRecipe(recipe)}>
@@ -712,12 +712,6 @@ export default function RecipesPage() {
                                         </div>
                                     </div>
                                 ))}
-                                {!currentRecipe.instructionSteps && (
-                                     <div className="prose prose-sm prose-p:text-muted-foreground max-w-none whitespace-pre-wrap">
-                                         {currentRecipe.instructions}
-                                     </div>
-
-                                )}
                             </div>
                         </div>
 

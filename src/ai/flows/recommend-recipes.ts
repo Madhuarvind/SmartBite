@@ -28,7 +28,7 @@ Your task is to generate exactly 4 distinct and creative recipes. Prioritize usi
 For each recipe, you MUST provide:
 1. A unique, appealing name.
 2. A full list of ingredients, with a name and a specific quantity for each (e.g., "200g", "1 cup", "2 cloves").
-3. Detailed, step-by-step instructions as a single string, with each step numbered and separated by a newline character (e.g., "1. Chop the onions.\\n2. Saute the garlic.").
+3. Detailed, step-by-step instructions.
 4. A detailed nutritional analysis per serving, including calories, protein, carbs, and fat, based on the specific ingredients and quantities you've listed.
 
 Ingredients: {{{ingredients}}}
@@ -56,11 +56,7 @@ const recommendRecipesFlow = ai.defineFlow(
       output.recipes.map(async (recipe: Recipe) => {
         // First, generate the step-by-step images, which are relatively fast.
         const instructionSteps: InstructionStep[] = await Promise.all(
-            recipe.instructions.split('\n').filter(line => line.trim().length > 0).map(async (instructionText, index) => {
-              const step: InstructionStep = {
-                step: index + 1,
-                text: instructionText.replace(/^\d+\.\s*/, ''), // Remove leading numbers like "1. "
-              };
+            (recipe.instructionSteps || []).map(async (step) => {
               try {
                 const imageResult = await generateRecipeStepImage({
                   instruction: step.text,
@@ -76,16 +72,22 @@ const recommendRecipesFlow = ai.defineFlow(
         
         const recipeWithImages: Recipe = { ...recipe, instructionSteps };
 
-        const mediaPromise = Promise.allSettled([
-            generateRecipeAudio({ instructions: recipe.instructions }),
-            generateRecipeVideo({ recipeName: recipe.name })
-        ]).then(([audioResult, videoResult]) => {
+        const mediaPromise = (async () => {
+            const fullInstructions = recipeWithImages.instructionSteps?.map(s => s.text).join('\n') || "";
+            const [audioResult, videoResult] = await Promise.allSettled([
+                generateRecipeAudio({ instructions: fullInstructions }),
+                generateRecipeVideo({ recipeName: recipe.name })
+            ]);
+
             const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
             const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
+
             if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
             if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
+            
             return { audio, video };
-        });
+        })();
+
 
         return {
           ...recipeWithImages,

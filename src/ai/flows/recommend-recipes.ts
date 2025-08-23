@@ -52,7 +52,7 @@ const recommendRecipesFlow = ai.defineFlow(
     }
 
     // After generating the recipe text, kick off all media generation in parallel.
-    const enhancedRecipes = await Promise.all(
+    const enhancedRecipes: Recipe[] = await Promise.all(
       output.recipes.map(async (recipe: Recipe) => {
         // First, generate the step-by-step images, which are relatively fast.
         const instructionSteps: InstructionStep[] = await Promise.all(
@@ -76,8 +76,6 @@ const recommendRecipesFlow = ai.defineFlow(
         
         const recipeWithImages: Recipe = { ...recipe, instructionSteps };
 
-        // Now, start the slow audio and video generation but don't wait for it.
-        // Return the recipe with a promise for the full media.
         const mediaPromise = Promise.allSettled([
             generateRecipeAudio({ instructions: recipe.instructions }),
             generateRecipeVideo({ recipeName: recipe.name })
@@ -86,21 +84,13 @@ const recommendRecipesFlow = ai.defineFlow(
             const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
             if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
             if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
-            return { ...recipeWithImages, audio, video };
+            return { audio, video };
         });
 
-        // We can add the unresolved promise to the object.
-        // This is a bit of a trick; the client will get the initial object,
-        // and the full object with media will resolve later on the server.
-        // For the UI, we just check if `recipe.video` exists.
         return {
           ...recipeWithImages,
-          // This ensures the final object passed to the client has the resolved media.
-          // The client-side code will receive the fully resolved object once this `map` completes.
-          // The key is that the UI can render the recipe before the video/audio is ready.
           audio: undefined,
           video: undefined,
-          // This is a conceptual representation; the final awaited result of this function will have the media.
           ...await mediaPromise
         };
       })

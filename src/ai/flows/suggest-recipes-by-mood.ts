@@ -65,7 +65,7 @@ const suggestRecipesByMoodFlow = ai.defineFlow(
     }
 
     // After generating the recipe text, kick off all media generation in parallel.
-    const enhancedRecipes = await Promise.all(
+    const enhancedRecipes: Recipe[] = await Promise.all(
       output.recipes.map(async (recipe: Recipe) => {
         // Generate step images first as they are quicker
         const instructionSteps: InstructionStep[] = await Promise.all(
@@ -90,7 +90,7 @@ const suggestRecipesByMoodFlow = ai.defineFlow(
             })
         );
         
-        const recipeWithImages = { ...recipe, instructionSteps };
+        const recipeWithImages: Recipe = { ...recipe, instructionSteps };
 
         // Generate audio and video in the background
         const mediaPromise = Promise.allSettled([
@@ -103,7 +103,7 @@ const suggestRecipesByMoodFlow = ai.defineFlow(
           if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${recipe.name}:`, audioResult.reason);
           if (videoResult.status === 'rejected') console.error(`Video generation failed for ${recipe.name}:`, videoResult.reason);
           
-          return { ...recipeWithImages, audio, video };
+          return { audio, video };
         });
 
         // Return the recipe with the media promise

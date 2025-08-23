@@ -1,4 +1,3 @@
-
 // src/ai/flows/transform-recipe.ts
 'use server';
 /**
@@ -14,6 +13,7 @@ import {
   TransformRecipeOutput,
   TransformRecipeOutputSchema,
   InstructionStep,
+  Recipe,
 } from '../schemas';
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
@@ -85,7 +85,7 @@ const transformRecipeFlow = ai.defineFlow(
       })
     );
     
-    const recipeWithImages = { ...output, instructionSteps };
+    const recipeWithImages: Recipe = { ...output, instructionSteps };
 
     // Generate audio and video in the background
     const mediaPromise = Promise.allSettled([
@@ -96,7 +96,7 @@ const transformRecipeFlow = ai.defineFlow(
       const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
       if (audioResult.status === 'rejected') console.error(`Audio generation failed for transformed recipe ${output.name}:`, audioResult.reason);
       if (videoResult.status === 'rejected') console.error(`Video generation failed for transformed recipe ${output.name}:`, videoResult.reason);
-      return { ...recipeWithImages, audio, video };
+      return { audio, video };
     });
 
     return {

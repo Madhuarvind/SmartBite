@@ -16,7 +16,7 @@ import {
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeStepImage } from './generate-recipe-step-image';
-import type { InstructionStep } from '../schemas';
+import type { InstructionStep, Recipe } from '../schemas';
 
 export async function findRecipeFromMeal(
   input: FindRecipeFromMealInput
@@ -74,11 +74,12 @@ const findRecipeFromMealFlow = ai.defineFlow(
         })
     );
     
-    const recipeWithImages = { ...output, instructionSteps };
+    const recipeWithImages: Recipe = { ...output, instructionSteps };
 
+    // Generate audio and video in parallel in the background
     const mediaPromise = Promise.allSettled([
-      generateRecipeAudio({ instructions: output.instructions }),
-      generateRecipeVideo({ recipeName: output.name }),
+      generateRecipeAudio({ instructions: recipeWithImages.instructions }),
+      generateRecipeVideo({ recipeName: recipeWithImages.name }),
     ]).then(([audioResult, videoResult]) => {
       const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
       const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
@@ -86,7 +87,7 @@ const findRecipeFromMealFlow = ai.defineFlow(
       if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${output.name}:`, audioResult.reason);
       if (videoResult.status === 'rejected') console.error(`Video generation failed for ${output.name}:`, videoResult.reason);
       
-      return { ...recipeWithImages, audio, video };
+      return { audio, video };
     });
 
     return {

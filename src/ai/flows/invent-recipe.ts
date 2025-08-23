@@ -13,6 +13,7 @@ import {
   InventRecipeOutput,
   InventRecipeOutputSchema,
   InstructionStep,
+  Recipe,
 } from '../schemas';
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
@@ -101,7 +102,7 @@ const inventRecipeFlow = ai.defineFlow(
       })
     );
     
-    const recipeWithImagesAndCost = { ...recipeWithCost, instructionSteps };
+    const recipeWithImagesAndCost: Recipe = { ...recipeWithCost, instructionSteps };
 
     // Generate audio and video in the background
     const mediaPromise = Promise.allSettled([
@@ -112,7 +113,7 @@ const inventRecipeFlow = ai.defineFlow(
       const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
       if (audioResult.status === 'rejected') console.error(`Audio generation failed for invented recipe ${recipeWithImagesAndCost.name}:`, audioResult.reason);
       if (videoResult.status === 'rejected') console.error(`Video generation failed for invented recipe ${recipeWithImagesAndCost.name}:`, videoResult.reason);
-      return { ...recipeWithImagesAndCost, audio, video };
+      return { audio, video };
     });
 
     return {

@@ -11,6 +11,12 @@ import {ai} from '@/ai/genkit';
 import { ScanIngredientsInput, ScanIngredientsInputSchema, ScanIngredientsOutput, ScanIngredientsOutputSchema } from '../schemas';
 import { predictExpiryDate } from './predict-expiry-date';
 
+export async function scanIngredients(
+  input: ScanIngredientsInput
+): Promise<ScanIngredientsOutput> {
+  return scanIngredientsFlow(input);
+}
+
 const prompt = ai.definePrompt({
   name: 'scanIngredientsPrompt',
   input: {schema: ScanIngredientsInputSchema},

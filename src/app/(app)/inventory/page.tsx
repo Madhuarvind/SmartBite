@@ -44,36 +44,41 @@ export default function InventoryPage() {
   const { toast } = useToast();
   const [stream, setStream] = useState<MediaStream | null>(null);
 
+  // State for main inventory item dialog
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("");
   const [newItemPurchaseDate, setNewItemPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [newItemExpiry, setNewItemExpiry] = useState("");
+  
+  // State for pantry essential dialog
+  const [isEssentialDialogOpen, setIsEssentialDialogOpen] = useState(false);
+  const [newEssentialName, setNewEssentialName] = useState("");
+  const [newEssentialQuantity, setNewEssentialQuantity] = useState("");
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        setIsInventoryLoading(true); // Set loading true when user is found
-        // Fetch Inventory
+        setIsInventoryLoading(true);
         const inventoryQuery = query(collection(db, "users", currentUser.uid, "inventory"));
         const unsubscribeInventory = onSnapshot(inventoryQuery, (snapshot) => {
           const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
           setInventory(items);
-          // Don't stop loading here, wait for both
-        });
+          
+          const pantryQuery = query(collection(db, "users", currentUser.uid, "pantry_essentials"));
+          const unsubscribePantry = onSnapshot(pantryQuery, (pantrySnapshot) => {
+              const items = pantrySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PantryItem[];
+              setPantryEssentials(items);
+              setIsInventoryLoading(false);
+          });
 
-        // Fetch Pantry Essentials
-        const pantryQuery = query(collection(db, "users", currentUser.uid, "pantry_essentials"));
-        const unsubscribePantry = onSnapshot(pantryQuery, (snapshot) => {
-            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PantryItem[];
-            setPantryEssentials(items);
-            setIsInventoryLoading(false); // Stop loading after both are fetched
+          return () => unsubscribePantry();
         });
 
         return () => {
           unsubscribeInventory();
-          unsubscribePantry();
         };
       } else {
         setUser(null);
@@ -165,7 +170,6 @@ export default function InventoryPage() {
         const photoDataUri = canvas.toDataURL('image/jpeg');
         processImage(photoDataUri);
 
-        // Stop the camera stream
         stream?.getTracks().forEach(track => track.stop());
         setStream(null);
 
@@ -279,7 +283,6 @@ export default function InventoryPage() {
         return;
     }
     
-    // Log wasted item if expired
     if (expiry !== 'N/A' && isPast(parseISO(expiry))) {
         try {
             await addDoc(collection(db, "users", user.uid, "activity"), {
@@ -293,7 +296,6 @@ export default function InventoryPage() {
         }
     }
 
-    // Delete from Firestore
     try {
         await deleteDoc(doc(db, "users", user.uid, "inventory", itemId));
         toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
@@ -413,6 +415,38 @@ export default function InventoryPage() {
       setIsListening(false);
     };
   };
+
+  const handleAddEssentialItem = async () => {
+    if (!user || !newEssentialName || !newEssentialQuantity) {
+        toast({ variant: "destructive", title: "Missing Information", description: "Please fill out both name and quantity." });
+        return;
+    }
+    try {
+        await addDoc(collection(db, "users", user.uid, "pantry_essentials"), {
+            name: newEssentialName,
+            quantity: newEssentialQuantity,
+        });
+        toast({ title: "Essential Item Added" });
+        setIsEssentialDialogOpen(false);
+        setNewEssentialName("");
+        setNewEssentialQuantity("");
+    } catch (error) {
+        console.error("Error adding essential item:", error);
+        toast({ variant: "destructive", title: "Failed to Add Item" });
+    }
+  };
+
+  const handleRemoveEssentialItem = async (itemId: string, itemName: string) => {
+    if (!user) return;
+    try {
+        await deleteDoc(doc(db, "users", user.uid, "pantry_essentials", itemId));
+        toast({ variant: "destructive", title: "Item Removed", description: `${itemName} removed from essentials.` });
+    } catch (error) {
+        console.error("Error removing essential item:", error);
+        toast({ variant: "destructive", title: "Failed to Remove Item" });
+    }
+  };
+
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
@@ -616,14 +650,17 @@ export default function InventoryPage() {
                     {isInventoryLoading ? (
                         <TableRow><TableCell colSpan={3} className="text-center"><Loader className="mx-auto animate-spin" /></TableCell></TableRow>
                     ) : pantryEssentials.length === 0 ? (
-                        <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No pantry essentials defined.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No pantry essentials defined.</TableCell></TableRow>
                     ) : (
                         pantryEssentials.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" disabled>Remove</Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveEssentialItem(item.id, item.name)}>
+                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                    <span className="sr-only">Remove</span>
+                                </Button>
                             </TableCell>
                         </TableRow>
                         ))
@@ -632,7 +669,30 @@ export default function InventoryPage() {
                 </Table>
             </CardContent>
             <CardFooter>
-                <Button variant="outline" disabled>Add Essential Item</Button>
+                 <Dialog open={isEssentialDialogOpen} onOpenChange={setIsEssentialDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><PlusCircle className="mr-2" />Add Essential Item</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add Pantry Essential</DialogTitle>
+                            <DialogDescription>Add an item you usually have on hand.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="essential-name" className="text-right">Name</Label>
+                                <Input id="essential-name" value={newEssentialName} onChange={(e) => setNewEssentialName(e.target.value)} className="col-span-3" placeholder="e.g. Olive Oil"/>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="essential-quantity" className="text-right">Quantity</Label>
+                                <Input id="essential-quantity" value={newEssentialQuantity} onChange={(e) => setNewEssentialQuantity(e.target.value)} className="col-span-3" placeholder="e.g. 1 bottle" />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" onClick={handleAddEssentialItem}>Save Item</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                 </Dialog>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -640,5 +700,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
-    

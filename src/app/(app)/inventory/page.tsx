@@ -54,12 +54,13 @@ export default function InventoryPage() {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        setIsInventoryLoading(true); // Set loading true when user is found
         // Fetch Inventory
         const inventoryQuery = query(collection(db, "users", currentUser.uid, "inventory"));
         const unsubscribeInventory = onSnapshot(inventoryQuery, (snapshot) => {
           const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
           setInventory(items);
-          setIsInventoryLoading(false);
+          // Don't stop loading here, wait for both
         });
 
         // Fetch Pantry Essentials
@@ -67,6 +68,7 @@ export default function InventoryPage() {
         const unsubscribePantry = onSnapshot(pantryQuery, (snapshot) => {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PantryItem[];
             setPantryEssentials(items);
+            setIsInventoryLoading(false); // Stop loading after both are fetched
         });
 
         return () => {
@@ -638,3 +640,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    

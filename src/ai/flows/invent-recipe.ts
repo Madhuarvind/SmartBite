@@ -54,7 +54,7 @@ For the new recipe, you MUST provide:
 3.  Detailed, step-by-step instructions as a single string, with each step numbered and separated by a newline character.
 4.  A detailed nutritional analysis per serving (calories, protein, carbs, fat).
 
-Do NOT include an `estimatedCost` in your JSON output. This will be calculated separately.
+Do not include the estimatedCost field in your JSON output. This will be calculated separately.
 
 Available Ingredients:
 {{#each ingredients}}

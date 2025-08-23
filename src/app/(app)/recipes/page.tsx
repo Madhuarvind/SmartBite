@@ -312,24 +312,24 @@ export default function RecipesPage() {
 
   const handleViewRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
+    setTransformedRecipe(null);
     setIsModalOpen(true);
     // Reset states for the modal
     setSubstitutions([]);
     setMissingIngredient(null);
-    setTransformedRecipe(null);
     setTransformationRequest("");
     setInventoryCheckResults([]);
     setIsCheckingInventory(false);
     setServings(2);
-    setRecipeMedia({});
+    setRecipeMedia({ audio: recipe.audio, video: recipe.video });
 
     // Handle asynchronous media
     if (recipe.mediaPromise) {
       (recipe.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>)
         .then(media => {
             // Update the state only if the modal for this recipe is still open
-            if (selectedRecipe && selectedRecipe.name === recipe.name) {
-                 setRecipeMedia(media);
+            if (isModalOpen && selectedRecipe && selectedRecipe.name === recipe.name) {
+                setRecipeMedia(media);
             }
         });
     }
@@ -664,7 +664,7 @@ export default function RecipesPage() {
                               />
                             ) : (
                               <div className="w-full aspect-video bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center rounded-lg">
-                                  <Loader className="w-10 h-10 mb-2 animate-pulse text-primary"/>
+                                  <Loader className="w-10 h-10 mb-2 animate-spin text-primary"/>
                                   <p className="text-sm font-medium">Preparing your video...</p>
                                   <p className="text-xs">This can take a moment, especially for new recipes.</p>
                               </div>

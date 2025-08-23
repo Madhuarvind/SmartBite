@@ -271,6 +271,8 @@ export const ScannedItemSchema = z.object({
     name: z.string().describe('The name of the grocery item.'),
     quantity: z.string().describe('The quantity of the item (e.g., "1", "500g", "2 lbs").'),
     price: z.number().optional().describe('The price of the item as a number.'),
+    isFresh: z.boolean().describe('Whether the item is a fresh product that needs an expiry date prediction.'),
+    expiryDate: z.string().nullable().describe('The predicted expiry date for the fresh item in YYYY-MM-DD format, or null if not applicable.'),
 });
 export type ScannedItem = z.infer<typeof ScannedItemSchema>;
 

@@ -145,7 +145,7 @@ export default function BillScannerPage() {
             batch.set(docRef, { 
                 name: item.name, 
                 quantity: item.quantity, 
-                expiry: 'N/A',
+                expiry: item.expiryDate || 'N/A',
                 price: item.price || 0,
                 purchaseDate: today,
             });
@@ -228,6 +228,7 @@ export default function BillScannerPage() {
                               <TableRow>
                                   <TableHead>Item Name</TableHead>
                                   <TableHead>Quantity</TableHead>
+                                  <TableHead>Expiry (Predicted)</TableHead>
                                   <TableHead className="text-right">Price</TableHead>
                               </TableRow>
                           </TableHeader>
@@ -236,6 +237,7 @@ export default function BillScannerPage() {
                                   <TableRow key={`${item.name}-${index}`}>
                                       <TableCell className="font-medium">{item.name}</TableCell>
                                       <TableCell>{item.quantity}</TableCell>
+                                      <TableCell>{item.expiryDate || 'N/A'}</TableCell>
                                       <TableCell className="text-right">{item.price ? `$${item.price.toFixed(2)}` : 'N/A'}</TableCell>
                                   </TableRow>
                               ))}

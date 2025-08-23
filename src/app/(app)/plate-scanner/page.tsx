@@ -15,7 +15,7 @@ import { analyzePlate } from "@/ai/flows/analyze-plate";
 import { findRecipeFromMeal } from "@/ai/flows/find-recipe-from-meal";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
-import type { AnalyzePlateOutput, Recipe, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput, SubstitutionSuggestion, RecipeIngredient } from "@/ai/schemas";
+import { AnalyzePlateOutput, Recipe, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput, SubstitutionSuggestion, RecipeIngredient } from "@/ai/schemas";
 import { cn } from "@/lib/utils";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp, onSnapshot, query } from "firebase/firestore";

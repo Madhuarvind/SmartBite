@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import type { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput } from "@/ai/schemas";
+import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";

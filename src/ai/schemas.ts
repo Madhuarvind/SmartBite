@@ -176,6 +176,7 @@ export const RecipeSchema = z.object({
   rationale: z.string().optional().describe("A brief explanation for why this recipe was suggested."),
   audio: GenerateRecipeAudioOutputSchema.optional(),
   video: GenerateRecipeVideoOutputSchema.optional(),
+  mediaPromise: z.any().optional(),
 });
 export type Recipe = z.infer<typeof RecipeSchema>;
 

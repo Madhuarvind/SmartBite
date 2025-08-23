@@ -111,7 +111,7 @@ const suggestRecipesByMoodFlow = ai.defineFlow(
           ...recipeWithImages,
           audio: undefined,
           video: undefined,
-          ...await mediaPromise
+          mediaPromise: mediaPromise as any,
         };
       })
     );

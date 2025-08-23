@@ -76,22 +76,27 @@ const findRecipeFromMealFlow = ai.defineFlow(
     
     const recipeWithImages: Recipe = { ...output, instructionSteps };
 
-    // Generate audio and video in parallel in the background
-    const mediaResults = await Promise.allSettled([
+    // Generate audio and video in parallel in the background, but don't wait for them to return the initial recipe object
+    const mediaPromise = Promise.allSettled([
       generateRecipeAudio({ instructions: recipeWithImages.instructions }),
       generateRecipeVideo({ recipeName: recipeWithImages.name }),
-    ]);
-    
-    const audio = mediaResults[0].status === 'fulfilled' ? mediaResults[0].value : undefined;
-    const video = mediaResults[1].status === 'fulfilled' ? mediaResults[1].value : undefined;
+    ]).then(([audioResult, videoResult]) => {
+      const audio = audioResult.status === 'fulfilled' ? audioResult.value : undefined;
+      const video = videoResult.status === 'fulfilled' ? videoResult.value : undefined;
 
-    if (mediaResults[0].status === 'rejected') console.error(`Audio generation failed for ${output.name}:`, mediaResults[0].reason);
-    if (mediaResults[1].status === 'rejected') console.error(`Video generation failed for ${output.name}:`, mediaResults[1].reason);
+      if (audioResult.status === 'rejected') console.error(`Audio generation failed for ${output.name}:`, audioResult.reason);
+      if (videoResult.status === 'rejected') console.error(`Video generation failed for ${output.name}:`, videoResult.reason);
+
+      return { audio, video };
+    });
 
     return {
       ...recipeWithImages,
-      audio,
-      video,
+      // Initially return undefined for media, which will be populated on the client once the promise resolves
+      audio: undefined,
+      video: undefined,
+      // Return the promise itself so the client can await it
+      mediaPromise: mediaPromise as any,
     };
   }
 );

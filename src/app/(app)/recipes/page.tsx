@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient, SubstitutionSuggestion } from "@/ai/schemas";
+import type { Recipe, RecommendRecipesOutput, TransformRecipeOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
@@ -73,6 +73,9 @@ export default function RecipesPage() {
   
   const [isPredicting, setIsPredicting] = useState(false);
   const [isInventing, setIsInventing] = useState(false);
+  
+  const [recipeMedia, setRecipeMedia] = useState<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>({});
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -310,6 +313,7 @@ export default function RecipesPage() {
   const handleViewRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
     setIsModalOpen(true);
+    // Reset states for the modal
     setSubstitutions([]);
     setMissingIngredient(null);
     setTransformedRecipe(null);
@@ -317,6 +321,18 @@ export default function RecipesPage() {
     setInventoryCheckResults([]);
     setIsCheckingInventory(false);
     setServings(2);
+    setRecipeMedia({});
+
+    // Handle asynchronous media
+    if (recipe.mediaPromise) {
+      (recipe.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>)
+        .then(media => {
+            // Update the state only if the modal for this recipe is still open
+            if (selectedRecipe && selectedRecipe.name === recipe.name) {
+                 setRecipeMedia(media);
+            }
+        });
+    }
   };
   
   const handleFindSubstitutions = async () => {
@@ -356,6 +372,10 @@ export default function RecipesPage() {
         transformation: transformationRequest,
       });
       setTransformedRecipe(result);
+      if (result.mediaPromise) {
+          (result.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>)
+            .then(media => setRecipeMedia(media));
+      }
       toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
     } catch (error) {
       console.error("Error transforming recipe:", error);
@@ -632,9 +652,9 @@ export default function RecipesPage() {
                         
                         <div>
                            <h3 className="font-bold text-lg mb-2">Full Recipe Video</h3>
-                           {currentRecipe.video?.videoDataUri ? (
+                           {recipeMedia.video?.videoDataUri ? (
                               <video
-                                src={currentRecipe.video.videoDataUri}
+                                src={recipeMedia.video.videoDataUri}
                                 controls
                                 className="w-full aspect-video rounded-lg bg-black"
                                 autoPlay
@@ -711,6 +731,21 @@ export default function RecipesPage() {
                                 <Button className="w-full" onClick={() => handleCookedThis(currentRecipe.name)}>
                                     <ChefHat className="mr-2"/> I Cooked This!
                                 </Button>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-secondary/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-lg"><Music className="w-5 h-5 mr-2 text-primary"/> Audio Guide</CardTitle>
+                                <CardDescription>Listen to the recipe instructions.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {recipeMedia.audio?.audioDataUri ? (
+                                    <audio controls src={recipeMedia.audio.audioDataUri} className="w-full" />
+                                ) : (
+                                    <div className="flex items-center justify-center text-muted-foreground text-sm">
+                                        <Loader className="mr-2 animate-spin"/> Loading audio...
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                         <Card className="bg-secondary/50">

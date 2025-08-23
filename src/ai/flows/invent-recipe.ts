@@ -120,7 +120,7 @@ const inventRecipeFlow = ai.defineFlow(
       ...recipeWithImagesAndCost,
       audio: undefined,
       video: undefined,
-      ...await mediaPromise
+      mediaPromise: mediaPromise as any,
     };
   }
 );

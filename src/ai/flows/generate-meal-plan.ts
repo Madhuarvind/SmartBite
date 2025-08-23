@@ -36,7 +36,7 @@ After creating the meal plan, generate a shopping list of all the ingredients re
 Format the shopping list as an array of strings.
 
 Nutritional Goal: {{{nutritionalGoal}}}
-Dietary Restrictions: {{#if dietaryRestrictions}}{{join dietaryRestrictions ", "}}{{else}}None{{/if}}
+Dietary Restrictions: {{#if dietaryRestrictions}}{{#each dietaryRestrictions}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}None{{/if}}
 Available Ingredients: {{#each availableIngredients}}{{{this}}}, {{/each}}
 
 Respond in the specified JSON format.

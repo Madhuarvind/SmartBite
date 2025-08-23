@@ -34,19 +34,17 @@ const generateRecipeVideoFlow = ai.defineFlow(
     if (!operation) {
       throw new Error('Expected the model to return an operation for video generation.');
     }
+    
+    // The framework will handle waiting for the long-running operation to complete.
+    // The `await` here will pause until the operation is done.
+    const result = await operation.wait();
 
-    // Poll for the result of the long-running operation.
-    while (!operation.done) {
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds before checking again.
-      operation = await ai.checkOperation(operation);
+    if (result.error) {
+      console.error('Video generation failed:', result.error.message);
+      throw new Error(`Failed to generate video: ${result.error.message}`);
     }
 
-    if (operation.error) {
-      console.error('Video generation failed:', operation.error.message);
-      throw new Error(`Failed to generate video: ${operation.error.message}`);
-    }
-
-    const videoPart = operation.output?.message?.content.find((p) => p.media && p.media.contentType?.startsWith('video/'));
+    const videoPart = result.output?.message?.content.find((p) => p.media && p.media.contentType?.startsWith('video/'));
     if (!videoPart || !videoPart.media?.url) {
       throw new Error('Failed to find the generated video in the operation result.');
     }

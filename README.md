@@ -44,6 +44,42 @@ SmartBite is packed with advanced features that work together to save you time, 
 - **Generative AI**: Google's Gemini models, orchestrated with Genkit.
 - **Backend & Database**: Firebase (Firestore for database, Firebase Auth for authentication).
 
+## Architecture
+
+The application follows a modern web architecture, separating the client-side UI from the server-side AI logic.
+
+```mermaid
+graph TD
+    subgraph "Client-Side (Browser)"
+        A[Next.js Frontend - React Components]
+    end
+
+    subgraph "Server-Side (Next.js & Genkit)"
+        B[Genkit AI Flows <br/> e.g., recommendRecipes]
+        C[Genkit Tools <br/> e.g., checkInventory]
+        D[Firebase SDK]
+    end
+
+    subgraph "External Services"
+        E[Firebase <br/> (Auth, Firestore)]
+        F[Google AI <br/> (Gemini & Veo)]
+    end
+
+    A -- "Server Action Call" --> B
+    B -- "Uses Tool" --> C
+    C -- "Queries/Mutates Data" --> D
+    D -- "Interacts with" --> E
+    B -- "Calls Generative Model" --> F
+    A -- "Reads Data via Firebase SDK" --> E
+
+    style A fill:#F0C808,stroke:#4D450A,stroke-width:2px,color:#4D450A
+    style B fill:#F07208,stroke:#4D450A,stroke-width:2px,color:#4D450A
+    style C fill:#F07208,stroke:#4D450A,stroke-width:2px,color:#4D450A
+    style D fill:#F07208,stroke:#4D450A,stroke-width:2px,color:#4D450A
+    style E fill:#4CAF50,stroke:#4D450A,stroke-width:2px,color:#fff
+    style F fill:#4285F4,stroke:#4D450A,stroke-width:2px,color:#fff
+```
+
 ## Project Structure
 
 - `src/app/`: Contains all the application pages, following the Next.js App Router structure.

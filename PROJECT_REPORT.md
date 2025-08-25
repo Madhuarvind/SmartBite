@@ -15,7 +15,7 @@ The SmartBite project is important because it offers a holistic, AI-driven solut
 
 ## Problem Statement
 
-The core challenge this project addresses is the inefficiency and lack of intelligence in traditional home kitchen management. Households lack a centralized system that connects их inventory of available ingredients with their meal planning, cooking, health, and financial activities. This gap results in suboptimal decision-making, leading directly to food and money waste, nutritional imbalances, and the daily stress of meal preparation. The project tackles the specific problem of how to leverage modern AI to create a proactive, personalized kitchen assistant that closes this loop, turning a reactive chore into a streamlined, intelligent process.
+The core challenge this project addresses is the inefficiency and lack of intelligence in traditional home kitchen management. Households lack a centralized system that connects their inventory of available ingredients with their meal planning, cooking, health, and financial activities. This gap results in suboptimal decision-making, leading directly to food and money waste, nutritional imbalances, and the daily stress of meal preparation. The project tackles the specific problem of how to leverage modern AI to create a proactive, personalized kitchen assistant that closes this loop, turning a reactive chore into a streamlined, intelligent process.
 
 ## Objectives
 

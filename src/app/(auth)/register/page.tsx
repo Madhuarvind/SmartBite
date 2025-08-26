@@ -17,10 +17,12 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendEmailVerification } from "firebase/auth";
-import { Loader } from "lucide-react";
+import { AlertTriangle, Loader } from "lucide-react";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { initialInventory, pantryEssentials } from "@/lib/inventory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -33,6 +35,7 @@ export default function RegisterPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const populateInitialData = async (userId: string) => {
       const batch = writeBatch(db);
@@ -56,6 +59,7 @@ export default function RegisterPage() {
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
+    setError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -74,11 +78,15 @@ export default function RegisterPage() {
 
     } catch (error: any) {
        console.error("Registration failed:", error);
-       toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: error.message || "An unexpected error occurred.",
-      });
+        if (error.code === 'auth/internal-error') {
+            setError("Firebase internal error: Please ensure your app's domain is authorized in your Firebase project's Authentication settings.");
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Registration Failed",
+                description: error.message || "An unexpected error occurred.",
+            });
+        }
     } finally {
       setIsLoading(false);
     }
@@ -86,6 +94,7 @@ export default function RegisterPage() {
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
+    setError(null);
     const provider = new GoogleAuthProvider();
     try {
         const userCredential = await signInWithPopup(auth, provider);
@@ -96,11 +105,15 @@ export default function RegisterPage() {
         router.push("/dashboard");
     } catch (error: any) {
         console.error("Google sign up failed:", error);
-        toast({
-            variant: "destructive",
-            title: "Google Sign-Up Failed",
-            description: error.message || "Could not sign up with Google. Please try again.",
-        });
+        if (error.code === 'auth/internal-error') {
+            setError("Firebase internal error: Please ensure your app's domain is authorized in your Firebase project's Authentication settings.");
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Google Sign-Up Failed",
+                description: error.message || "Could not sign up with Google. Please try again.",
+            });
+        }
     } finally {
         setIsGoogleLoading(false);
     }
@@ -116,6 +129,13 @@ export default function RegisterPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Authentication Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <Tabs defaultValue="email">
               <TabsList className="grid w-full grid-cols-1">
                 <TabsTrigger value="email">Email & Password</TabsTrigger>

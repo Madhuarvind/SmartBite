@@ -17,8 +17,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "firebase/auth";
-import { Loader } from "lucide-react";
+import { AlertTriangle, Loader } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 
 export default function LoginPage() {
@@ -28,6 +29,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -36,17 +38,22 @@ export default function LoginPage() {
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
+    setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Successful", description: "Welcome back!" });
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login failed:", error);
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "An unexpected error occurred.",
-      });
+      if (error.code === 'auth/internal-error') {
+        setError("Firebase internal error: Please ensure your app's domain is authorized in your Firebase project's Authentication settings.");
+      } else {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: error.message || "An unexpected error occurred.",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +61,7 @@ export default function LoginPage() {
   
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
+    setError(null);
     const provider = new GoogleAuthProvider();
     try {
         await signInWithPopup(auth, provider);
@@ -61,11 +69,15 @@ export default function LoginPage() {
         router.push("/dashboard");
     } catch (error: any) {
         console.error("Google login failed:", error);
-        toast({
-            variant: "destructive",
-            title: "Google Login Failed",
-            description: "Please ensure your domain is authorized in the Firebase Console. " + (error.message || "Could not log in with Google."),
-        });
+        if (error.code === 'auth/internal-error') {
+            setError("Firebase internal error: Please ensure your app's domain is authorized in your Firebase project's Authentication settings.");
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Google Login Failed",
+                description: "Please ensure your domain is authorized in the Firebase Console. " + (error.message || "Could not log in with Google."),
+            });
+        }
     } finally {
         setIsGoogleLoading(false);
     }
@@ -109,6 +121,13 @@ export default function LoginPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && (
+            <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Authentication Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
         <form onSubmit={handleLogin} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>

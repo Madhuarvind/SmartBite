@@ -508,16 +508,26 @@ export default function PlateScannerPage() {
       </div>
     </div>
 
-    {currentRecipe && (
+    {isRecipeModalOpen && (
         <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl text-primary">{currentRecipe.name}</DialogTitle>
+                    {isFindingRecipe ? <Skeleton className="h-8 w-3/4"/> : 
+                        <DialogTitle className="text-3xl text-primary">{currentRecipe?.name}</DialogTitle>
+                    }
                     <DialogDescription>
-                        View the full recipe details, and use our AI tools to find substitutions or transform the recipe.
+                        {isFindingRecipe ? 'Please wait while we find the perfect recipe for you...' : 
+                        'View the full recipe details, and use our AI tools to find substitutions or transform the recipe.'
+                        }
                     </DialogDescription>
                 </DialogHeader>
-
+                
+                {isFindingRecipe ? (
+                    <div className="flex items-center justify-center h-96">
+                        <Loader className="w-16 h-16 animate-spin text-primary" />
+                    </div>
+                ) : (
+                currentRecipe &&
                 <div className="grid md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
                     <div className="md:col-span-2 space-y-4">
                         {transformedRecipe && (
@@ -742,6 +752,7 @@ export default function PlateScannerPage() {
                         </Card>
                     </div>
                 </div>
+                )}
 
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsRecipeModalOpen(false)}>Close</Button>

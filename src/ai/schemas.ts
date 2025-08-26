@@ -431,3 +431,18 @@ export type InventRecipeInput = z.infer<typeof InventRecipeInputSchema>;
 
 export const InventRecipeOutputSchema = Recipe.describe('A new, invented recipe based on the provided ingredients.');
 export type InventRecipeOutput = z.infer<typeof InventRecipeOutputSchema>;
+
+// Schemas for image-generator.ts
+export const GenerateImageInputSchema = z.object({
+  prompt: z.string().describe('A text prompt to generate an image from.'),
+});
+export type GenerateImageInput = z.infer<typeof GenerateImageInputSchema>;
+
+export const GenerateImageOutputSchema = z.object({
+  imageDataUri: z
+    .string()
+    .describe(
+      "The generated image as a data URI. Expected format: 'data:image/png;base64,<encoded_data>'."
+    ),
+});
+export type GenerateImageOutput = z.infer<typeof GenerateImageOutputSchema>;

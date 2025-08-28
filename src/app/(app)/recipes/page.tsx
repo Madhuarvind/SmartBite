@@ -422,11 +422,23 @@ export default function RecipesPage() {
 
         const batch = writeBatch(db);
         deductionResult.updatedItems.forEach(item => {
-            const itemDocRef = doc(db, "users", user.uid, "inventory", item.id);
-             if (item.newQuantity.trim() === '0' || item.newQuantity.trim().toLowerCase() === 'none') {
-                batch.delete(itemDocRef); // Remove if quantity is zero
-            } else {
-                batch.update(itemDocRef, { quantity: item.newQuantity });
+            const inventoryItem = userInventory.find(i => i.id === item.id);
+            const essentialItem = pantryEssentials.find(e => e.id === item.id);
+            
+            let collectionName = '';
+            if (inventoryItem) {
+              collectionName = 'inventory';
+            } else if (essentialItem) {
+              collectionName = 'pantry_essentials';
+            }
+
+            if (collectionName) {
+              const itemDocRef = doc(db, "users", user!.uid, collectionName, item.id);
+              if (item.newQuantity.trim() === '0' || item.newQuantity.trim().toLowerCase() === 'none') {
+                  batch.delete(itemDocRef); // Remove if quantity is zero
+              } else {
+                  batch.update(itemDocRef, { quantity: item.newQuantity });
+              }
             }
         });
         await batch.commit();
@@ -912,3 +924,5 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    

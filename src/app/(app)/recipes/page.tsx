@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput } from "@/ai/schemas";
+import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput, InstructionStep } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
@@ -52,13 +52,12 @@ export default function RecipesPage() {
   const { toast } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [recipeInModal, setRecipeInModal] = useState<Recipe | null>(null);
   const [missingIngredient, setMissingIngredient] = useState<string | null>(null);
   const [substitutions, setSubstitutions] = useState<SubstitutionSuggestion[]>([]);
   const [isSubstituting, setIsSubstituting] = useState(false);
   const [transformationRequest, setTransformationRequest] = useState("");
   const [isTransforming, setIsTransforming] = useState(false);
-  const [transformedRecipe, setTransformedRecipe] = useState<Recipe | null>(null);
   const [servings, setServings] = useState(2);
   const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
@@ -74,8 +73,6 @@ export default function RecipesPage() {
   const [isPredicting, setIsPredicting] = useState(false);
   const [isInventing, setIsInventing] = useState(false);
   
-  const [recipeMedia, setRecipeMedia] = useState<{ audio?: GenerateRecipeAudioOutput, video?: GenerateRecipeVideoOutput }>({});
-
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -311,12 +308,8 @@ export default function RecipesPage() {
 
 
   const handleViewRecipe = (recipe: Recipe) => {
-    setSelectedRecipe(recipe);
-    setTransformedRecipe(null); // Clear any previous transformations
-    setRecipeMedia({ audio: recipe.audio, video: recipe.video }); // Set initial media
+    setRecipeInModal(recipe);
     setIsModalOpen(true);
-
-    // Reset other modal states
     setSubstitutions([]);
     setMissingIngredient(null);
     setTransformationRequest("");
@@ -324,19 +317,17 @@ export default function RecipesPage() {
     setIsCheckingInventory(false);
     setServings(2);
 
-    // Handle the async media promise
     if (recipe.mediaPromise) {
-      (recipe.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput; video?: GenerateRecipeVideoOutput }>)
-        .then(media => {
-          // This check is important. It ensures that we only update the media
-          // for the recipe that is currently being viewed.
-          // It compares the name of the recipe that just finished loading media
-          // with the name of the recipe currently in the modal.
-          setSelectedRecipe(currentRecipe => {
+      (recipe.mediaPromise as Promise<{ 
+          instructionSteps: InstructionStep[], 
+          audio?: GenerateRecipeAudioOutput, 
+          video?: GenerateRecipeVideoOutput 
+      }>).then(media => {
+        setRecipeInModal(currentRecipe => {
             if (currentRecipe && currentRecipe.name === recipe.name) {
-              setRecipeMedia(media);
+              return { ...currentRecipe, ...media };
             }
-            return currentRecipe; // Return the current state
+            return currentRecipe;
           });
         });
     }
@@ -367,30 +358,28 @@ export default function RecipesPage() {
   };
 
   const handleTransformRecipe = async () => {
-    if (!selectedRecipe || !transformationRequest) {
+    if (!recipeInModal || !transformationRequest) {
       toast({ variant: "destructive", title: "Please enter a transformation request." });
       return;
     }
     setIsTransforming(true);
-    setTransformedRecipe(null);
-    setRecipeMedia({}); // Clear old media
+    const originalRecipe = recipeInModal;
+    
+    // Create a temporary recipe object to show loading state in modal
+    setRecipeInModal({ ...originalRecipe, name: "Transforming your recipe..." });
+
     try {
       const result = await transformRecipe({
-        recipe: selectedRecipe,
+        recipe: originalRecipe,
         transformation: transformationRequest,
       });
-      setTransformedRecipe(result);
+      // Replace the recipe in the modal with the new transformed one
+      handleViewRecipe(result); // This re-initializes the modal with the new recipe and its media promise
       toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
-      
-      // Handle the async media promise for the new transformed recipe
-      if (result.mediaPromise) {
-        (result.mediaPromise as Promise<{ audio?: GenerateRecipeAudioOutput; video?: GenerateRecipeVideoOutput }>)
-            .then(media => setRecipeMedia(media));
-      }
-
     } catch (error) {
       console.error("Error transforming recipe:", error);
       toast({ variant: "destructive", title: "Transformation failed. Please try again." });
+      setRecipeInModal(originalRecipe); // Revert to original recipe on failure
     } finally {
       setIsTransforming(false);
     }
@@ -418,11 +407,11 @@ export default function RecipesPage() {
   };
 
   const handleInventoryCheck = () => {
-      if (!currentRecipe) return;
+      if (!recipeInModal) return;
       setIsCheckingInventory(true);
       
       const allUserItems = [...userInventory, ...pantryEssentials];
-      const results: InventoryCheckResult[] = currentRecipe.ingredients.map(ing => {
+      const results: InventoryCheckResult[] = recipeInModal.ingredients.map(ing => {
           const inventoryItem = allUserItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
           if (inventoryItem) {
               return { ingredient: ing, status: 'available', notes: `You have ${inventoryItem.quantity}` };
@@ -435,8 +424,6 @@ export default function RecipesPage() {
       setIsCheckingInventory(false);
   }
   
-  const currentRecipe = transformedRecipe || selectedRecipe;
-
   const handleIngredientSelection = (ingredient: string, checked: boolean | 'indeterminate') => {
     setSelectedIngredients(prev => 
       checked ? [...prev, ingredient] : prev.filter(i => i !== ingredient)
@@ -639,11 +626,11 @@ export default function RecipesPage() {
         </div>
       </div>
 
-      {currentRecipe && (
+      {isModalOpen && recipeInModal && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl text-primary">{currentRecipe.name}</DialogTitle>
+                    <DialogTitle className="text-3xl text-primary">{recipeInModal.name}</DialogTitle>
                     <DialogDescription>
                         View the full recipe details, and use our AI tools to find substitutions or transform the recipe.
                     </DialogDescription>
@@ -651,7 +638,7 @@ export default function RecipesPage() {
 
                 <div className="grid md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
                     <div className="md:col-span-2 space-y-4">
-                        {transformedRecipe && (
+                        {isTransforming && (
                            <Alert>
                                <Wand2 className="h-4 w-4" />
                                <AlertTitle className="text-accent-foreground">This is an AI-Transformed Recipe!</AlertTitle>
@@ -663,9 +650,9 @@ export default function RecipesPage() {
                         
                         <div>
                            <h3 className="font-bold text-lg mb-2">Full Recipe Video</h3>
-                           {recipeMedia.video?.videoDataUri ? (
+                           {recipeInModal.video?.videoDataUri ? (
                               <video
-                                src={recipeMedia.video.videoDataUri}
+                                src={recipeInModal.video.videoDataUri}
                                 controls
                                 className="w-full aspect-video rounded-lg bg-black"
                                 autoPlay
@@ -692,7 +679,7 @@ export default function RecipesPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {currentRecipe.ingredients.map(ing => (
+                                    {recipeInModal.ingredients.map(ing => (
                                         <TableRow key={ing.name}>
                                             <TableCell>{ing.name}</TableCell>
                                             <TableCell>{ing.quantity}</TableCell>
@@ -707,7 +694,7 @@ export default function RecipesPage() {
                         <div>
                             <h3 className="font-bold text-lg mb-2">Instructions</h3>
                             <div className="space-y-4">
-                                {currentRecipe.instructionSteps?.map((step, index) => (
+                                {recipeInModal.instructionSteps?.map((step, index) => (
                                     <div key={index} className="flex gap-4 items-start">
                                         <div className="flex flex-col items-center gap-1">
                                            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{step.step}</div>
@@ -733,7 +720,7 @@ export default function RecipesPage() {
                                 <CardTitle className="text-lg">Log Your Progress</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <Button className="w-full" onClick={() => handleCookedThis(currentRecipe.name)}>
+                                <Button className="w-full" onClick={() => handleCookedThis(recipeInModal.name)}>
                                     <ChefHat className="mr-2"/> I Cooked This!
                                 </Button>
                             </CardContent>
@@ -744,8 +731,8 @@ export default function RecipesPage() {
                                 <CardDescription>Listen to the recipe instructions.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {recipeMedia.audio?.audioDataUri ? (
-                                    <audio controls src={recipeMedia.audio.audioDataUri} className="w-full" />
+                                {recipeInModal.audio?.audioDataUri ? (
+                                    <audio controls src={recipeInModal.audio.audioDataUri} className="w-full" />
                                 ) : (
                                     <div className="flex items-center justify-center text-muted-foreground text-sm">
                                         <Loader className="mr-2 animate-spin"/> Loading audio...
@@ -763,24 +750,24 @@ export default function RecipesPage() {
                                     <TableBody>
                                         <TableRow>
                                             <TableCell className="font-medium">Calories</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.calories.toFixed(0)} kcal</TableCell>
+                                            <TableCell className="text-right">{recipeInModal.nutrition.calories.toFixed(0)} kcal</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Protein</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.protein.toFixed(1)}g</TableCell>
+                                            <TableCell className="text-right">{recipeInModal.nutrition.protein.toFixed(1)}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Carbs</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.carbs.toFixed(1)}g</TableCell>
+                                            <TableCell className="text-right">{recipeInModal.nutrition.carbs.toFixed(1)}g</TableCell>
                                         </TableRow>
                                         <TableRow>
                                             <TableCell className="font-medium">Fat</TableCell>
-                                            <TableCell className="text-right">{currentRecipe.nutrition.fat.toFixed(1)}g</TableCell>
+                                            <TableCell className="text-right">{recipeInModal.nutrition.fat.toFixed(1)}g</TableCell>
                                         </TableRow>
-                                        {currentRecipe.estimatedCost && (
+                                        {recipeInModal.estimatedCost && (
                                             <TableRow>
                                                 <TableCell className="font-medium">Est. Cost</TableCell>
-                                                <TableCell className="text-right">${currentRecipe.estimatedCost.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">${recipeInModal.estimatedCost.toFixed(2)}</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -829,7 +816,7 @@ export default function RecipesPage() {
                                         <SelectValue placeholder="Select an ingredient..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {selectedRecipe?.ingredients.map(ing => (
+                                        {recipeInModal?.ingredients.map(ing => (
                                             <SelectItem key={ing.name} value={ing.name}>{ing.name}</SelectItem>
                                         ))}
                                     </SelectContent>

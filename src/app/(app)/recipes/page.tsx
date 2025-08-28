@@ -362,8 +362,8 @@ export default function RecipesPage() {
       toast({ variant: "destructive", title: "Please enter a transformation request." });
       return;
     }
-    setIsTransforming(true);
     const originalRecipe = recipeInModal;
+    setIsTransforming(true);
     
     // Create a temporary recipe object to show loading state in modal
     setRecipeInModal({ ...originalRecipe, name: "Transforming your recipe..." });

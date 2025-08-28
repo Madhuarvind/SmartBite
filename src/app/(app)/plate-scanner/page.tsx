@@ -354,15 +354,15 @@ export default function PlateScannerPage() {
       toast({ variant: "destructive", title: "Please enter a transformation request." });
       return;
     }
+    const originalRecipe = recipeInModal;
     setIsTransforming(true);
     
     // Create a temporary recipe object to show loading state
-    const tempRecipe = { ...recipeInModal, name: "Transforming your recipe..." };
-    setRecipeInModal(tempRecipe);
+    setRecipeInModal({ ...originalRecipe, name: "Transforming your recipe..." });
     
     try {
       const result = await transformRecipe({
-        recipe: recipeInModal, // Send the original recipe for transformation
+        recipe: originalRecipe, // Send the original recipe for transformation
         transformation: transformationRequest,
       });
       openRecipeModal(result); // Open the new transformed recipe
@@ -370,7 +370,7 @@ export default function PlateScannerPage() {
     } catch (error) {
       console.error("Error transforming recipe:", error);
       toast({ variant: "destructive", title: "Transformation failed. Please try again." });
-      setRecipeInModal(recipeInModal); // Revert to the original recipe on failure
+      setRecipeInModal(originalRecipe); // Revert to the original recipe on failure
     } finally {
       setIsTransforming(false);
     }

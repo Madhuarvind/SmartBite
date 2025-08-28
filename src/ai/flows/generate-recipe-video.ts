@@ -9,6 +9,28 @@
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { GenerateRecipeVideoInput, GenerateRecipeVideoInputSchema, GenerateRecipeVideoOutput, GenerateRecipeVideoOutputSchema } from '../schemas';
+import * as fs from 'fs';
+import { Readable } from 'stream';
+import { MediaPart } from 'genkit';
+
+async function downloadVideo(video: MediaPart): Promise<string> {
+  const fetch = (await import('node-fetch')).default;
+  // Add API key before fetching the video.
+  const videoDownloadResponse = await fetch(
+    `${video.media!.url}&key=${process.env.GEMINI_API_KEY}`
+  );
+  if (
+    !videoDownloadResponse ||
+    videoDownloadResponse.status !== 200 ||
+    !videoDownloadResponse.body
+  ) {
+    throw new Error('Failed to fetch video');
+  }
+
+  const videoBuffer = await videoDownloadResponse.arrayBuffer();
+  return Buffer.from(videoBuffer).toString('base64');
+}
+
 
 export async function generateRecipeVideo(
   input: GenerateRecipeVideoInput
@@ -35,31 +57,23 @@ const generateRecipeVideoFlow = ai.defineFlow(
       throw new Error('Expected the model to return an operation for video generation.');
     }
     
-    // The framework will handle waiting for the long-running operation to complete.
-    // The `await` here will pause until the operation is done.
-    const result = await operation.wait();
-
-    if (result.error) {
-      console.error('Video generation failed:', result.error.message);
-      throw new Error(`Failed to generate video: ${result.error.message}`);
+    // Wait until the operation completes. Note that this may take some time.
+    while (!operation.done) {
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Poll every 5 seconds
+        operation = await ai.checkOperation(operation);
     }
 
-    const videoPart = result.output?.message?.content.find((p) => p.media && p.media.contentType?.startsWith('video/'));
+    if (operation.error) {
+      console.error('Video generation failed:', operation.error.message);
+      throw new Error(`Failed to generate video: ${operation.error.message}`);
+    }
+
+    const videoPart = operation.output?.message?.content.find((p) => p.media && p.media.contentType?.startsWith('video/'));
     if (!videoPart || !videoPart.media?.url) {
       throw new Error('Failed to find the generated video in the operation result.');
     }
 
-    // The URL from Veo is a temporary download link, so we need to fetch it
-    // and convert it to a data URI to send to the client.
-    const fetch = (await import('node-fetch')).default;
-    const videoResponse = await fetch(`${videoPart.media.url}&key=${process.env.GEMINI_API_KEY}`);
-    
-    if (!videoResponse.ok || !videoResponse.body) {
-         throw new Error(`Failed to download video from ${videoPart.media.url}. Status: ${videoResponse.status}`);
-    }
-
-    const videoBuffer = await videoResponse.arrayBuffer();
-    const videoBase64 = Buffer.from(videoBuffer).toString('base64');
+    const videoBase64 = await downloadVideo(videoPart);
 
     return {
       videoDataUri: `data:video/mp4;base64,${videoBase64}`,

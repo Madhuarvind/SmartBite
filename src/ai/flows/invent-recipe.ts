@@ -83,39 +83,64 @@ Respond in the specified JSON format.
 
     // Asynchronously generate all media in the background.
     const mediaPromise = (async () => {
-      const [imagePromises, audioResult, videoResult] = await Promise.all([
-        Promise.allSettled(
-          recipeWithCost.instructionSteps.map(step =>
-            generateRecipeStepImage({
-              instruction: step.text,
-              recipeName: recipeWithCost.name,
-            })
-          )
-        ),
-        generateRecipeAudio({ instructions: recipeWithCost.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
-            console.error(`Audio generation failed for ${recipeWithCost.name}:`, e);
-            return undefined;
-        }),
-        generateRecipeVideo({ recipeName: recipeWithCost.name }).catch(e => {
-            console.error(`Video generation failed for ${recipeWithCost.name}:`, e);
-            return undefined;
-        })
-      ]);
-
-      const instructionStepsWithImages = recipeWithCost.instructionSteps.map((step, index) => {
-        const imageResult = imagePromises[index];
-        if (imageResult.status === 'fulfilled') {
-          return { ...step, image: imageResult.value };
-        }
-        console.error(`Image generation failed for step "${step.text}" in recipe ${recipeWithCost.name}:`, imageResult.reason);
-        return step;
+      // Prioritize the first image to make the UI feel faster
+      const firstImageResult = await generateRecipeStepImage({
+        instruction: recipeWithCost.instructionSteps[0].text,
+        recipeName: recipeWithCost.name,
+      }).catch(e => {
+        console.error(`First image generation failed for ${recipeWithCost.name}:`, e);
+        return undefined;
       });
 
+      const instructionStepsWithFirstImage = [...recipeWithCost.instructionSteps];
+      if (firstImageResult) {
+        instructionStepsWithFirstImage[0] = {
+          ...instructionStepsWithFirstImage[0],
+          image: firstImageResult,
+        };
+      }
+      
+      const remainingMediaPromise = (async () => {
+        const [remainingImagePromises, audioResult, videoResult] = await Promise.all([
+          Promise.allSettled(
+            recipeWithCost.instructionSteps.slice(1).map(step =>
+              generateRecipeStepImage({
+                instruction: step.text,
+                recipeName: recipeWithCost.name,
+              })
+            )
+          ),
+          generateRecipeAudio({ instructions: recipeWithCost.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
+              console.error(`Audio generation failed for ${recipeWithCost.name}:`, e);
+              return undefined;
+          }),
+          generateRecipeVideo({ recipeName: recipeWithCost.name }).catch(e => {
+              console.error(`Video generation failed for ${recipeWithCost.name}:`, e);
+              return undefined;
+          })
+        ]);
+
+        const finalInstructionSteps = [...instructionStepsWithFirstImage];
+        recipeWithCost.instructionSteps.slice(1).forEach((step, index) => {
+            const imageResult = remainingImagePromises[index];
+            if (imageResult.status === 'fulfilled') {
+                finalInstructionSteps[index + 1] = { ...step, image: imageResult.value };
+            } else {
+                console.error(`Image generation failed for step "${step.text}" in recipe ${recipeWithCost.name}:`, imageResult.reason);
+            }
+        });
+        
+        return {
+          instructionSteps: finalInstructionSteps,
+          audio: audioResult,
+          video: videoResult,
+        };
+      })();
+
       return {
-        instructionSteps: instructionStepsWithImages,
-        audio: audioResult,
-        video: videoResult,
-      };
+          instructionSteps: instructionStepsWithFirstImage,
+          mediaPromise: remainingMediaPromise,
+      }
     })();
 
     return {

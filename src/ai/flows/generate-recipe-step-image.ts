@@ -6,14 +6,14 @@
  * - generateRecipeStepImage - Generates an image based on an instruction.
  */
 
-import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
 import {
   GenerateRecipeStepImageInput,
   GenerateRecipeStepImageInputSchema,
   GenerateRecipeStepImageOutput,
   GenerateRecipeStepImageOutputSchema,
 } from '../schemas';
+import { generateImage } from './generate-image';
+import { ai } from '@/ai/genkit';
 
 export async function generateRecipeStepImage(
   input: GenerateRecipeStepImageInput
@@ -28,21 +28,11 @@ const generateRecipeStepImageFlow = ai.defineFlow(
     outputSchema: GenerateRecipeStepImageOutputSchema,
   },
   async ({ instruction, recipeName }) => {
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+    // We now call the dedicated image generation flow.
+    const result = await generateImage({
       prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipeName}": ${instruction}. Focus on the action described.`,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
     });
 
-    const imageDataUri = media.url;
-    if (!imageDataUri) {
-      throw new Error('No image was generated for the recipe step.');
-    }
-
-    return {
-      imageDataUri,
-    };
+    return result;
   }
 );

@@ -251,17 +251,30 @@ export default function PlateScannerPage() {
 
     if (recipe.mediaPromise) {
       (recipe.mediaPromise as Promise<{ 
-          instructionSteps: InstructionStep[], 
-          audio?: GenerateRecipeAudioOutput, 
-          video?: GenerateRecipeVideoOutput 
-      }>).then(media => {
-        setRecipeInModal(currentRecipe => {
-            if (currentRecipe && currentRecipe.name === recipe.name) {
-              return { ...currentRecipe, ...media };
-            }
-            return currentRecipe;
+          instructionSteps: InstructionStep[],
+          mediaPromise: Promise<{
+            instructionSteps: InstructionStep[], 
+            audio?: GenerateRecipeAudioOutput, 
+            video?: GenerateRecipeVideoOutput 
+          }>
+      }>).then(initialMedia => {
+          // Set the first image(s)
+          setRecipeInModal(currentRecipe => {
+              if (currentRecipe && currentRecipe.name === recipe.name) {
+                  return { ...currentRecipe, instructionSteps: initialMedia.instructionSteps };
+              }
+              return currentRecipe;
           });
-        });
+          // Wait for the rest of the media
+          initialMedia.mediaPromise.then(fullMedia => {
+              setRecipeInModal(currentRecipe => {
+                if (currentRecipe && currentRecipe.name === recipe.name) {
+                    return { ...currentRecipe, ...fullMedia };
+                }
+                return currentRecipe;
+              });
+          });
+      });
     }
   };
 

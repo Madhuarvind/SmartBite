@@ -15,10 +15,11 @@ import { analyzePlate } from "@/ai/flows/analyze-plate";
 import { findRecipeFromMeal } from "@/ai/flows/find-recipe-from-meal";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
+import { deductIngredients } from "@/ai/flows/deduct-ingredients";
 import { AnalyzePlateOutput, Recipe, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput, SubstitutionSuggestion, RecipeIngredient, InstructionStep } from "@/ai/schemas";
 import { cn } from "@/lib/utils";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, Timestamp, onSnapshot, query } from "firebase/firestore";
+import { collection, addDoc, Timestamp, onSnapshot, query, doc, writeBatch } from "firebase/firestore";
 import type { User } from 'firebase/auth';
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -286,26 +287,54 @@ export default function PlateScannerPage() {
     }
   }
   
-    const handleCookedThis = async (recipeName: string) => {
-        if (!user) {
-            toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to track activity."});
-            return;
-        }
-        try {
-            await addDoc(collection(db, "users", user.uid, "activity"), {
-                type: 'mealCooked',
-                recipeName: recipeName,
-                timestamp: Timestamp.now()
-            });
-            toast({
-                title: "Activity Logged!",
-                description: `Great job cooking ${recipeName}! Check your dashboard to see your progress.`
-            });
-        } catch (error) {
-            console.error("Error logging activity:", error);
-            toast({ variant: "destructive", title: "Logging Failed", description: "Could not save your cooking activity." });
-        }
-    };
+  const handleCookedThis = async (recipe: Recipe) => {
+    if (!user) {
+        toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to track activity." });
+        return;
+    }
+
+    const { name: recipeName, ingredients: recipeIngredients } = recipe;
+
+    try {
+        // 1. Deduct ingredients from inventory
+        const allInventoryItems = [...userInventory, ...pantryEssentials].map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity
+        }));
+
+        const deductionResult = await deductIngredients({
+            inventoryItems: allInventoryItems,
+            recipeIngredients: recipeIngredients,
+        });
+
+        const batch = writeBatch(db);
+        deductionResult.updatedItems.forEach(item => {
+            const itemDocRef = doc(db, "users", user.uid, "inventory", item.id);
+            if (item.newQuantity.trim() === '0' || item.newQuantity.trim().toLowerCase() === 'none') {
+                batch.delete(itemDocRef); // Remove if quantity is zero
+            } else {
+                batch.update(itemDocRef, { quantity: item.newQuantity });
+            }
+        });
+        await batch.commit();
+
+        // 2. Log the "mealCooked" activity
+        await addDoc(collection(db, "users", user.uid, "activity"), {
+            type: 'mealCooked',
+            recipeName: recipeName,
+            timestamp: Timestamp.now()
+        });
+
+        toast({
+            title: "Yum! Activity Logged!",
+            description: `${recipeName} cooked and ingredients have been deducted from your inventory.`
+        });
+    } catch (error) {
+        console.error("Error logging activity and deducting ingredients:", error);
+        toast({ variant: "destructive", title: "Action Failed", description: "Could not save your cooking activity or update inventory." });
+    }
+  };
   
     const handleInventoryCheck = () => {
       if (!recipeInModal) return;
@@ -608,7 +637,7 @@ export default function PlateScannerPage() {
                                 <CardTitle className="text-lg">Log Your Progress</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <Button className="w-full" onClick={() => handleCookedThis(recipeInModal.name)}>
+                                <Button className="w-full" onClick={() => handleCookedThis(recipeInModal)}>
                                     <ChefHat className="mr-2"/> I Cooked This!
                                 </Button>
                             </CardContent>

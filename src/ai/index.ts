@@ -25,3 +25,4 @@ export * from '@/ai/flows/analyze-user-spending';
 export * from '@/ai/flows/find-recipe-from-meal';
 export * from '@/ai/flows/invent-recipe';
 export * from '@/ai/flows/generate-image';
+export * from '@/ai/flows/deduct-ingredients';

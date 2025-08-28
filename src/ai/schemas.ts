@@ -446,3 +446,29 @@ export const GenerateImageOutputSchema = z.object({
     ),
 });
 export type GenerateImageOutput = z.infer<typeof GenerateImageOutputSchema>;
+
+// Schemas for deduct-ingredients.ts
+const InventoryItemRefSchema = z.object({
+  id: z.string().describe("The unique ID of the ingredient in Firestore."),
+  name: z.string().describe("The name of the ingredient."),
+  quantity: z.string().describe("The current quantity of the ingredient."),
+});
+export type InventoryItemRef = z.infer<typeof InventoryItemRefSchema>;
+
+
+export const DeductIngredientsInputSchema = z.object({
+  inventoryItems: z.array(InventoryItemRefSchema).describe("The user's current inventory items."),
+  recipeIngredients: z.array(RecipeIngredientSchema).describe("The ingredients used in the cooked recipe."),
+});
+export type DeductIngredientsInput = z.infer<typeof DeductIngredientsInputSchema>;
+
+const UpdatedInventoryItemSchema = z.object({
+  id: z.string().describe("The unique ID of the inventory item to update."),
+  newQuantity: z.string().describe("The new quantity of the item after deduction (e.g., '8 eggs', '800g', '0')."),
+});
+export type UpdatedInventoryItem = z.infer<typeof UpdatedInventoryItemSchema>;
+
+export const DeductIngredientsOutputSchema = z.object({
+  updatedItems: z.array(UpdatedInventoryItemSchema).describe("A list of inventory items with their new quantities."),
+});
+export type DeductIngredientsOutput = z.infer<typeof DeductIngredientsOutputSchema>;

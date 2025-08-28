@@ -24,7 +24,7 @@ async function findUserItem(userId: string, itemName: string): Promise<PantryIte
   const inventorySnapshot = await getDocs(inventoryQuery);
   for (const doc of inventorySnapshot.docs) {
     const data = doc.data() as InventoryItem;
-    if (data.name.toLowerCase() === searchFor) {
+    if (data.name.toLowerCase().includes(searchFor)) {
       return data;
     }
   }
@@ -33,7 +33,7 @@ async function findUserItem(userId: string, itemName: string): Promise<PantryIte
   const pantrySnapshot = await getDocs(pantryQuery);
    for (const doc of pantrySnapshot.docs) {
     const data = doc.data() as PantryItem;
-    if (data.name.toLowerCase() === searchFor) {
+    if (data.name.toLowerCase().includes(searchFor)) {
       return data;
     }
   }
@@ -52,14 +52,10 @@ export const checkInventoryTool = ai.defineTool(
       familyAdminId: z.string().optional().describe("The unique ID of the family admin to also check. If the current user is the admin, this can be omitted."),
     }),
     outputSchema: z.object({
-      currentUser: z.object({
-        found: z.boolean().describe('Whether the item was found in the current user\'s inventory.'),
-        quantity: z.string().nullable().describe('The quantity of the item found, or null if not found.'),
-      }),
-      familyAdmin: z.object({
-        found: z.boolean().describe("Whether the item was found in the family admin's inventory."),
-        quantity: z.string().nullable().describe('The quantity of the item found, or null if not found.'),
-      }),
+      currentUserFound: z.boolean().describe('Whether the item was found in the current user\'s inventory.'),
+      currentUserQuantity: z.string().nullable().describe('The quantity of the item found, or null if not found.'),
+      familyAdminFound: z.boolean().describe("Whether the item was found in the family admin's inventory."),
+      familyAdminQuantity: z.string().nullable().describe('The quantity of the item found, or null if not found.'),
     }),
   },
   async ({ userId, itemName, familyAdminId }) => {
@@ -69,23 +65,17 @@ export const checkInventoryTool = ai.defineTool(
     const foundCurrentUserItem = await findUserItem(userId, itemName);
 
     const result = {
-        currentUser: {
-            found: !!foundCurrentUserItem,
-            quantity: foundCurrentUserItem?.quantity || null,
-        },
-        familyAdmin: {
-            found: false,
-            quantity: null,
-        }
+        currentUserFound: !!foundCurrentUserItem,
+        currentUserQuantity: foundCurrentUserItem?.quantity || null,
+        familyAdminFound: false,
+        familyAdminQuantity: null,
     };
 
     // Check family admin's inventory if provided
     if (familyAdminId) {
         const foundFamilyAdminItem = await findUserItem(familyAdminId, itemName);
-        result.familyAdmin = {
-            found: !!foundFamilyAdminItem,
-            quantity: foundFamilyAdminItem?.quantity || null,
-        };
+        result.familyAdminFound = !!foundFamilyAdminItem;
+        result.familyAdminQuantity = foundFamilyAdminItem?.quantity || null;
     }
     
     console.log('Collaborative inventory check result:', result);

@@ -36,15 +36,12 @@ const responseGenerationPrompt = ai.definePrompt({
     name: 'shoppingResponsePrompt',
     input: { schema: z.object({ 
         itemName: z.string(),
+        // This schema now perfectly matches the tool's output
         inventoryResult: z.object({
-            currentUser: z.object({
-              found: z.boolean(),
-              quantity: z.string().nullable(),
-            }),
-            familyAdmin: z.object({
-              found: z.boolean(),
-              quantity: z.string().nullable(),
-            }),
+            currentUserFound: z.boolean(),
+            currentUserQuantity: z.string().nullable(),
+            familyAdminFound: z.boolean(),
+            familyAdminQuantity: z.string().nullable(),
         }),
     })},
     output: { schema: IdentifyAndCheckItemOutputSchema },
@@ -53,8 +50,8 @@ const responseGenerationPrompt = ai.definePrompt({
     The user has just scanned an item: **{{{itemName}}}**.
     
     You have checked their inventory and their family admin's inventory with the following results:
-    - Current User has it: {{{inventoryResult.currentUser.found}}} (Quantity: {{{inventoryResult.currentUser.quantity}}})
-    - Family Admin has it: {{{inventoryResult.familyAdmin.found}}} (Quantity: {{{inventoryResult.familyAdmin.quantity}}})
+    - Current User has it: {{{inventoryResult.currentUserFound}}} (Quantity: {{{inventoryResult.currentUserQuantity}}})
+    - Family Admin has it: {{{inventoryResult.familyAdminFound}}} (Quantity: {{{inventoryResult.familyAdminQuantity}}})
 
     Generate a concise and helpful response based on the following rules, prioritizing preventing duplicate purchases within the family:
     - If the Family Admin has the item, tell the user they might not need to buy it and mention the admin has it (e.g., "Looks like the family pantry is stocked! John Doe already has this.").

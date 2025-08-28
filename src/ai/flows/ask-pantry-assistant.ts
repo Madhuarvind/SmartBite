@@ -67,6 +67,8 @@ const askPantryAssistantFlow = ai.defineFlow(
       If a user asks a general question like "what should I buy?", you should first use the 'clarifyShoppingQuery' tool to determine a list of common items to check for. Then, use the 'checkInventory' tool for EACH of those items and provide a summary of what's missing.
 
       When you find an item in the family admin's pantry, make sure to mention that (e.g., "Yes, it looks like John Doe already has milk.").
+      
+      Your FINAL response to the user should be a conversational, helpful answer in plain text, NOT raw tool code or JSON.
 
       User's query: "${query}"
       

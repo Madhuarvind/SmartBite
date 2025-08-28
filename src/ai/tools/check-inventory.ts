@@ -8,22 +8,37 @@
 
 import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { z } from 'genkit';
 import type { InventoryItem, PantryItem } from '@/lib/types';
 
-// Helper function to query a user's inventory and pantry
-async function getUserItems(userId: string): Promise<PantryItem[]> {
+// Helper function to query a user's inventory and pantry for a specific item
+async function findUserItem(userId: string, itemName: string): Promise<PantryItem | InventoryItem | null> {
   const inventoryRef = collection(db, 'users', userId, 'inventory');
   const pantryRef = collection(db, 'users', userId, 'pantry_essentials');
 
-  const inventorySnapshot = await getDocs(inventoryRef);
-  const pantrySnapshot = await getDocs(pantryRef);
+  // Case-insensitive search helper
+  const searchFor = itemName.toLowerCase();
 
-  return [
-    ...inventorySnapshot.docs.map(doc => doc.data() as InventoryItem),
-    ...pantrySnapshot.docs.map(doc => doc.data() as PantryItem),
-  ];
+  const inventoryQuery = query(inventoryRef);
+  const inventorySnapshot = await getDocs(inventoryQuery);
+  for (const doc of inventorySnapshot.docs) {
+    const data = doc.data() as InventoryItem;
+    if (data.name.toLowerCase() === searchFor) {
+      return data;
+    }
+  }
+
+  const pantryQuery = query(pantryRef);
+  const pantrySnapshot = await getDocs(pantryQuery);
+   for (const doc of pantrySnapshot.docs) {
+    const data = doc.data() as PantryItem;
+    if (data.name.toLowerCase() === searchFor) {
+      return data;
+    }
+  }
+
+  return null;
 }
 
 
@@ -51,8 +66,7 @@ export const checkInventoryTool = ai.defineTool(
     console.log(`Checking inventory for user ${userId} and family admin ${familyAdminId}, item: ${itemName}`);
     
     // Check current user's inventory
-    const currentUserItems = await getUserItems(userId);
-    const foundCurrentUserItem = currentUserItems.find(item => item.name.toLowerCase() === itemName.toLowerCase());
+    const foundCurrentUserItem = await findUserItem(userId, itemName);
 
     const result = {
         currentUser: {
@@ -67,8 +81,7 @@ export const checkInventoryTool = ai.defineTool(
 
     // Check family admin's inventory if provided
     if (familyAdminId) {
-        const familyAdminItems = await getUserItems(familyAdminId);
-        const foundFamilyAdminItem = familyAdminItems.find(item => item.name.toLowerCase() === itemName.toLowerCase());
+        const foundFamilyAdminItem = await findUserItem(familyAdminId, itemName);
         result.familyAdmin = {
             found: !!foundFamilyAdminItem,
             quantity: foundFamilyAdminItem?.quantity || null,

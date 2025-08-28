@@ -61,6 +61,8 @@ const responseGenerationPrompt = ai.definePrompt({
     - If only the current user has it, tell them they're all set and mention their quantity.
     - If neither person has it, tell them it looks like they need to buy it.
     - If both have it, just tell them they're all set.
+    
+    Your response should be a single, conversational sentence.
     `
 });
 

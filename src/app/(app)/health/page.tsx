@@ -14,7 +14,7 @@ import { analyzeWastePatterns } from "@/ai/flows/analyze-waste-patterns";
 import { analyzeHealthHabits } from "@/ai/flows/analyze-health-habits";
 import type { AnalyzeWastePatternsOutput, AnalyzeHealthHabitsOutput } from "@/ai/schemas";
 import type { InventoryItem } from "@/lib/types";
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, LabelList, Cell } from "recharts";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 
@@ -220,6 +220,7 @@ export default function HealthAndImpactPage() {
                                 tickLine={false}
                                 tickMargin={10}
                                 axisLine={false}
+                                width={110}
                                 className="text-xs"
                                 tickFormatter={(value) =>
                                   chartConfig[value as keyof typeof chartConfig]?.label
@@ -227,6 +228,9 @@ export default function HealthAndImpactPage() {
                               />
                               <XAxis dataKey="percentage" type="number" hide />
                               <Bar dataKey="percentage" layout="vertical" radius={5}>
+                                 {healthAnalysis.spendingBreakdown.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={chartConfig[entry.category as keyof typeof chartConfig]?.color} />
+                                 ))}
                                 <LabelList
                                   dataKey="percentage"
                                   position="right"
@@ -314,5 +318,3 @@ export default function HealthAndImpactPage() {
     </div>
   );
 }
-
-    

@@ -7,9 +7,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { generateRecipeAudio } from './generate-recipe-audio';
-import { generateRecipeVideo } from './generate-recipe-video';
-import { generateRecipeStepImage } from './generate-recipe-step-image';
 import {
   PredictiveSuggestionsInput,
   PredictiveSuggestionsInputSchema,
@@ -17,6 +14,9 @@ import {
   PredictiveSuggestionsOutputSchema,
   Recipe,
 } from '../schemas';
+import { generateRecipeAudio } from './generate-recipe-audio';
+import { generateRecipeVideo } from './generate-recipe-video';
+import { generateRecipeStepImage } from './generate-recipe-step-image';
 
 export async function predictiveSuggestions(
   input: PredictiveSuggestionsInput

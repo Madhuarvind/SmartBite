@@ -14,7 +14,7 @@ import {
   ScanReceiptOutputSchema,
   ScanReceiptOutput,
 } from '../schemas';
-import { predictExpiryDate } from './predict-expiry-date';
+import { predictExpiryDate } from '@/ai/flows/predict-expiry-date';
 
 export async function scanReceipt(
   input: ScanReceiptInput

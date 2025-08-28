@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import { ScanIngredientsInput, ScanIngredientsInputSchema, ScanIngredientsOutput, ScanIngredientsOutputSchema } from '../schemas';
-import { predictExpiryDate } from './predict-expiry-date';
+import { predictExpiryDate } from '@/ai/flows/predict-expiry-date';
 
 export async function scanIngredients(
   input: ScanIngredientsInput

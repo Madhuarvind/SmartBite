@@ -400,7 +400,7 @@ export type AnalyzeUserSpendingInput = z.infer<typeof AnalyzeUserSpendingInputSc
 
 export const AnalyzeUserSpendingOutputSchema = z.object({
     spendingBreakdown: z.array(z.object({
-        category: z.string().describe("The spending category (e.g., 'Fresh Produce', 'Snacks/Processed Foods')."),
+        category: z.string().describe("The spending category (e.g., 'Fresh Produce', 'Snacks/Processed Foods', 'Other')."),
         percentage: z.number().describe("The percentage of total spending for this category."),
     })).describe("A breakdown of spending by food category."),
     keyInsight: z.string().describe('A concise, one-sentence insight into the user\'s spending habits.'),

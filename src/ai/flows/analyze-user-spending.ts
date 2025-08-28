@@ -29,7 +29,7 @@ const prompt = ai.definePrompt({
 You will be given a list of all items the user has purchased, derived from their scanned receipts.
 
 Your tasks are:
-1.  **Categorize Spending**: Analyze the user's spending and categorize it into basic groups like 'Fresh Produce', 'Protein', 'Dairy', 'Grains', 'Snacks/Processed Foods', and 'Beverages'. Provide a simple percentage breakdown of their spending in these categories.
+1.  **Categorize Spending**: Analyze the user's spending and categorize it into the following specific groups: 'Fresh Produce', 'Protein', 'Dairy', 'Grains', 'Snacks/Processed Foods', and 'Beverages'. Provide a simple percentage breakdown of their spending in these categories. If an item doesn't fit, categorize it as 'Other'.
 2.  **Generate a Key Spending Insight**: Based on the overall purchase history, write a concise, one-sentence observation about the user's spending habits. For example, "A significant portion of your budget is allocated to premium brand snacks," or "You consistently purchase organic produce, which contributes to a higher weekly spend."
 3.  **Provide 3 Actionable Budget Optimization Suggestions**: Based on the insight, provide three concrete, actionable tips to help the user save money on their next shopping trip. These should be predictive or strategic. For example:
     *   "Tomato prices are often lower on weekends. Consider shifting your produce shopping to Saturday to potentially save."

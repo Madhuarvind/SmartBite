@@ -12,8 +12,44 @@ import { collection, query, getDocs } from "firebase/firestore";
 import { analyzeUserSpending } from "@/ai/flows/analyze-user-spending";
 import type { AnalyzeUserSpendingOutput } from "@/ai/schemas";
 import type { InventoryItem } from "@/lib/types";
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, LabelList, Cell } from "recharts";
 import { Button } from "@/components/ui/button";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+
+const chartConfig = {
+  percentage: {
+    label: "Percentage",
+  },
+  'Fresh Produce': {
+    label: "Fresh Produce",
+    color: "hsl(var(--chart-1))",
+  },
+  'Protein': {
+    label: "Protein",
+    color: "hsl(var(--chart-2))",
+  },
+  'Dairy': {
+    label: "Dairy",
+    color: "hsl(var(--chart-3))",
+  },
+  'Grains': {
+    label: "Grains",
+    color: "hsl(var(--chart-4))",
+  },
+  'Snacks/Processed Foods': {
+    label: "Snacks/Processed",
+    color: "hsl(var(--chart-5))",
+  },
+   'Beverages': {
+    label: "Beverages",
+    color: "hsl(var(--primary))",
+  },
+  'Other': {
+    label: "Other",
+    color: "hsl(var(--muted-foreground))",
+  }
+} satisfies ChartConfig;
+
 
 export default function FinancialAdvisorPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -106,24 +142,36 @@ export default function FinancialAdvisorPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <div>
                             <h4 className="font-semibold text-lg mb-2">Spending Breakdown</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={analysis.spendingBreakdown} layout="vertical" margin={{ left: 120, right: 50, top: 5, bottom: 5 }}>
-                                    <XAxis type="number" hide />
-                                    <YAxis 
-                                        type="category" 
-                                        dataKey="category" 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        width={120}
-                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                                        style={{ textAnchor: 'start' }}
-                                        dx={-115}
+                             <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                               <BarChart accessibilityLayer data={analysis.spendingBreakdown} layout="vertical" margin={{left: 20}}>
+                                  <YAxis
+                                    dataKey="category"
+                                    type="category"
+                                    tickLine={false}
+                                    tickMargin={10}
+                                    axisLine={false}
+                                    width={150}
+                                    className="text-sm"
+                                    tickFormatter={(value) =>
+                                      chartConfig[value as keyof typeof chartConfig]?.label
+                                    }
+                                  />
+                                  <XAxis dataKey="percentage" type="number" hide />
+                                  <Bar dataKey="percentage" layout="vertical" radius={5}>
+                                     {analysis.spendingBreakdown.map((entry) => (
+                                        <Cell key={entry.category} fill={chartConfig[entry.category as keyof typeof chartConfig]?.color || 'hsl(var(--muted-foreground))'} />
+                                     ))}
+                                    <LabelList
+                                      dataKey="percentage"
+                                      position="right"
+                                      offset={8}
+                                      className="fill-foreground font-semibold"
+                                      fontSize={12}
+                                      formatter={(value: number) => `${value.toFixed(0)}%`}
                                     />
-                                    <Bar dataKey="percentage" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} background={{ fill: 'hsl(var(--secondary))' }}>
-                                        <LabelList dataKey="percentage" position="right" formatter={(value: number) => `${value.toFixed(0)}%`} className="fill-foreground font-semibold" />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                                  </Bar>
+                               </BarChart>
+                            </ChartContainer>
                         </div>
                         <div>
                             <h4 className="font-semibold text-lg flex items-center mb-2"><TrendingUp className="w-5 h-5 mr-2"/>Key Spending Insight</h4>

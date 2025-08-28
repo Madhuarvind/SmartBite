@@ -14,7 +14,9 @@ import { analyzeWastePatterns } from "@/ai/flows/analyze-waste-patterns";
 import { analyzeHealthHabits } from "@/ai/flows/analyze-health-habits";
 import type { AnalyzeWastePatternsOutput, AnalyzeHealthHabitsOutput } from "@/ai/schemas";
 import type { InventoryItem } from "@/lib/types";
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+
 
 const badges = [
   { name: 'First Meal', description: 'Cooked your first recipe!', icon: FirstBadge },
@@ -22,6 +24,37 @@ const badges = [
   { name: 'Eco-Planner', description: 'Planned a full week of meals.', icon: Recycle },
   { name: 'Top Chef', description: 'Cooked 25 recipes.', icon: Trophy },
 ];
+
+const chartConfig = {
+  percentage: {
+    label: "Percentage",
+  },
+  'Fresh Produce': {
+    label: "Fresh Produce",
+    color: "hsl(var(--chart-1))",
+  },
+  'Protein': {
+    label: "Protein",
+    color: "hsl(var(--chart-2))",
+  },
+  'Dairy': {
+    label: "Dairy",
+    color: "hsl(var(--chart-3))",
+  },
+  'Grains': {
+    label: "Grains",
+    color: "hsl(var(--chart-4))",
+  },
+  'Snacks/Processed Foods': {
+    label: "Snacks/Processed",
+    color: "hsl(var(--chart-5))",
+  },
+   'Beverages': {
+    label: "Beverages",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
 
 export default function HealthAndImpactPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -106,10 +139,19 @@ export default function HealthAndImpactPage() {
   const runHealthAnalysis = async (purchaseHistory: InventoryItem[]) => {
       setIsAnalyzingHealth(true);
       try {
-          const purchaseDataForAnalysis = purchaseHistory.map(item => ({
+          const purchaseDataForAnalysis = purchaseHistory
+            .filter(item => item.price && item.price > 0)
+            .map(item => ({
               name: item.name,
               price: item.price
           }));
+          
+          if (purchaseDataForAnalysis.length === 0) {
+              setHealthAnalysis(null);
+              setIsAnalyzingHealth(false);
+              return;
+          }
+
           const result = await analyzeHealthHabits({ purchaseHistory: purchaseDataForAnalysis });
           setHealthAnalysis(result);
       } catch (error) {
@@ -165,34 +207,45 @@ export default function HealthAndImpactPage() {
           </CardHeader>
           <CardContent>
             {isAnalyzingHealth ? (
-                <div className="space-y-4 p-4"><Skeleton className="h-40 w-full" /></div>
+                <div className="space-y-4 p-4"><Skeleton className="h-48 w-full" /></div>
             ) : healthAnalysis ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     <div>
-                        <h4 className="font-semibold">Spending Breakdown</h4>
-                        <ResponsiveContainer width="100%" height={150}>
-                            <BarChart data={healthAnalysis.spendingBreakdown} layout="vertical" margin={{ left: 20 }}>
-                                <XAxis type="number" hide />
-                                <YAxis type="category" dataKey="category" hide />
-                                <Bar dataKey="percentage" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                         <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-                            {healthAnalysis.spendingBreakdown.map(item => (
-                                <div key={item.category} className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-primary" />
-                                    <span>{item.category} ({item.percentage.toFixed(0)}%)</span>
-                                </div>
-                            ))}
-                        </div>
+                        <h4 className="font-semibold text-lg mb-2">Spending Breakdown</h4>
+                        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                           <BarChart accessibilityLayer data={healthAnalysis.spendingBreakdown} layout="vertical" margin={{left: 20}}>
+                              <YAxis
+                                dataKey="category"
+                                type="category"
+                                tickLine={false}
+                                tickMargin={10}
+                                axisLine={false}
+                                className="text-xs"
+                                tickFormatter={(value) =>
+                                  chartConfig[value as keyof typeof chartConfig]?.label
+                                }
+                              />
+                              <XAxis dataKey="percentage" type="number" hide />
+                              <Bar dataKey="percentage" layout="vertical" radius={5}>
+                                <LabelList
+                                  dataKey="percentage"
+                                  position="right"
+                                  offset={8}
+                                  className="fill-foreground font-semibold"
+                                  fontSize={12}
+                                  formatter={(value: number) => `${value.toFixed(0)}%`}
+                                />
+                              </Bar>
+                           </BarChart>
+                        </ChartContainer>
                     </div>
                     <div>
-                        <h4 className="font-semibold">Key Insight</h4>
-                        <p className="text-muted-foreground italic">"{healthAnalysis.keyInsight}"</p>
+                        <h4 className="font-semibold text-lg flex items-center mb-2"><Heart className="w-5 h-5 mr-2" />Key Health Insight</h4>
+                        <blockquote className="border-l-2 pl-6 italic text-muted-foreground">"{healthAnalysis.keyInsight}"</blockquote>
                     </div>
                      <div>
-                        <h4 className="font-semibold">Smart Suggestions</h4>
-                        <ul className="list-disc pl-5 text-muted-foreground space-y-1 mt-2">
+                        <h4 className="font-semibold text-lg flex items-center mb-2"><Lightbulb className="w-5 h-5 mr-2" />Smart Suggestions</h4>
+                        <ul className="list-disc pl-5 text-muted-foreground space-y-2 mt-2">
                            {healthAnalysis.suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}
                         </ul>
                     </div>
@@ -207,25 +260,25 @@ export default function HealthAndImpactPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Lightbulb className="mr-2 text-primary"/> AI Waste Coach</CardTitle>
+            <CardTitle className="flex items-center"><Recycle className="mr-2 text-primary"/> AI Waste Coach</CardTitle>
             <CardDescription>Personalized insights from your pantry habits to help you save more.</CardDescription>
           </CardHeader>
           <CardContent>
             {isAnalyzingWaste ? (
-                <div className="space-y-4"><Skeleton className="h-40 w-full" /></div>
+                <div className="space-y-4 p-4"><Skeleton className="h-48 w-full" /></div>
             ) : wasteAnalysis ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     <div>
-                        <h4 className="font-semibold flex items-center"><TrendingUp className="mr-2"/> Most Wasted Item</h4>
-                        <p className="text-primary font-bold text-lg">{wasteAnalysis.mostWastedItem}</p>
+                        <h4 className="font-semibold text-lg flex items-center"><TrendingUp className="mr-2"/> Most Wasted Item</h4>
+                        <p className="text-primary font-bold text-2xl">{wasteAnalysis.mostWastedItem}</p>
                     </div>
                     <div>
-                        <h4 className="font-semibold">Key Insight</h4>
-                        <p className="text-muted-foreground italic">"{wasteAnalysis.keyInsight}"</p>
+                        <h4 className="font-semibold text-lg">Key Insight</h4>
+                        <blockquote className="border-l-2 pl-6 italic text-muted-foreground">"{wasteAnalysis.keyInsight}"</blockquote>
                     </div>
                      <div>
-                        <h4 className="font-semibold">Smart Suggestions</h4>
-                        <ul className="list-disc pl-5 text-muted-foreground space-y-1 mt-2">
+                        <h4 className="font-semibold text-lg flex items-center"><Lightbulb className="mr-2"/>Smart Suggestions</h4>
+                        <ul className="list-disc pl-5 text-muted-foreground space-y-2 mt-2">
                            {wasteAnalysis.suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}
                         </ul>
                     </div>
@@ -261,3 +314,5 @@ export default function HealthAndImpactPage() {
     </div>
   );
 }
+
+    

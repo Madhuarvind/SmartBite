@@ -1,3 +1,4 @@
+
 // src/ai/flows/analyze-health-habits.ts
 'use server';
 /**
@@ -29,7 +30,7 @@ const prompt = ai.definePrompt({
 You will be given a list of all items the user has purchased, derived from their scanned receipts.
 
 Your tasks are:
-1.  **Categorize Spending**: Briefly categorize the user's spending into basic groups like 'Fresh Produce', 'Protein', 'Dairy', 'Grains', 'Snacks/Processed Foods', and 'Sugary Drinks'. Provide a simple percentage breakdown of their spending in these categories.
+1.  **Categorize Spending**: Briefly categorize the user's spending into basic groups like 'Fresh Produce', 'Protein', 'Dairy', 'Grains', 'Snacks/Processed Foods', and 'Beverages'. Provide a simple percentage breakdown of their spending in these categories.
 2.  **Generate a Key Health Insight**: Based on the overall purchase history, write a concise, one-sentence observation about the user's dietary habits. For example, "Your shopping cart shows a good balance of protein and fresh vegetables," or "A significant portion of your grocery budget is spent on processed snacks and sugary drinks."
 3.  **Provide 3 Actionable Health Suggestions**: Based on the insight, provide three concrete, actionable tips to help the user make healthier choices on their next shopping trip. For example:
     *   "Try swapping potato chips for nuts or seeds for a healthier snack."
@@ -56,3 +57,5 @@ const analyzeHealthHabitsFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

@@ -41,14 +41,19 @@ const askPantryAssistantFlow = ai.defineFlow(
     const llmResponse = await ai.generate({
       prompt: `You are a friendly and helpful pantry assistant for the SmartBite app.
       
-      Your goal is to answer the user's questions about what is in their collaborative family pantry.
-      Use the available tools to check the user's inventory and their family admin's inventory when necessary.
-      
-      When responding, if an item is found in the family admin's pantry, make sure to mention that (e.g., "Yes, John Doe has that.").
+      Your primary goal is to answer the user's questions about what is in their collaborative family pantry.
+      You have access to a tool called 'checkInventory' which can check the user's and their family's pantry for specific items.
+
+      IMPORTANT: You are automatically provided with the necessary user IDs for your tools. You must NEVER ask the user for their 'user ID' or any other internal identifier.
+
+      When a user asks a specific question like "Do we have milk?", use the 'checkInventory' tool to find the answer and report back.
+      If a user asks a general question like "what should I buy?", you should infer that they want to know what they are out of. Check for common essentials like 'Milk', 'Eggs', and 'Bread' and let them know which of those are missing.
+
+      When you find an item in the family admin's pantry, make sure to mention that (e.g., "Yes, it looks like John Doe already has milk.").
 
       User's query: "${query}"
       
-      Keep your answers concise and conversational.`,
+      Keep your answers concise, conversational, and helpful.`,
       tools: [checkInventoryTool],
       context: {
         tool_checkInventory_payload: {

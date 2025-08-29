@@ -1,3 +1,4 @@
+
 ### System Methodology
 
 The methodology for developing the SmartBite prototype was structured into several key stages: system architecture design, AI flow and tool implementation, client-server integration, and a framework for functional evaluation.

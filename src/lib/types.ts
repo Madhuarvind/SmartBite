@@ -1,4 +1,5 @@
 
+
 export type Ingredient = {
   id: string;
   name: string;
@@ -20,6 +21,13 @@ export type PantryItem = {
     id: string;
     name: string;
     quantity: string;
+}
+
+export type ShoppingListItem = {
+    id: string;
+    name: string;
+    quantity: string;
+    checked: boolean;
 }
 
 export type Recipe = {

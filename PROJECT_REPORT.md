@@ -47,36 +47,38 @@ The proposed system is a modern, full-stack web application that leverages a cli
 
 The application's architecture is designed for scalability and clear separation of concerns.
 
-```mermaid
-graph TD
-    subgraph "Client-Side (Browser)"
-        A[Next.js Frontend - React Components]
-    end
+**AI Image Generator Prompt for Figure 1: System Architecture**
 
-    subgraph "Server-Side (Next.js & Genkit)"
-        B[Genkit AI Flows <br/> e.g., recommendRecipes]
-        C[Genkit Tools <br/> e.g., checkInventory]
-        D[Firebase SDK]
-    end
+```text
+Create a clean, modern, technical system architecture diagram for an IEEE conference paper. The diagram should illustrate the workflow of an AI application called "SmartBite". Use a formal, minimalist style with clear labels and directed arrows. The diagram must have three distinct vertical lanes or columns, each with a clear heading.
 
-    subgraph "External Services"
-        E[Firebase <br/> (Auth, Firestore)]
-        F[Google AI <br/> (Gemini & Veo)]
-    end
+**Column 1: "Client-Side (Browser)"**
+*   This column should contain one primary box labeled: **"Next.js Frontend - React Components"**.
+*   This box represents the user interface. Use a vibrant yellow-gold color for this box, with dark text.
 
-    A -- "Server Action Call" --> B
-    B -- "Uses Tool" --> C
-    C -- "Queries/Mutates Data" --> D
-    D -- "Interacts with" --> E
-    B -- "Calls Generative Model" --> F
-    A -- "Reads Data via Firebase SDK" --> E
+**Column 2: "Server-Side (Next.js & Genkit)"**
+*   This column represents the application's backend logic. It should be the central column.
+*   Inside this column, create a large container to hold several components.
+*   Within this container, add three distinct sub-boxes arranged vertically:
+    1.  Top box: **"Genkit AI Flows (e.g., recommendRecipes, scanReceipt)"**
+    2.  Middle box: **"Genkit Tools (e.g., checkInventory)"**
+    3.  Bottom box: **"Firebase SDK"**
+*   Use a bright, peachy-coral orange color for these server-side boxes, with dark text.
 
-    style A fill:#F0C808,stroke:#4D450A,stroke-width:2px,color:#4D450A
-    style B fill:#F07208,stroke:#4D450A,stroke-width:2px,color:#4D450A
-    style C fill:#F07208,stroke:#4D450A,stroke-width:2px,color:#4D450A
-    style D fill:#F07208,stroke:#4D450A,stroke-width:2px,color:#4D450A
-    style E fill:#4CAF50,stroke:#4D450A,stroke-width:2px,color:#fff
-    style F fill:#4285F4,stroke:#4D450A,stroke-width:2px,color:#fff
+**Column 3: "External Services"**
+*   This column represents the third-party cloud services.
+*   It should contain two boxes, stacked vertically:
+    1.  Top box: **"Firebase (Auth, Firestore)"**. Color this box green, with white text.
+    2.  Bottom box: **"Google AI (Gemini & Veo Models)"**. Color this box blue, with white text.
+
+**Connections (Arrows):**
+Draw clear, labeled, directed arrows to show the data flow between the boxes.
+1.  From **"Next.js Frontend"** to **"Genkit AI Flows"**, label the arrow: **"Server Action Call"**.
+2.  From **"Genkit AI Flows"** to **"Genkit Tools"**, label the arrow: **"Uses Tool"**.
+3.  From **"Genkit Tools"** to **"Firebase SDK"**, label the arrow: **"Queries/Mutates Data"**.
+4.  From **"Firebase SDK"** to the **"Firebase"** box in the third column, label the arrow: **"Interacts with"**.
+5.  From **"Genkit AI Flows"** to the **"Google AI"** box in the third column, label the arrow: **"Calls Generative Model"**.
+6.  Draw a final arrow directly from the **"Firebase"** box in the third column back to the **"Next.js Frontend"** in the first column. Label this arrow: **"Reads Data via Firebase SDK"**.
 ```
 
 ### Steps/methods you followed

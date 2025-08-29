@@ -1,7 +1,7 @@
 
 ### System Methodology
 
-The methodology for developing the SmartBite prototype was structured into several key stages: system architecture design, AI flow and tool implementation, client-server integration, and a framework for functional evaluation.
+The development of the SmartBite application followed a **prototype-based agile methodology**. This approach was selected to facilitate rapid, iterative development and validation of the complex, interconnected AI features at the core of the system. Given the experimental nature of integrating multiple generative AI models (Gemini, Veo) with real-time database interactions, an agile framework allowed for the flexibility to refine AI prompts, tools, and system architecture in response to functional testing at each stage. This iterative process was crucial for de-risking the novel aspects of the project, such as asynchronous multimedia generation and tool-based AI, ensuring that the final proposed system is both robust and aligned with user-centric goals. The methodology was structured into several key stages: system architecture design, AI flow and tool implementation, client-server integration, and a framework for functional evaluation.
 
 #### 1. System Architecture Design
 
@@ -53,4 +53,5 @@ While this paper presents a functional prototype, a framework for its quantitati
 -   **Recipe Relevance:** Evaluated through user satisfaction surveys (e.g., Likert scale ratings) on the quality and relevance of recommendations from the `recommendRecipes` flow.
 -   **Task Completion Time:** Time-on-task analysis for key user journeys, such as adding inventory and generating a meal plan.
 -   **Waste Reduction:** A longitudinal study tracking the percentage of items marked as 'wasted' over time compared to a baseline.
+
 

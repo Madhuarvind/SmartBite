@@ -20,6 +20,7 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPa
 import { AlertTriangle, Loader } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { ForkAndLeaf } from "@/components/icons";
 
 
 export default function LoginPage() {
@@ -114,7 +115,8 @@ export default function LoginPage() {
   return (
     <>
     <Card className="mx-auto max-w-sm w-full">
-      <CardHeader>
+      <CardHeader className="items-center text-center">
+        <ForkAndLeaf className="w-12 h-12 text-primary" />
         <CardTitle className="text-2xl">Login</CardTitle>
         <CardDescription>
           Enter your email below to login to your account

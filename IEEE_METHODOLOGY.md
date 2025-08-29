@@ -53,3 +53,4 @@ While this paper presents a functional prototype, a framework for its quantitati
 -   **Recipe Relevance:** Evaluated through user satisfaction surveys (e.g., Likert scale ratings) on the quality and relevance of recommendations from the `recommendRecipes` flow.
 -   **Task Completion Time:** Time-on-task analysis for key user journeys, such as adding inventory and generating a meal plan.
 -   **Waste Reduction:** A longitudinal study tracking the percentage of items marked as 'wasted' over time compared to a baseline.
+

@@ -91,26 +91,30 @@ graph TD
 
 ## Technologies Used
 
--   **Framework:** Next.js (App Router)
--   **Language:** TypeScript
+The proposed system is implemented using a modern web stack:
+
+-   **Framework:** Next.js (with App Router)
+-   **Programming Language:** TypeScript
 -   **Styling:** Tailwind CSS
 -   **UI Components:** ShadCN UI, Radix UI
--   **Generative AI:** Google's Gemini family of models (including Gemini 2.0 Flash for text and `gemini-2.0-flash-preview-image-generation` for images) and Veo for video.
+-   **Generative AI:** Google's Gemini models (for vision, text, and image generation) and Veo (for video generation).
 -   **AI Orchestration:** Genkit
--   **Backend & Database:** Firebase (Firestore, Firebase Authentication)
+-   **Backend & Database:** Firebase (Firestore, Authentication)
 -   **State Management:** React Hooks (`useState`, `useEffect`)
 
 ## Implementation
 
-### Key modules/features of your system
+The proposed system incorporates the following key features, implemented as distinct AI flows:
 
--   **AI Bill/Pantry Scanner:** (`/bill-scanner`, `/inventory`) Uses the Gemini vision model within the `scanReceipt` and `scanIngredients` flows to perform OCR and object recognition on images, extracting item names, quantities, and prices.
--   **Predictive Expiry:** The `predictExpiryDate` flow uses Gemini's knowledge base to estimate the shelf life of fresh ingredients, which is then used to populate the expiry date in the user's inventory.
--   **Recipe Generation Core:** (`/recipes`) The `recommendRecipes`, `suggestRecipesByMood`, and `inventRecipe` flows are the heart of the culinary experience. They take user context (inventory, mood) and generate a list of `Recipe` objects, including ingredients, instructions, and nutritional information.
--   **Multimedia Generation:** For each recipe, the system triggers `generateRecipeStepImage`, `generateRecipeAudio`, and `generateRecipeVideo` flows. These flows run in the background to create a rich, multimodal cooking guide without blocking the user interface.
--   **AI Taste Predictor:** (`/plate-scanner` recipe modal) The `transformRecipe` flow takes an existing recipe and a user's natural language request (e.g., "make it spicier") and re-engineers the entire recipe's ingredients and instructions.
--   **Financial & Health Advisor:** (`/financial-advisor`, `/health`) The `analyzeUserSpending` and `analyzeHealthHabits` flows process a user's purchase history from Firestore to generate charts and actionable suggestions for improving their habits.
--   **Collaborative Shopping:** (`/shopping-helper`) The `identifyAndCheckItem` and `askPantryAssistant` flows utilize a Genkit tool (`checkInventoryTool`) to allow the AI to access both the user's and a family member's inventory, preventing duplicate purchases.
+-   **Automated Inventory Scanning:** Utilizes the Gemini vision model in `scanReceipt` and `scanIngredients` flows to perform OCR and object recognition on images, automatically digitizing grocery items.
+-   **Predictive Expiry Date Generation:** The `predictExpiryDate` flow leverages the Gemini model's knowledge base to estimate the shelf life of fresh ingredients, crucial for waste reduction.
+-   **Context-Aware Recipe Generation:** The `recommendRecipes`, `suggestRecipesByMood`, and `inventRecipe` flows generate personalized recipes based on user inventory, mood, and preferences.
+-   **Asynchronous Multimedia Generation:** The system enhances recipes by asynchronously generating step-by-step images (`generateRecipeStepImage`), audio narration (`generateRecipeAudio`), and summary videos (`generateRecipeVideo`) in the background.
+-   **AI-Powered Recipe Transformation:** The `transformRecipe` flow acts as an "AI Taste Predictor," re-engineering entire recipes based on natural language requests (e.g., "make it vegan").
+-   **Integrated Financial & Health Coaching:** The `analyzeUserSpending` and `analyzeHealthHabits` flows process purchase history to generate charts and actionable advice.
+-   **Collaborative Shopping Assistance:** The `identifyAndCheckItem` and `askPantryAssistant` flows use a Genkit tool (`checkInventoryTool`) to check family inventory in real-time, preventing duplicate purchases.
+
+These features work in concert to provide a comprehensive and intelligent kitchen management solution.
 
 ## Results / Output
 

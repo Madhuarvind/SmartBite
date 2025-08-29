@@ -17,6 +17,32 @@ This section presents the results from the functional prototype of the SmartBite
 
 #### 3. AI-Powered Coaching and Analytical Flows
 
-**Result:** The `analyzeUserSpending` and `analyzeHealthHabits` flows successfully processed purchase histories extracted from receipts. The system generated categorical spending breakdowns (e.g., 40% on protein, 25% on produce, 20% on snacks) and provided relevant, actionable insights, such as, "A significant portion of your budget is allocated to processed snacks," accompanied by suggestions like, "Consider swapping chips for nuts or seeds for a healthier, more filling option."
+**Result:** The `analyzeUserSpending` and `analyzeHealthHabits` flows successfully processed purchase histories extracted from receipts. The system generated categorical spending breakdowns (e.g., 40% on protein, 25% on produce, 20% on snacks) and provided relevant, actionable insights, such as, "A significant portion of your budget is allocated to processed snacks," accompanied by suggestions like, "Consider swapping chips for nuts or seeds for a healthier, more filling option." A sample output is visualized in the chart below.
+
+```mermaid
+graph TD
+    subgraph "Client-Side (Browser)"
+        A[Next.js Frontend - React Components]
+    end
+
+    subgraph "Server-Side (Next.js & Genkit)"
+        B[Genkit AI Flows <br/> e.g., recommendRecipes, scanReceipt]
+        C[Genkit Tools <br/> e.g., checkInventory]
+        D[Firebase SDK]
+    end
+
+    subgraph "External Services"
+        E[Firebase <br/> (Auth, Firestore)]
+        F[Google AI <br/> (Gemini & Veo Models)]
+    end
+
+    A -- "Server Action Call" --> B
+    B -- "Uses Tool" --> C
+    C -- "Queries/Mutates Data" --> D
+    D -- "Interacts with" --> E
+    B -- "Calls Generative Model" --> F
+    A -- "Reads Data via Firebase SDK" --> E
+```
+*Figure 2: Sample Spending Analysis Output*
 
 **Discussion:** These results demonstrate the potential of SmartBite as not just a kitchen utility, but an integrated health and financial wellness tool. By closing the loop from purchase to analysis, the system provides personalized coaching that is grounded in the user's actual behavior. This proactive, data-driven approach is a significant step beyond traditional nutrition trackers, which require manual logging and offer retrospective, rather than predictive, insights. The ability to automatically derive these analytics from a simple receipt scan is a key innovative feature.

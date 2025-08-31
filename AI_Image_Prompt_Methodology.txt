@@ -1,0 +1,52 @@
+Create a clean, modern, technical diagram for an IEEE conference paper illustrating the FIRE (Food Image to Recipe) system methodology. The diagram should show the complete workflow from food image input to recipe output with the following specifications:
+
+**Overall Layout:**
+- Use a horizontal flowchart layout with three main processing stages
+- Apply a professional, minimalist style with clear labels and directional arrows
+- Use a blue and green color scheme for technical diagrams
+- Include section numbers (3.1, 3.2, 3.3) corresponding to the methodology subsections
+
+**Stage 1 - Title Generation (Left Section):**
+- Show a food image input box
+- Display "BLIP Model" as the main processing component
+- Include "Fine-tuned on Recipe1M" annotation
+- Show output as "Recipe Title" (e.g., "Chocolate Cake")
+- Use blue color for this section
+
+**Stage 2 - Ingredient Extraction (Middle Section):**
+- Show the same food image input
+- Display "Vision Transformer (ViT)" as feature extractor
+- Show "Ingredient Decoder" with attention layers
+- Include mathematical notation: "loss = α₁×loss_ingr + α₂×loss_eos + α₃×loss_card"
+- Show output as "Ingredient List" (e.g., "flour, eggs, chocolate")
+- Use green color for this section
+
+**Stage 3 - Cooking Instruction Generation (Right Section):**
+- Show combined inputs: "Title + Ingredients"
+- Display "T5 Encoder-Decoder" as the main model
+- Include "220M parameters" annotation
+- Show formatted input structure: "Title: [title] Ingredients: [list]"
+- Show output as "Cooking Instructions" with example steps
+- Use teal color for this section
+
+**Connections and Flow:**
+- Draw clear directional arrows between each stage
+- Label arrows with data flow descriptions
+- Show parallel processing where applicable
+- Include a final arrow combining all outputs into "Complete Recipe"
+
+**Technical Details to Include:**
+- Model names: BLIP, ViT, T5
+- Key parameters: 220M parameters for T5
+- Dataset reference: Recipe1M
+- Loss function components
+- Processing steps and transformations
+
+**Visual Style Requirements:**
+- White background with colored sections
+- Sans-serif fonts for readability
+- High contrast text for IEEE publication standards
+- Include figure caption: "Figure 3: FIRE System Methodology Overview"
+- Add legend explaining color coding and component types
+
+The diagram should be suitable for academic publication and clearly show the technical workflow of the FIRE system methodology.

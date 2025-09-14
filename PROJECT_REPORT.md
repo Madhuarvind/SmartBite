@@ -153,6 +153,15 @@ The Aura Rail serves as the central command and display unit, projected onto the
 -   **Power System:** A main power supply for the rail and an inductive charging transmitter coil to wirelessly power the Aura Knife.
 -   **Enclosure:** A custom-designed, sleek housing to be mounted on a kitchen backsplash.
 
+**Prototype Budget Estimate (Aura Rail):**
+- Raspberry Pi 4 (4GB): **$55 - $75**
+- Pico-projector: **$100 - $300**
+- ToF Gesture Sensor: **$15 - $30**
+- 5V Power Supply: **$10 - $20**
+- Inductive Charging Transmitter: **$15 - $25**
+- 3D Printed/Custom Enclosure: **$30 - $100**
+- **Subtotal: ~$225 - $550**
+
 ### 2. Aura Knife (Onboard Food Analysis)
 This diagnostic tool analyzes food composition in real-time as it cuts.
 
@@ -161,6 +170,14 @@ This diagnostic tool analyzes food composition in real-time as it cuts.
 -   **Wireless Communication:** A Bluetooth Low Energy (BLE) module for transmitting data to the Aura Rail.
 -   **Power System:** An inductive charging receiver coil and a small LiPo battery to power the electronics.
 -   **Physical Assembly:** A custom-designed knife handle to safely house all electronic components, ensuring it remains balanced, ergonomic, and water-resistant.
+
+**Prototype Budget Estimate (Aura Knife):**
+- Miniaturized NIR Spectrometer (e.g., from Hamamatsu or similar): **$500 - $2,500+** (This is the most significant cost driver)
+- Low-power MCU (e.g., Seeed Studio XIAO, ESP32-C3): **$5 - $15**
+- BLE Module: **$5 - $10**
+- Inductive Charging Receiver & Battery: **$10 - $20**
+- Custom Handle/Enclosure: **$50 - $150**
+- **Subtotal: ~$570 - $2,700+**
 
 ### 3. SmartBite "Gecko" Sensors (Ambient Inventory Trackers)
 These are thin, adhesive sensors for real-time, automated inventory management.
@@ -172,6 +189,14 @@ These are thin, adhesive sensors for real-time, automated inventory management.
 -   **Microcontroller & Wireless:** A low-power MCU with integrated BLE for each sensor unit.
 -   **Power Source:** Energy harvesting modules (e.g., small solar cells designed for indoor light) or long-life coin cell batteries.
 -   **Enclosure:** A thin, flexible, and food-safe silicone or polymer casing for the electronics.
+
+**Prototype Budget Estimate (per Gecko Sensor):**
+- Load Cell/Capacitance Array: **$10 - $25**
+- IR Break-beam Sensor: **$2 - $5**
+- BME680 Environment Sensor: **$10 - $15**
+- Low-power MCU with BLE (e.g., nRF52 series): **$8 - $20**
+- Power Source (Coin Cell or Solar): **$2 - $10**
+- **Subtotal per sensor: ~$25 - $75**
 
 ## Conclusion
 
@@ -185,3 +210,4 @@ The SmartBite platform is a strong foundation that can be extended in several wa
 -   **Smart Appliance Integration:** Allow the app to communicate with smart ovens or refrigerators to pre-heat or adjust settings based on the selected recipe.
 -   **Long-Term Trend Analysis:** Expand the health and financial dashboards to show trends over months or years, providing more comprehensive insights.
 -   **Advanced Waste Tracking:** Improve waste tracking by allowing users to specify the reason for waste (e.g., spoilage, leftovers), which can feed back into the AI's suggestions for better portion control or meal planning.
+```

@@ -139,6 +139,40 @@ The system's performance can be evaluated on several metrics:
 -   **User Experience:** The separation of the UI from the AI logic ensures the application remains responsive. Recipe details are shown instantly, with media loading in as it becomes available, which is a significant improvement over a fully synchronous model.
 -   **Scalability:** The use of Firebase and serverless AI flows means the architecture is highly scalable and can handle a large number of users without manual intervention.
 
+## Hardware Requirements for "Aura" Prototype
+
+This section outlines the hardware components required to build a functional prototype of the advanced "SmartBite Aura" system, which integrates physical sensors and interfaces into the SmartBite ecosystem.
+
+### 1. Aura Rail (Intelligent Backsplash Hub)
+The Aura Rail serves as the central command and display unit, projected onto the countertop.
+
+-   **Processing Unit:** A single-board computer (e.g., Raspberry Pi 4 or later) to manage sensors, run local logic, and communicate with the cloud backend.
+-   **Projection System:** A pico-projector with short-throw lens capabilities to display an interactive UI on a standard countertop.
+-   **Gesture Sensor:** A time-of-flight (ToF) camera module (e.g., VL53L1X) for detecting hand gestures to control the projected interface.
+-   **Wireless Communication:** Wi-Fi and Bluetooth module (typically included with the single-board computer) for connecting to the home network and Aura accessories.
+-   **Power System:** A main power supply for the rail and an inductive charging transmitter coil to wirelessly power the Aura Knife.
+-   **Enclosure:** A custom-designed, sleek housing to be mounted on a kitchen backsplash.
+
+### 2. Aura Knife (Onboard Food Analysis)
+This diagnostic tool analyzes food composition in real-time as it cuts.
+
+-   **Spectrometer:** A miniaturized near-infrared (NIR) spectrometer module suitable for embedding into a knife handle. This is the core component for chemical analysis of food.
+-   **Microcontroller:** A low-power MCU (e.g., an ARM Cortex-M series) to process data from the spectrometer and communicate with the Aura Rail.
+-   **Wireless Communication:** A Bluetooth Low Energy (BLE) module for transmitting data to the Aura Rail.
+-   **Power System:** An inductive charging receiver coil and a small LiPo battery to power the electronics.
+-   **Physical Assembly:** A custom-designed knife handle to safely house all electronic components, ensuring it remains balanced, ergonomic, and water-resistant.
+
+### 3. SmartBite "Gecko" Sensors (Ambient Inventory Trackers)
+These are thin, adhesive sensors for real-time, automated inventory management.
+
+-   **Weight/Volume Sensors:**
+    -   **For Liquids/Grains:** Flexible, printed load cells or capacitance sensor arrays that can be attached to the bottom or side of containers.
+    -   **For Countable Items:** Small break-beam (IR emitter/detector pairs) or capacitive touch sensors to detect the presence or absence of items like cans or eggs.
+-   **Environment Sensor:** A multi-sensor module (e.g., BME680) capable of detecting temperature, humidity, and volatile organic compounds (VOCs), which is crucial for detecting ethylene gas for freshness monitoring.
+-   **Microcontroller & Wireless:** A low-power MCU with integrated BLE for each sensor unit.
+-   **Power Source:** Energy harvesting modules (e.g., small solar cells designed for indoor light) or long-life coin cell batteries.
+-   **Enclosure:** A thin, flexible, and food-safe silicone or polymer casing for the electronics.
+
 ## Conclusion
 
 The SmartBite project successfully demonstrates the potential of leveraging generative AI to create a truly smart kitchen assistant. By integrating various AI capabilities—from vision and OCR to natural language processing and video generation—it provides a single, cohesive platform that addresses key user pain points in a novel way. The project meets all its stated objectives, delivering a feature-rich application that can help users save time, reduce food waste, and lead healthier lives. The use of Genkit for AI orchestration proved highly effective, allowing for the creation of complex, stateful AI agents with relative ease.

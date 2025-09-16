@@ -48,7 +48,7 @@ const generateRecipeAudioFlow = ai.defineFlow(
     outputSchema: GenerateRecipeAudioOutputSchema,
   },
   async ({instructions}) => {
-    const { media, finishReason, "custom": error } = await ai.generate({
+    const { media, finishReason, "custom": customError } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
       config: {
         responseModalities: ['AUDIO'],
@@ -62,8 +62,11 @@ const generateRecipeAudioFlow = ai.defineFlow(
     });
     
     if (finishReason !== 'success' || !media) {
-      console.error('Audio generation failed.', {finishReason, error});
-      throw new Error(`Audio generation failed: ${error?.message || 'No media was generated.'}`);
+      const errorMessage = (customError as any)?.message || 'No media was generated.';
+      console.error('Audio generation failed.', {finishReason, error: errorMessage});
+      // Instead of throwing, we now catch the error and re-throw with a more specific message
+      // which will be caught by the UI and displayed in a toast.
+      throw new Error(`Audio generation failed: ${errorMessage}`);
     }
 
     const audioBuffer = Buffer.from(

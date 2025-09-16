@@ -60,7 +60,6 @@ export type GenerateImageOutput = z.infer<typeof GenerateImageOutputSchema>;
 // Schemas for generate-recipe-audio.ts
 export const GenerateRecipeAudioInputSchema = z.object({
   instructions: z.string().describe('The recipe instructions to be converted to speech.'),
-  languageCode: z.string().optional().describe('The BCP-47 language code for the audio (e.g., "en-US", "es-ES"). Defaults to en-US.'),
 });
 export type GenerateRecipeAudioInput = z.infer<typeof GenerateRecipeAudioInputSchema>;
 
@@ -68,6 +67,18 @@ export const GenerateRecipeAudioOutputSchema = z.object({
   audioDataUri: z.string().describe("The generated audio as a data URI. Expected format: 'data:audio/wav;base64,<encoded_data>'."),
 });
 export type GenerateRecipeAudioOutput = z.infer<typeof GenerateRecipeAudioOutputSchema>;
+
+
+// Schemas for generate-recipe-video.ts
+export const GenerateRecipeVideoInputSchema = z.object({
+  recipeName: z.string().describe('The name of the recipe to generate a video for.'),
+});
+export type GenerateRecipeVideoInput = z.infer<typeof GenerateRecipeVideoInputSchema>;
+
+export const GenerateRecipeVideoOutputSchema = z.object({
+  videoDataUri: z.string().describe("The generated video as a data URI. Expected format: 'data:video/mp4;base64,<encoded_data>'."),
+});
+export type GenerateRecipeVideoOutput = z.infer<typeof GenerateRecipeVideoOutputSchema>;
 
 
 // Schemas for scan-ingredients.ts

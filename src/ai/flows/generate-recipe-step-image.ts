@@ -7,30 +7,30 @@
  */
 
 import {
-  GenerateRecipeStepImageInput,
-  GenerateRecipeStepImageInputSchema,
-  GenerateRecipeStepImageOutput,
-  GenerateRecipeStepImageOutputSchema,
+  GenerateImageInput,
+  GenerateImageInputSchema,
+  GenerateImageOutput,
+  GenerateImageOutputSchema,
 } from '../schemas';
 import { generateImage } from './generate-image';
 import { ai } from '@/ai/genkit';
 
 export async function generateRecipeStepImage(
-  input: GenerateRecipeStepImageInput
-): Promise<GenerateRecipeStepImageOutput> {
+  input: GenerateImageInput
+): Promise<GenerateImageOutput> {
   return generateRecipeStepImageFlow(input);
 }
 
 const generateRecipeStepImageFlow = ai.defineFlow(
   {
     name: 'generateRecipeStepImageFlow',
-    inputSchema: GenerateRecipeStepImageInputSchema,
-    outputSchema: GenerateRecipeStepImageOutputSchema,
+    inputSchema: GenerateImageInputSchema,
+    outputSchema: GenerateImageOutputSchema,
   },
-  async ({ instruction, recipeName }) => {
+  async ({ prompt }) => {
     // We now call the dedicated image generation flow.
     const result = await generateImage({
-      prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipeName}": ${instruction}. Focus on the action described.`,
+      prompt: prompt,
     });
 
     return result;

@@ -9,9 +9,8 @@
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { GenerateRecipeVideoInput, GenerateRecipeVideoInputSchema, GenerateRecipeVideoOutput, GenerateRecipeVideoOutputSchema } from '../schemas';
-import * as fs from 'fs';
 import { Readable } from 'stream';
-import { MediaPart } from 'genkit';
+import type { MediaPart } from 'genkit';
 
 async function downloadVideo(video: MediaPart): Promise<string> {
   const fetch = (await import('node-fetch')).default;

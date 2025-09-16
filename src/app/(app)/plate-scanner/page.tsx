@@ -593,7 +593,7 @@ export default function PlateScannerPage() {
 
     {isRecipeModalOpen && (
         <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     {isFindingRecipe || isTransforming ? <Skeleton className="h-8 w-3/4"/> : 
                         <DialogTitle className="text-3xl text-primary">{recipeInModal?.name}</DialogTitle>
@@ -610,8 +610,8 @@ export default function PlateScannerPage() {
                         <Loader className="w-16 h-16 animate-spin text-primary" />
                     </div>
                 ) : (
-                <div className="grid md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
-                    <div className="md:col-span-2 space-y-4">
+                <div className="grid md:grid-cols-3 gap-6 overflow-hidden flex-1">
+                    <div className="md:col-span-2 space-y-4 overflow-y-auto pr-4">
                         {isTransforming && (
                            <Alert>
                                <Wand2 className="h-4 w-4" />
@@ -667,7 +667,7 @@ export default function PlateScannerPage() {
                         </div>
 
                     </div>
-                    <div className="space-y-6">
+                    <div className="space-y-6 overflow-y-auto pr-2">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-lg">Log Your Progress</CardTitle>

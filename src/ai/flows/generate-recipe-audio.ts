@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-recipe-audio.ts
 'use server';
 /**
@@ -47,7 +48,7 @@ const generateRecipeAudioFlow = ai.defineFlow(
     outputSchema: GenerateRecipeAudioOutputSchema,
   },
   async ({instructions}) => {
-    const { media } = await ai.generate({
+    const { media, finishReason, "custom": error } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
       config: {
         responseModalities: ['AUDIO'],
@@ -60,8 +61,9 @@ const generateRecipeAudioFlow = ai.defineFlow(
       prompt: instructions,
     });
     
-    if (!media) {
-      throw new Error('No audio media was generated.');
+    if (finishReason !== 'success' || !media) {
+      console.error('Audio generation failed.', {finishReason, error});
+      throw new Error(`Audio generation failed: ${error?.message || 'No media was generated.'}`);
     }
 
     const audioBuffer = Buffer.from(

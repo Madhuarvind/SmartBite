@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useRef, useEffect, ChangeEvent, DragEvent, FormEvent } from "react";
@@ -440,9 +441,9 @@ export default function PlateScannerPage() {
     try {
       const result = await generateRecipeAudio({ instructions: recipeInModal.instructionSteps.map(s => s.text).join('\n') });
       setRecipeInModal(prev => prev ? { ...prev, audio: result } : null);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error generating audio:", e);
-      toast({ variant: "destructive", title: "Audio Generation Failed" });
+      toast({ variant: "destructive", title: "Audio Generation Failed", description: e.message || 'The AI could not generate audio at this time.' });
     } finally {
       setIsGeneratingAudio(false);
     }
@@ -454,9 +455,9 @@ export default function PlateScannerPage() {
     try {
       const result = await generateRecipeVideo({ recipeName: recipeInModal.name });
       setRecipeInModal(prev => prev ? { ...prev, video: result } : null);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error generating video:", e);
-      toast({ variant: "destructive", title: "Video Generation Failed", description: "The AI couldn't create a video at this time. This can happen under heavy load." });
+      toast({ variant: "destructive", title: "Video Generation Failed", description: e.message || "The AI couldn't create a video at this time. This can happen under heavy load." });
     } finally {
       setIsGeneratingVideo(false);
     }

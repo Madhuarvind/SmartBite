@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-recipe-video.ts
 'use server';
 /**
@@ -54,6 +55,7 @@ const generateRecipeVideoFlow = ai.defineFlow(
     });
 
     if (!operation) {
+      console.error('Video generation failed: No operation returned.');
       throw new Error('Expected the model to return an operation for video generation.');
     }
     
@@ -70,6 +72,7 @@ const generateRecipeVideoFlow = ai.defineFlow(
 
     const videoPart = operation.output?.message?.content.find((p) => p.media && p.media.contentType?.startsWith('video/'));
     if (!videoPart || !videoPart.media?.url) {
+      console.error('Video generation failed: No video part found in result.');
       throw new Error('Failed to find the generated video in the operation result.');
     }
 

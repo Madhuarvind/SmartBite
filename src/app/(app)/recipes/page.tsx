@@ -27,6 +27,7 @@ import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
 import { predictiveSuggestions } from "@/ai/flows/predictive-suggestions";
 import { predictFacialMood } from "@/ai/flows/predict-facial-mood";
 import { inventRecipe } from "@/ai/flows/invent-recipe";
+import { generateRecipeMedia } from "@/ai/flows/generate-recipe-media";
 import { Textarea } from "@/components/ui/textarea";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp, onSnapshot, query, orderBy, getDocs, writeBatch, doc } from "firebase/firestore";
@@ -309,6 +310,7 @@ export default function RecipesPage() {
 
 
   const handleViewRecipe = (recipe: Recipe) => {
+    // Open the modal immediately with the text content and cover image
     setRecipeInModal(recipe);
     setIsModalOpen(true);
     setSubstitutions([]);
@@ -318,34 +320,24 @@ export default function RecipesPage() {
     setIsCheckingInventory(false);
     setServings(2);
 
-    if (recipe.mediaPromise) {
-      (recipe.mediaPromise as Promise<{ 
-          instructionSteps: InstructionStep[],
-          mediaPromise: Promise<{
-            instructionSteps: InstructionStep[], 
-            audio?: GenerateRecipeAudioOutput, 
-            video?: GenerateRecipeVideoOutput 
-          }>
-      }>).then(initialMedia => {
-          // Set the first image(s)
-          setRecipeInModal(currentRecipe => {
-              if (currentRecipe && currentRecipe.name === recipe.name) {
-                  return { ...currentRecipe, instructionSteps: initialMedia.instructionSteps };
-              }
-              return currentRecipe;
-          });
-          // Wait for the rest of the media
-          initialMedia.mediaPromise.then(fullMedia => {
-              setRecipeInModal(currentRecipe => {
-                if (currentRecipe && currentRecipe.name === recipe.name) {
-                    return { ...currentRecipe, ...fullMedia };
-                }
-                return currentRecipe;
-              });
-          });
+    // Call the media generation flow in the background
+    generateRecipeMedia({ recipe }).then(mediaResult => {
+      // Update the recipe in the modal with the new media
+      setRecipeInModal(currentRecipe => {
+        if (currentRecipe && currentRecipe.name === mediaResult.name) {
+          return mediaResult;
+        }
+        return currentRecipe; // Return the old one if the modal has changed
       });
-    }
-};
+    }).catch(error => {
+      console.error("Error generating recipe media:", error);
+      toast({
+        variant: "destructive",
+        title: "Media Generation Failed",
+        description: "Could not load all images for this recipe."
+      });
+    });
+  };
   
   const handleFindSubstitutions = async () => {
       if (!missingIngredient) {
@@ -388,7 +380,7 @@ export default function RecipesPage() {
         transformation: transformationRequest,
       });
       // Replace the recipe in the modal with the new transformed one
-      handleViewRecipe(result); // This re-initializes the modal with the new recipe and its media promise
+      handleViewRecipe(result); // This re-initializes the modal with the new recipe and its media
       toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
     } catch (error) {
       console.error("Error transforming recipe:", error);
@@ -654,8 +646,8 @@ export default function RecipesPage() {
               <Card key={`${recipe.name}-${index}`} className="overflow-hidden flex flex-col bg-card hover:bg-secondary/50 transition-colors duration-300 animate-fade-in-slide-up" style={{animationDelay: `${index * 0.1}s`}}>
                 <CardHeader className="p-0">
                    <div className="relative aspect-video">
-                    {recipe.instructionSteps && recipe.instructionSteps[0]?.image?.imageDataUri ? (
-                        <Image src={recipe.instructionSteps[0].image.imageDataUri} alt={recipe.name} layout="fill" objectFit="cover" className="bg-secondary"/>
+                    {recipe.coverImage?.imageDataUri ? (
+                        <Image src={recipe.coverImage.imageDataUri} alt={recipe.name} layout="fill" objectFit="cover" className="bg-secondary"/>
                     ) : (
                        <Skeleton className="w-full h-full" />
                     )}
@@ -702,27 +694,6 @@ export default function RecipesPage() {
                            </Alert>
                         )}
                         
-                        <div>
-                           <h3 className="font-bold text-lg mb-2">Full Recipe Video</h3>
-                           {recipeInModal.video?.videoDataUri ? (
-                              <video
-                                src={recipeInModal.video.videoDataUri}
-                                controls
-                                className="w-full aspect-video rounded-lg bg-black"
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                              />
-                            ) : (
-                              <div className="w-full aspect-video bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center rounded-lg">
-                                  <Loader className="w-10 h-10 mb-2 animate-spin text-primary"/>
-                                  <p className="text-sm font-medium">Preparing your video...</p>
-                                  <p className="text-xs">This can take a moment, especially for new recipes.</p>
-                              </div>
-                            )}
-                        </div>
-
                         <div>
                             <h3 className="font-bold text-lg mb-2">Ingredients</h3>
                             <Table>
@@ -779,21 +750,7 @@ export default function RecipesPage() {
                                 </Button>
                             </CardContent>
                         </Card>
-                        <Card className="bg-secondary/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Music className="w-5 h-5 mr-2 text-primary"/> Audio Guide</CardTitle>
-                                <CardDescription>Listen to the recipe instructions.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {recipeInModal.audio?.audioDataUri ? (
-                                    <audio controls src={recipeInModal.audio.audioDataUri} className="w-full" />
-                                ) : (
-                                    <div className="flex items-center justify-center text-muted-foreground text-sm">
-                                        <Loader className="mr-2 animate-spin"/> Loading audio...
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        
                         <Card className="bg-secondary/50">
                             <CardHeader>
                                 <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Nutritional Info</CardTitle>

@@ -14,9 +14,8 @@ import {
   PredictiveSuggestionsOutputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeAudio } from './generate-recipe-audio';
-import { generateRecipeVideo } from './generate-recipe-video';
-import { generateRecipeStepImage } from './generate-recipe-step-image';
+import { generateImage } from './generate-image';
+
 
 export async function predictiveSuggestions(
   input: PredictiveSuggestionsInput
@@ -72,79 +71,18 @@ Respond in the specified JSON format.
       return { recipes: [] };
     }
 
-    // After generating the recipe text, kick off all media generation in parallel for all recipes.
-    const enhancedRecipes: Recipe[] = await Promise.all(
+    // After generating the recipe text, generate a cover image for each one in parallel.
+    const enhancedRecipes = await Promise.all(
       output.recipes.map(async (recipe: Recipe) => {
-        // Asynchronously generate all media in the background.
-        const mediaPromise = (async () => {
-          // Prioritize the first image to make the UI feel faster
-          const firstImageResult = await generateRecipeStepImage({
-            instruction: recipe.instructionSteps[0].text,
-            recipeName: recipe.name,
-          }).catch(e => {
-            console.error(`First image generation failed for ${recipe.name}:`, e);
-            return undefined;
+        try {
+          const coverImage = await generateImage({
+            prompt: `A beautiful, appetizing, professional food photography shot of a finished plate of "${recipe.name}".`,
           });
-
-          const instructionStepsWithFirstImage = [...recipe.instructionSteps];
-          if (firstImageResult) {
-            instructionStepsWithFirstImage[0] = {
-              ...instructionStepsWithFirstImage[0],
-              image: firstImageResult,
-            };
-          }
-          
-          const remainingMediaPromise = (async () => {
-              const [remainingImagePromises, audioResult, videoResult] = await Promise.all([
-                Promise.allSettled(
-                  recipe.instructionSteps.slice(1).map(step =>
-                    generateRecipeStepImage({
-                      instruction: step.text,
-                      recipeName: recipe.name,
-                    })
-                  )
-                ),
-                generateRecipeAudio({ instructions: recipe.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
-                    console.error(`Audio generation failed for ${recipe.name}:`, e);
-                    return undefined;
-                }),
-                generateRecipeVideo({ recipeName: recipe.name }).catch(e => {
-                    console.error(`Video generation failed for ${recipe.name}:`, e);
-                    return undefined;
-                })
-              ]);
-
-              const finalInstructionSteps = [...instructionStepsWithFirstImage];
-              recipe.instructionSteps.slice(1).forEach((step, index) => {
-                  const imageResult = remainingImagePromises[index];
-                  if (imageResult.status === 'fulfilled') {
-                      finalInstructionSteps[index + 1] = { ...step, image: imageResult.value };
-                  } else {
-                      console.error(`Image generation failed for step "${step.text}" in recipe ${recipe.name}:`, imageResult.reason);
-                  }
-              });
-
-              return {
-                instructionSteps: finalInstructionSteps,
-                audio: audioResult,
-                video: videoResult,
-              };
-          })();
-          
-          return {
-            instructionSteps: instructionStepsWithFirstImage,
-            mediaPromise: remainingMediaPromise,
-          };
-        })();
-        
-        // Return the recipe immediately with placeholders and the media promise
-        return {
-          ...recipe,
-          instructionSteps: recipe.instructionSteps.map(step => ({...step, image: undefined})),
-          audio: undefined,
-          video: undefined,
-          mediaPromise: mediaPromise as any,
-        };
+          return { ...recipe, coverImage };
+        } catch (e) {
+          console.error(`Cover image generation failed for ${recipe.name}:`, e);
+          return recipe; // Return recipe without cover image on failure
+        }
       })
     );
 

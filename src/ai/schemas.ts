@@ -1,4 +1,3 @@
-
 // src/ai/schemas.ts
 /**
  * @fileOverview This file contains all the Zod schemas and TypeScript types for the AI flows.
@@ -42,22 +41,26 @@ export const PredictExpiryDateOutputSchema = z.object({
 export type PredictExpiryDateOutput = z.infer<typeof PredictExpiryDateOutputSchema>;
 
 
-// Schemas for generate-recipe-step-image.ts
-export const GenerateRecipeStepImageInputSchema = z.object({
-  instruction: z.string().describe('The single recipe instruction to generate an image for.'),
-  recipeName: z.string().describe('The name of the recipe this step belongs to.'),
+// Schemas for generate-image.ts (replaces generate-recipe-step-image)
+export const GenerateImageInputSchema = z.object({
+  prompt: z.string().describe('A text prompt to generate an image from.'),
 });
-export type GenerateRecipeStepImageInput = z.infer<typeof GenerateRecipeStepImageInputSchema>;
+export type GenerateImageInput = z.infer<typeof GenerateImageInputSchema>;
 
-export const GenerateRecipeStepImageOutputSchema = z.object({
-    imageDataUri: z.string().describe("The generated image as a data URI. Expected format: 'data:image/png;base64,<encoded_data>'."),
+export const GenerateImageOutputSchema = z.object({
+  imageDataUri: z
+    .string()
+    .describe(
+      "The generated image as a data URI. Expected format: 'data:image/png;base64,<encoded_data>'."
+    ),
 });
-export type GenerateRecipeStepImageOutput = z.infer<typeof GenerateRecipeStepImageOutputSchema>;
+export type GenerateImageOutput = z.infer<typeof GenerateImageOutputSchema>;
 
 
 // Schemas for generate-recipe-audio.ts
 export const GenerateRecipeAudioInputSchema = z.object({
   instructions: z.string().describe('The recipe instructions to be converted to speech.'),
+  languageCode: z.string().optional().describe('The BCP-47 language code for the audio (e.g., "en-US", "es-ES"). Defaults to en-US.'),
 });
 export type GenerateRecipeAudioInput = z.infer<typeof GenerateRecipeAudioInputSchema>;
 
@@ -65,18 +68,6 @@ export const GenerateRecipeAudioOutputSchema = z.object({
   audioDataUri: z.string().describe("The generated audio as a data URI. Expected format: 'data:audio/wav;base64,<encoded_data>'."),
 });
 export type GenerateRecipeAudioOutput = z.infer<typeof GenerateRecipeAudioOutputSchema>;
-
-
-// Schemas for generate-recipe-video.ts
-export const GenerateRecipeVideoInputSchema = z.object({
-    recipeName: z.string().describe('The name of the recipe to generate a video for.'),
-});
-export type GenerateRecipeVideoInput = z.infer<typeof GenerateRecipeVideoInputSchema>;
-
-export const GenerateRecipeVideoOutputSchema = z.object({
-    videoDataUri: z.string().describe("The generated video as a data URI. Expected format: 'data:video/mp4;base64,<encoded_data>'."),
-});
-export type GenerateRecipeVideoOutput = z.infer<typeof GenerateRecipeVideoOutputSchema>;
 
 
 // Schemas for scan-ingredients.ts
@@ -151,7 +142,7 @@ export type SuggestSubstitutionsOutput = z.infer<
 export const InstructionStepSchema = z.object({
     step: z.number().describe('The step number.'),
     text: z.string().describe('The text of the instruction.'),
-    image: GenerateRecipeStepImageOutputSchema.optional(),
+    image: GenerateImageOutputSchema.optional(),
 });
 export type InstructionStep = z.infer<typeof InstructionStepSchema>;
 
@@ -174,9 +165,7 @@ export const Recipe = z.object({
   }).describe('The nutritional information for the recipe.'),
   estimatedCost: z.number().optional().describe('The estimated cost of the ingredients for this recipe.'),
   rationale: z.string().optional().describe("A brief explanation for why this recipe was suggested."),
-  audio: GenerateRecipeAudioOutputSchema.optional(),
-  video: GenerateRecipeVideoOutputSchema.optional(),
-  mediaPromise: z.any().optional(),
+  coverImage: GenerateImageOutputSchema.optional().describe("A single, beautiful cover image for the recipe card."),
 });
 export type Recipe = z.infer<typeof Recipe>;
 
@@ -432,20 +421,6 @@ export type InventRecipeInput = z.infer<typeof InventRecipeInputSchema>;
 export const InventRecipeOutputSchema = Recipe.describe('A new, invented recipe based on the provided ingredients.');
 export type InventRecipeOutput = z.infer<typeof InventRecipeOutputSchema>;
 
-// Schemas for image-generator.ts
-export const GenerateImageInputSchema = z.object({
-  prompt: z.string().describe('A text prompt to generate an image from.'),
-});
-export type GenerateImageInput = z.infer<typeof GenerateImageInputSchema>;
-
-export const GenerateImageOutputSchema = z.object({
-  imageDataUri: z
-    .string()
-    .describe(
-      "The generated image as a data URI. Expected format: 'data:image/png;base64,<encoded_data>'."
-    ),
-});
-export type GenerateImageOutput = z.infer<typeof GenerateImageOutputSchema>;
 
 // Schemas for deduct-ingredients.ts
 const InventoryItemRefSchema = z.object({
@@ -472,3 +447,9 @@ export const DeductIngredientsOutputSchema = z.object({
   updatedItems: z.array(UpdatedInventoryItemSchema).describe("A list of inventory items with their new quantities."),
 });
 export type DeductIngredientsOutput = z.infer<typeof DeductIngredientsOutputSchema>;
+
+// Schemas for generate-recipe-media.ts
+export const GenerateRecipeMediaInputSchema = z.object({
+  recipe: Recipe.describe('The text-only recipe object to generate media for.'),
+});
+export type GenerateRecipeMediaInput = z.infer<typeof GenerateRecipeMediaInputSchema>;

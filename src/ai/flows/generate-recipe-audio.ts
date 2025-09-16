@@ -47,7 +47,7 @@ const generateRecipeAudioFlow = ai.defineFlow(
     outputSchema: GenerateRecipeAudioOutputSchema,
   },
   async ({instructions}) => {
-    const { media, finishReason, "custom": customError } = await ai.generate({
+    const { media, finishReason, custom: customError } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
       config: {
         responseModalities: ['AUDIO'],
@@ -63,9 +63,15 @@ const generateRecipeAudioFlow = ai.defineFlow(
     if (finishReason !== 'success' || !media) {
       const errorMessage = (customError as any)?.message || 'No media was generated.';
       console.error('Audio generation failed.', {finishReason, error: errorMessage});
-      // Instead of throwing, we now catch the error and re-throw with a more specific message
-      // which will be caught by the UI and displayed in a toast.
-      throw new Error(`Audio generation failed: ${errorMessage}`);
+      // Instead of throwing the raw error, create a new, simpler error object.
+      // This ensures that only the clean message is sent to the client.
+      let displayMessage = 'The AI could not generate audio at this time.';
+      if (errorMessage.includes('429')) {
+        displayMessage = 'Too Many Requests. The free daily quota for audio generation has been exceeded.';
+      } else if (errorMessage.includes('503')) {
+          displayMessage = 'The audio generation service is currently overloaded. Please try again in a moment.';
+      }
+      throw new Error(displayMessage);
     }
 
     const audioBuffer = Buffer.from(

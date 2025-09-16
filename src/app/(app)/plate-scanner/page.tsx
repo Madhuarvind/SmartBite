@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
+import { useState, useRef, useEffect, ChangeEvent, DragEvent, FormEvent } from "react";
 import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Camera, Loader, Upload, Sparkles, ChefHat, CheckCircle, Music, Video, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle } from "lucide-react";
+import { Camera, Loader, Upload, Sparkles, ChefHat, CheckCircle, Music, Video, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Film } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzePlate } from "@/ai/flows/analyze-plate";
 import { findRecipeFromMeal } from "@/ai/flows/find-recipe-from-meal";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { deductIngredients } from "@/ai/flows/deduct-ingredients";
+import { generateRecipeAudio } from "@/ai/flows/generate-recipe-audio";
+import { generateRecipeVideo } from "@/ai/flows/generate-recipe-video";
 import { AnalyzePlateOutput, Recipe, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput, SubstitutionSuggestion, RecipeIngredient, InstructionStep } from "@/ai/schemas";
 import { cn } from "@/lib/utils";
 import { auth, db } from "@/lib/firebase";
@@ -63,6 +65,8 @@ export default function PlateScannerPage() {
   const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
   const [servings, setServings] = useState(2);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
@@ -430,6 +434,34 @@ export default function PlateScannerPage() {
     }
   }
 
+  const handleGenerateAudio = async () => {
+    if (!recipeInModal) return;
+    setIsGeneratingAudio(true);
+    try {
+      const result = await generateRecipeAudio({ instructions: recipeInModal.instructionSteps.map(s => s.text).join('\n') });
+      setRecipeInModal(prev => prev ? { ...prev, audio: result } : null);
+    } catch (e) {
+      console.error("Error generating audio:", e);
+      toast({ variant: "destructive", title: "Audio Generation Failed" });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!recipeInModal) return;
+    setIsGeneratingVideo(true);
+    try {
+      const result = await generateRecipeVideo({ recipeName: recipeInModal.name });
+      setRecipeInModal(prev => prev ? { ...prev, video: result } : null);
+    } catch (e) {
+      console.error("Error generating video:", e);
+      toast({ variant: "destructive", title: "Video Generation Failed", description: "The AI couldn't create a video at this time. This can happen under heavy load." });
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
+
 
   return (
     <>
@@ -591,27 +623,6 @@ export default function PlateScannerPage() {
                         )}
                         
                         <div>
-                           <h3 className="font-bold text-lg mb-2">Full Recipe Video</h3>
-                           {recipeInModal.video?.videoDataUri ? (
-                              <video
-                                src={recipeInModal.video.videoDataUri}
-                                controls
-                                className="w-full aspect-video rounded-lg bg-black"
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                              />
-                            ) : (
-                              <div className="w-full aspect-video bg-secondary flex flex-col items-center justify-center text-muted-foreground p-4 text-center rounded-lg">
-                                  <Loader className="w-10 h-10 mb-2 animate-spin text-primary"/>
-                                  <p className="text-sm font-medium">Preparing your video...</p>
-                                  <p className="text-xs">This can take a moment, especially for new recipes.</p>
-                              </div>
-                            )}
-                        </div>
-
-                        <div>
                             <h3 className="font-bold text-lg mb-2">Ingredients</h3>
                             <Table>
                                 <TableHeader>
@@ -676,8 +687,28 @@ export default function PlateScannerPage() {
                                 {recipeInModal.audio?.audioDataUri ? (
                                     <audio controls src={recipeInModal.audio.audioDataUri} className="w-full" />
                                 ) : (
-                                    <div className="flex items-center justify-center text-muted-foreground text-sm">
-                                        <Loader className="mr-2 animate-spin"/> Loading audio...
+                                    <Button className="w-full" onClick={handleGenerateAudio} disabled={isGeneratingAudio}>
+                                        {isGeneratingAudio ? <Loader className="mr-2 animate-spin"/> : <Music className="mr-2" />}
+                                        Generate Audio
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-secondary/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-lg"><Video className="w-5 h-5 mr-2 text-primary"/> Recipe Video</CardTitle>
+                                <CardDescription>A cinematic look at the finished dish.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {recipeInModal.video?.videoDataUri ? (
+                                    <video controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
+                                ) : (
+                                    <div className="text-center space-y-2">
+                                        <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>
+                                        <Button className="w-full" onClick={handleGenerateVideo} disabled={isGeneratingVideo}>
+                                            {isGeneratingVideo ? <Loader className="mr-2 animate-spin"/> : <Film className="mr-2" />}
+                                            Generate Video
+                                        </Button>
                                     </div>
                                 )}
                             </CardContent>
@@ -813,7 +844,3 @@ export default function PlateScannerPage() {
     </>
   );
 }
-
-    
-
-    

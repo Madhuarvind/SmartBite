@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, FormEvent } from "react";
 import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { deductIngredients } from "@/ai/flows/deduct-ingredients";
+import { generateRecipeAudio } from "@/ai/flows/generate-recipe-audio";
+import { generateRecipeVideo } from "@/ai/flows/generate-recipe-video";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -63,6 +65,8 @@ export default function RecipesPage() {
   const [servings, setServings] = useState(2);
   const [inventoryCheckResults, setInventoryCheckResults] = useState<InventoryCheckResult[]>([]);
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   
   // Mood-based states
   const [mood, setMood] = useState("");
@@ -469,6 +473,34 @@ export default function RecipesPage() {
       setInventoryCheckResults(results);
       setIsCheckingInventory(false);
   }
+
+  const handleGenerateAudio = async () => {
+    if (!recipeInModal) return;
+    setIsGeneratingAudio(true);
+    try {
+      const result = await generateRecipeAudio({ instructions: recipeInModal.instructionSteps.map(s => s.text).join('\n') });
+      setRecipeInModal(prev => prev ? { ...prev, audio: result } : null);
+    } catch (e) {
+      console.error("Error generating audio:", e);
+      toast({ variant: "destructive", title: "Audio Generation Failed" });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!recipeInModal) return;
+    setIsGeneratingVideo(true);
+    try {
+      const result = await generateRecipeVideo({ recipeName: recipeInModal.name });
+      setRecipeInModal(prev => prev ? { ...prev, video: result } : null);
+    } catch (e) {
+      console.error("Error generating video:", e);
+      toast({ variant: "destructive", title: "Video Generation Failed", description: "The AI couldn't create a video at this time. This can happen under heavy load." });
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
   
   const handleIngredientSelection = (ingredient: string, checked: boolean | 'indeterminate') => {
     setSelectedIngredients(prev => 
@@ -750,6 +782,41 @@ export default function RecipesPage() {
                                 </Button>
                             </CardContent>
                         </Card>
+                        <Card className="bg-secondary/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-lg"><Music className="w-5 h-5 mr-2 text-primary"/> Audio Guide</CardTitle>
+                                <CardDescription>Listen to the recipe instructions.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {recipeInModal.audio?.audioDataUri ? (
+                                    <audio controls src={recipeInModal.audio.audioDataUri} className="w-full" />
+                                ) : (
+                                    <Button className="w-full" onClick={handleGenerateAudio} disabled={isGeneratingAudio}>
+                                        {isGeneratingAudio ? <Loader className="mr-2 animate-spin"/> : <Music className="mr-2" />}
+                                        Generate Audio
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-secondary/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-lg"><Video className="w-5 h-5 mr-2 text-primary"/> Recipe Video</CardTitle>
+                                <CardDescription>A cinematic look at the finished dish.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {recipeInModal.video?.videoDataUri ? (
+                                    <video controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
+                                ) : (
+                                    <div className="text-center space-y-2">
+                                        <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>
+                                        <Button className="w-full" onClick={handleGenerateVideo} disabled={isGeneratingVideo}>
+                                            {isGeneratingVideo ? <Loader className="mr-2 animate-spin"/> : <Film className="mr-2" />}
+                                            Generate Video
+                                        </Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                         
                         <Card className="bg-secondary/50">
                             <CardHeader>
@@ -881,5 +948,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    

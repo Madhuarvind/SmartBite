@@ -283,8 +283,9 @@ export default function PlannerPage() {
                         placeholder="Add item manually..."
                         value={newShoppingItemName}
                         onChange={(e) => setNewShoppingItemName(e.target.value)}
+                        suppressHydrationWarning
                     />
-                    <Button type="submit" size="icon" variant="outline"><PlusCircle /></Button>
+                    <Button type="submit" size="icon" variant="outline" suppressHydrationWarning><PlusCircle /></Button>
                 </form>
 
                 <div className="h-48 overflow-y-auto space-y-2 pr-2">

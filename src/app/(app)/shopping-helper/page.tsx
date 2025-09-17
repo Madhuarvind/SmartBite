@@ -5,16 +5,21 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import Image from 'next/image';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Camera, Loader, Sparkles, X, Bot, SendHorizonal } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Camera, Loader, Sparkles, X, Bot, SendHorizonal, PlusCircle, Trash2, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, addDoc, onSnapshot, query, writeBatch, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import type { User as FirebaseUser } from 'firebase/auth';
 import { identifyAndCheckItem } from '@/ai/flows/identify-and-check-item';
 import { askPantryAssistant } from '@/ai/flows/ask-pantry-assistant';
+import type { ShoppingListItem } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 type ChatMessage = {
     role: 'user' | 'assistant';
@@ -31,13 +36,41 @@ export default function ShoppingHelperPage() {
   const { toast } = useToast();
   const [stream, setStream] = useState<MediaStream | null>(null);
 
+  // Chat state
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatQuery, setChatQuery] = useState("");
   const [isAnswering, setIsAnswering] = useState(false);
+  
+  // Shopping list state
+  const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
+  const [isShoppingListLoading, setIsShoppingListLoading] = useState(true);
+  const [newShoppingItemName, setNewShoppingItemName] = useState("");
+  const [isAddToInventoryDialogOpen, setIsAddToInventoryDialogOpen] = useState(false);
+  const [checkedItems, setCheckedItems] = useState<ShoppingListItem[]>([]);
+  const [isAddingToInventory, setIsAddingToInventory] = useState(false);
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
+       if (currentUser) {
+        // --- Shopping List Listener ---
+        const shoppingListQuery = query(collection(db, "users", currentUser.uid, "shopping_list"));
+        const unsubscribeShoppingList = onSnapshot(shoppingListQuery, (snapshot) => {
+          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShoppingListItem[];
+          setShoppingList(items);
+          setIsShoppingListLoading(false);
+        });
+
+        return () => {
+          unsubscribeShoppingList();
+        };
+
+      } else {
+        setUser(null);
+        setShoppingList([]);
+        setIsShoppingListLoading(false);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -158,22 +191,163 @@ export default function ShoppingHelperPage() {
     }
   };
 
+  const handleAddShoppingItem = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!user || !newShoppingItemName.trim()) {
+      toast({ variant: "destructive", title: "Item name cannot be empty." });
+      return;
+    }
+    try {
+      await addDoc(collection(db, "users", user.uid, "shopping_list"), {
+        name: newShoppingItemName,
+        quantity: "1",
+        checked: false,
+      });
+      setNewShoppingItemName("");
+    } catch (error) {
+      console.error("Error adding shopping list item:", error);
+      toast({ variant: "destructive", title: "Failed to add item." });
+    }
+  };
+
+  const handleToggleChecked = async (item: ShoppingListItem) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, "users", user.uid, "shopping_list", item.id), {
+        checked: !item.checked,
+      });
+    } catch (error) {
+      console.error("Error updating item:", error);
+      toast({ variant: "destructive", title: "Failed to update item." });
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "shopping_list", itemId));
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast({ variant: "destructive", title: "Failed to delete item." });
+    }
+  };
+
+  const handleMoveCheckedToInventory = () => {
+      const itemsToMove = shoppingList.filter(item => item.checked);
+      if (itemsToMove.length === 0) {
+          toast({ variant: "destructive", title: "No items selected", description: "Check some items to move them to your inventory."});
+          return;
+      }
+      setCheckedItems(itemsToMove);
+      setIsAddToInventoryDialogOpen(true);
+  }
+
+  const confirmMoveToInventory = async () => {
+    if (!user || checkedItems.length === 0) return;
+    setIsAddingToInventory(true);
+    
+    const inventoryBatch = writeBatch(db);
+    const shoppingListBatch = writeBatch(db);
+    const inventoryRef = collection(db, "users", user.uid, "inventory");
+    const today = new Date().toISOString().split('T')[0];
+
+    checkedItems.forEach(item => {
+        const newInventoryItemRef = doc(inventoryRef);
+        inventoryBatch.set(newInventoryItemRef, {
+            name: item.name,
+            quantity: item.quantity,
+            expiry: 'N/A',
+            purchaseDate: today,
+            price: 0
+        });
+        
+        const shoppingListItemRef = doc(db, "users", user.uid, "shopping_list", item.id);
+        shoppingListBatch.delete(shoppingListItemRef);
+    });
+    
+    try {
+        await inventoryBatch.commit();
+        await shoppingListBatch.commit();
+        toast({
+            title: "Inventory Updated!",
+            description: `${checkedItems.length} items moved from your shopping list to your inventory.`
+        });
+    } catch (error) {
+        console.error("Error moving items to inventory:", error);
+        toast({ variant: "destructive", title: "Action Failed", description: "Could not move items to inventory." });
+    } finally {
+        setIsAddingToInventory(false);
+        setIsAddToInventoryDialogOpen(false);
+        setCheckedItems([]);
+    }
+  };
+
   return (
+    <>
     <div className="flex flex-col gap-8 animate-fade-in">
       <PageHeader title="Shopping Helper" />
       <Card className="animate-fade-in-slide-up">
         <CardHeader>
           <CardTitle>Check Before You Buy</CardTitle>
           <CardDescription>
-            Use our AI tools to check your pantry on the go. Use the Smart Lens to scan items with your camera, or ask the Pantry Chat assistant a question.
+            Use our AI tools to check your pantry on the go. Scan items with the Smart Lens, manage your shopping list, or ask the Pantry Chat assistant a question.
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <Tabs defaultValue="lens">
-                <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="list">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="list">Shopping List</TabsTrigger>
                     <TabsTrigger value="lens">Smart Lens</TabsTrigger>
                     <TabsTrigger value="chat">Pantry Chat</TabsTrigger>
                 </TabsList>
+                 <TabsContent value="list" className="mt-4">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Your Shopping List</CardTitle>
+                            <CardDescription>Items from your meal plan and anything you've added manually.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <form onSubmit={handleAddShoppingItem} className="flex gap-2">
+                                <Input 
+                                    placeholder="Add item manually..."
+                                    value={newShoppingItemName}
+                                    onChange={(e) => setNewShoppingItemName(e.target.value)}
+                                    suppressHydrationWarning
+                                />
+                                <Button type="submit" size="icon" variant="outline" suppressHydrationWarning><PlusCircle /></Button>
+                            </form>
+
+                            <div className="h-64 overflow-y-auto space-y-2 pr-2">
+                              {isShoppingListLoading ? (
+                                 <div className="flex justify-center items-center h-full"><Loader className="animate-spin" /></div>
+                              ) : shoppingList.length > 0 ? (
+                                shoppingList.map((item) => (
+                                  <div key={item.id} className={`flex items-center gap-2 p-2 rounded-md ${item.checked ? 'bg-muted/50' : ''}`}>
+                                      <Checkbox
+                                        id={`item-${item.id}`}
+                                        checked={item.checked}
+                                        onCheckedChange={() => handleToggleChecked(item)}
+                                      />
+                                      <Label htmlFor={`item-${item.id}`} className={`flex-1 ${item.checked ? 'line-through text-muted-foreground' : ''}`}>
+                                        {item.name} <span className="text-xs text-muted-foreground">({item.quantity})</span>
+                                      </Label>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteItem(item.id)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-center text-muted-foreground py-10">Your shopping list is empty.</div>
+                              )}
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                             <Button className="w-full" onClick={handleMoveCheckedToInventory} disabled={shoppingList.filter(i => i.checked).length === 0}>
+                                <ShoppingCart className="mr-2"/> Add Purchased to Pantry
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </TabsContent>
                 <TabsContent value="lens" className="mt-4">
                     <div className="flex flex-col items-center gap-4">
                         <div className="relative w-full max-w-lg aspect-[4/3] border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden">
@@ -267,5 +441,27 @@ export default function ShoppingHelperPage() {
         </CardContent>
       </Card>
     </div>
+    
+    <Dialog open={isAddToInventoryDialogOpen} onOpenChange={setIsAddToInventoryDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Move Items to Inventory?</DialogTitle>
+                <DialogDescription>
+                    You are about to move {checkedItems.length} item(s) to your main inventory. This will remove them from the shopping list.
+                </DialogDescription>
+            </DialogHeader>
+            <ul className="list-disc pl-5 space-y-1 max-h-48 overflow-y-auto">
+                {checkedItems.map(item => <li key={item.id}>{item.name} ({item.quantity})</li>)}
+            </ul>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddToInventoryDialogOpen(false)} disabled={isAddingToInventory}>Cancel</Button>
+                <Button onClick={confirmMoveToInventory} disabled={isAddingToInventory}>
+                    {isAddingToInventory ? <Loader className="animate-spin mr-2"/> : null}
+                    Confirm & Move
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

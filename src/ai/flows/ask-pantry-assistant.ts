@@ -63,6 +63,10 @@ Keep your answers concise and helpful.`,
       },
     });
 
+    if (llmResponse.text === '') {
+        throw new Error('The AI assistant did not return a response.');
+    }
+    
     return {
       answer: llmResponse.text,
     };

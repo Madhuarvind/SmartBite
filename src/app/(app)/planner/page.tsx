@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -10,12 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { generateMealPlan } from "@/ai/flows/generate-meal-plan";
 import type { GenerateMealPlanOutput } from "@/ai/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, onSnapshot, query, writeBatch, doc } from "firebase/firestore";
 import type { User } from 'firebase/auth';
 import type { InventoryItem, PantryItem } from "@/lib/types";
 
@@ -60,6 +60,10 @@ export default function PlannerPage() {
   }, []);
 
   const handleGeneratePlan = async () => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'You must be logged in to generate a plan.' });
+        return;
+    }
     setIsLoading(true);
     setMealPlan(null);
     setShoppingList([]);
@@ -76,7 +80,25 @@ export default function PlannerPage() {
         dietaryRestrictions: restrictionsArray,
       });
       setMealPlan(result.mealPlan);
-      setShoppingList(result.shoppingList || []);
+      
+      if (result.shoppingList && result.shoppingList.length > 0) {
+        setShoppingList(result.shoppingList);
+        
+        // Automatically add to Firestore shopping list
+        const batch = writeBatch(db);
+        const shoppingListRef = collection(db, "users", user.uid, "shopping_list");
+        result.shoppingList.forEach(itemName => {
+            const docRef = doc(shoppingListRef);
+            batch.set(docRef, { name: itemName, quantity: '1', checked: false });
+        });
+        await batch.commit();
+
+        toast({
+            title: "Shopping List Updated!",
+            description: `${result.shoppingList.length} items were added to your shopping list.`,
+        });
+      }
+
     } catch (error) {
       console.error("Error generating meal plan:", error);
       toast({
@@ -96,7 +118,7 @@ export default function PlannerPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center"><Sparkles className="w-6 h-6 mr-2 text-primary" /> AI Meal Plan Generator</CardTitle>
-          <CardDescription>Select your goals and let our AI create a personalized 7-day meal plan and shopping list for you.</CardDescription>
+          <CardDescription>Select your goals and let our AI create a personalized 7-day meal plan and an automatic shopping list for missing items.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
             <div>
@@ -129,25 +151,11 @@ export default function PlannerPage() {
                 {isLoading ? <><Loader className="mr-2 animate-spin"/> Generating...</> : "Generate Plan"}
             </Button>
             {shoppingList.length > 0 && !isLoading && (
-                 <Dialog>
-                    <DialogTrigger asChild>
-                         <Button variant="outline" className="w-full sm:w-auto">
-                            <ShoppingCart className="mr-2"/> View Shopping List ({shoppingList.length} items)
-                         </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Your Shopping List</DialogTitle>
-                            <DialogDescription>Here are the ingredients you need to buy for this week's meal plan.</DialogDescription>
-                        </DialogHeader>
-                        <ul className="list-disc pl-5 mt-4 space-y-2 max-h-[60vh] overflow-y-auto">
-                            {shoppingList.map(item => <li key={item}>{item}</li>)}
-                        </ul>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => (document.querySelector('[aria-label="Close"]') as HTMLElement)?.click()}>Close</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                 </Dialog>
+                 <Button variant="outline" className="w-full sm:w-auto" asChild>
+                    <Link href="/shopping-list">
+                        <ShoppingCart className="mr-2"/> View Shopping List ({shoppingList.length} items)
+                    </Link>
+                 </Button>
             )}
         </CardFooter>
       </Card>

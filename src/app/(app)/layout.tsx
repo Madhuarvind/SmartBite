@@ -14,7 +14,6 @@ import {
   Utensils,
   LogOut,
   ReceiptText,
-  ShoppingCart,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -38,7 +37,6 @@ const menuItems = [
   { href: "/plate-scanner", label: "Plate Scanner", icon: Utensils },
   { href: "/recipes", label: "Recipes", icon: ChefHat },
   { href: "/planner", label: "Meal Planner", icon: Calendar },
-  { href: "/shopping-list", label: "Shopping List", icon: ShoppingCart },
   { href: "/health", label: "Health & Impact", icon: HeartPulse },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -52,7 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-10">
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="shrink-0">
+            <Button variant="outline" size="icon" className="shrink-0" suppressHydrationWarning>
               <PanelLeft className="h-5 w-5" />
               <span className="sr-only">Toggle navigation menu</span>
             </Button>
@@ -107,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex-1"></div>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="icon" className="rounded-full">
+                    <Button variant="secondary" size="icon" className="rounded-full" suppressHydrationWarning>
                         <CircleUser className="h-5 w-5" />
                         <span className="sr-only">Toggle user menu</span>
                     </Button>

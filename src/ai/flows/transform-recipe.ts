@@ -45,7 +45,7 @@ You must deeply analyze the transformation request and modify the recipe accordi
 
 After transforming, you must recalculate the nutritional information for the new version based on the modified ingredients.
 
-For each instruction step, provide a 'step' number and the 'text' for the instruction. Do not include images yet.
+For each instruction step, provide a 'step' number and the 'text' for the instruction. Do not include images, audio, or video yet.
 
 Return the entire modified recipe in the specified JSON format.
 
@@ -68,8 +68,7 @@ Generate a new, transformed recipe based on this request.
     const mediaPromise = (async () => {
        // Prioritize the first image to make the UI feel faster
       const firstImageResult = await generateRecipeStepImage({
-        instruction: recipe.instructionSteps[0].text,
-        recipeName: recipe.name,
+        prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipe.name}": ${recipe.instructionSteps[0].text}. Focus on the action described.`,
       }).catch(e => {
         console.error(`First image generation failed for ${recipe.name}:`, e);
         return undefined;
@@ -88,8 +87,7 @@ Generate a new, transformed recipe based on this request.
           Promise.allSettled(
             recipe.instructionSteps.slice(1).map(step =>
               generateRecipeStepImage({
-                instruction: step.text,
-                recipeName: recipe.name,
+                prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipe.name}": ${step.text}. Focus on the action described.`,
               })
             )
           ),

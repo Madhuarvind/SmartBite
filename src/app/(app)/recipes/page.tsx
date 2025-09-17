@@ -314,8 +314,7 @@ export default function RecipesPage() {
   };
 
 
-  const handleViewRecipe = (recipe: Recipe) => {
-    // Open the modal immediately with the text content and cover image
+  const openRecipeModal = (recipe: Recipe) => {
     setRecipeInModal(recipe);
     setIsModalOpen(true);
     setSubstitutions([]);
@@ -325,23 +324,33 @@ export default function RecipesPage() {
     setIsCheckingInventory(false);
     setServings(2);
 
-    // Call the media generation flow in the background
-    generateRecipeMedia({ recipe }).then(mediaResult => {
-      // Update the recipe in the modal with the new media
-      setRecipeInModal(currentRecipe => {
-        if (currentRecipe && currentRecipe.name === mediaResult.name) {
-          return mediaResult;
-        }
-        return currentRecipe; // Return the old one if the modal has changed
+    if (recipe.mediaPromise) {
+      (recipe.mediaPromise as Promise<{ 
+          instructionSteps: InstructionStep[],
+          mediaPromise: Promise<{
+            instructionSteps: InstructionStep[], 
+            audio?: GenerateRecipeAudioOutput, 
+            video?: GenerateRecipeVideoOutput 
+          }>
+      }>).then(initialMedia => {
+          // Set the first image(s)
+          setRecipeInModal(currentRecipe => {
+              if (currentRecipe && currentRecipe.name === recipe.name) {
+                  return { ...currentRecipe, instructionSteps: initialMedia.instructionSteps };
+              }
+              return currentRecipe;
+          });
+          // Wait for the rest of the media
+          initialMedia.mediaPromise.then(fullMedia => {
+              setRecipeInModal(currentRecipe => {
+                if (currentRecipe && currentRecipe.name === recipe.name) {
+                    return { ...currentRecipe, ...fullMedia };
+                }
+                return currentRecipe;
+              });
+          });
       });
-    }).catch(error => {
-      console.error("Error generating recipe media:", error);
-      toast({
-        variant: "destructive",
-        title: "Media Generation Failed",
-        description: "Could not load all images for this recipe."
-      });
-    });
+    }
   };
   
   const handleFindSubstitutions = async () => {
@@ -385,7 +394,7 @@ export default function RecipesPage() {
         transformation: transformationRequest,
       });
       // Replace the recipe in the modal with the new transformed one
-      handleViewRecipe(result); // This re-initializes the modal with the new recipe and its media
+      openRecipeModal(result); // This re-initializes the modal with the new recipe and its media
       toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
     } catch (error) {
       console.error("Error transforming recipe:", error);
@@ -695,7 +704,7 @@ export default function RecipesPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
-                  <Button className="w-full" onClick={() => handleViewRecipe(recipe)}>
+                  <Button className="w-full" onClick={() => openRecipeModal(recipe)}>
                     <ChefHat className="mr-2"/> View Full Recipe
                   </Button>
                 </CardFooter>

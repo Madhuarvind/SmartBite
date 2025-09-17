@@ -44,7 +44,7 @@ For each recipe, you MUST provide:
 1.  A unique, appealing name.
 2.  A full list of ingredients with specific quantities, primarily using the user's available ingredients.
 3.  A detailed nutritional analysis per serving (calories, protein, carbs, fat).
-4.  Detailed, step-by-step instructions. For each step, provide a 'step' number and the 'text' for the instruction. Do not include images yet.
+4.  Detailed, step-by-step instructions. For each step, provide a 'step' number and the 'text' for the instruction. Do not include images, audio, or video yet.
 5.  A brief, one-sentence rationale for why you are suggesting this specific recipe to the user (e.g., "Since you recently bought avocados, this quick guacamole recipe might be perfect," or "Based on your love for Italian food, here's a classic carbonara.").
 
 User's Available Ingredients:

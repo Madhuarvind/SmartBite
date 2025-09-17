@@ -42,6 +42,7 @@ const generateRecipeMediaFlow = ai.defineFlow(
 
     const instructionStepsWithImages = await Promise.all(instructionImagePromises);
 
+    // This flow is now simplified to only handle step images, as audio/video are handled elsewhere.
     return {
       ...recipe,
       instructionSteps: instructionStepsWithImages,

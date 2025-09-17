@@ -613,7 +613,7 @@ export default function PlateScannerPage() {
                 ) : (
                 <div className="grid md:grid-cols-3 gap-6 flex-1 overflow-hidden">
                     <div className="md:col-span-2 space-y-4 overflow-y-auto pr-4">
-                        <Card className="bg-secondary/50">
+                         <Card className="bg-secondary/50">
                             <CardHeader>
                                 <CardTitle className="flex items-center text-lg"><Video className="w-5 h-5 mr-2 text-primary"/> Recipe Video</CardTitle>
                                 <CardDescription>A cinematic look at the finished dish.</CardDescription>

@@ -52,7 +52,7 @@ const deductIngredientsFlow = ai.defineFlow(
   {
     name: 'deductIngredientsFlow',
     inputSchema: DeductIngredientsInputSchema,
-    outputSchema: DeductIngredientsOutputSchema,
+    outputSchema: DeduuctIngredientsOutputSchema,
   },
   async (input) => {
     const { output } = await prompt(input);

@@ -40,7 +40,7 @@ const menuItems = [
   { href: "/planner", label: "Meal Planner", icon: Calendar },
   { href: "/shopping-helper", label: "Shopping Helper", icon: ShoppingCart },
   { href: "/health", label: "Health & Impact", icon: HeartPulse },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/financial-advisor", label: "Financial Advisor", icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

@@ -59,7 +59,7 @@ For the new recipe, you MUST provide:
 1.  A unique, appealing name.
 2.  A full list of ingredients with specific quantities, using only the provided ingredients.
 3.  A detailed nutritional analysis per serving (calories, protein, carbs, fat).
-4.  Detailed, step-by-step instructions. For each step, provide a 'step' number and the 'text' for the instruction. Do not include images yet.
+4.  Detailed, step-by-step instructions. For each step, provide a 'step' number and the 'text' for the instruction. Do not include images, audio, or video yet.
 
 Do not include the estimatedCost field in your JSON output. This will be calculated separately.
 
@@ -85,8 +85,7 @@ Respond in the specified JSON format.
     const mediaPromise = (async () => {
       // Prioritize the first image to make the UI feel faster
       const firstImageResult = await generateRecipeStepImage({
-        instruction: recipeWithCost.instructionSteps[0].text,
-        recipeName: recipeWithCost.name,
+        prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipeWithCost.name}": ${recipeWithCost.instructionSteps[0].text}. Focus on the action described.`,
       }).catch(e => {
         console.error(`First image generation failed for ${recipeWithCost.name}:`, e);
         return undefined;
@@ -105,8 +104,7 @@ Respond in the specified JSON format.
           Promise.allSettled(
             recipeWithCost.instructionSteps.slice(1).map(step =>
               generateRecipeStepImage({
-                instruction: step.text,
-                recipeName: recipeWithCost.name,
+                prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipeWithCost.name}": ${step.text}. Focus on the action described.`,
               })
             )
           ),

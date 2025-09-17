@@ -177,6 +177,9 @@ export const Recipe = z.object({
   estimatedCost: z.number().optional().describe('The estimated cost of the ingredients for this recipe.'),
   rationale: z.string().optional().describe("A brief explanation for why this recipe was suggested."),
   coverImage: GenerateImageOutputSchema.optional().describe("A single, beautiful cover image for the recipe card."),
+  audio: GenerateRecipeAudioOutputSchema.optional().describe("The audio narration of the recipe instructions."),
+  video: GenerateRecipeVideoOutputSchema.optional().describe("A short video summary of the finished dish."),
+  mediaPromise: z.any().optional().describe("A promise that resolves with the generated media.")
 });
 export type Recipe = z.infer<typeof Recipe>;
 

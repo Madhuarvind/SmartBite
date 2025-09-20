@@ -47,42 +47,45 @@ const generateRecipeAudioFlow = ai.defineFlow(
     outputSchema: GenerateRecipeAudioOutputSchema,
   },
   async ({instructions}) => {
-    const { media, finishReason, custom: customError } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+    try {
+      const { media, finishReason, custom: customError } = await ai.generate({
+        model: googleAI.model('gemini-2.5-flash-preview-tts'),
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            },
           },
         },
-      },
-      prompt: instructions,
-    });
-    
-    if (finishReason !== 'success' || !media) {
-      const errorMessage = (customError as any)?.message || 'No media was generated.';
-      console.error('Audio generation failed.', {finishReason, error: errorMessage});
-      // Instead of throwing the raw error, create a new, simpler error object.
-      // This ensures that only the clean message is sent to the client.
-      let displayMessage = 'The AI could not generate audio at this time.';
-      if (errorMessage.includes('429')) {
-        displayMessage = 'Too Many Requests. The free daily quota for audio generation has been exceeded.';
-      } else if (errorMessage.includes('503')) {
-          displayMessage = 'The audio generation service is currently overloaded. Please try again in a moment.';
+        prompt: instructions,
+      });
+      
+      if (finishReason !== 'success' || !media) {
+        const errorMessage = (customError as any)?.message || 'No media was generated.';
+        console.error('Audio generation failed.', {finishReason, error: errorMessage});
+        throw new Error(errorMessage);
       }
-      throw new Error(displayMessage);
+
+      const audioBuffer = Buffer.from(
+        media.url.substring(media.url.indexOf(',') + 1),
+        'base64'
+      );
+      
+      const wavBase64 = await toWav(audioBuffer);
+
+      return {
+        audioDataUri: `data:audio/wav;base64,${wavBase64}`,
+      };
+    } catch (e: any) {
+        let displayMessage = "The AI could not generate audio at this time.";
+        if (e.message?.includes('429')) {
+            displayMessage = 'Too Many Requests. The free daily quota for audio generation has been exceeded.';
+        } else if (e.message?.includes('503')) {
+            displayMessage = 'The audio generation service is currently overloaded. Please try again in a moment.';
+        }
+        console.error("Audio generation flow error:", e.message);
+        throw new Error(displayMessage);
     }
-
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    
-    const wavBase64 = await toWav(audioBuffer);
-
-    return {
-      audioDataUri: `data:audio/wav;base64,${wavBase64}`,
-    };
   }
 );

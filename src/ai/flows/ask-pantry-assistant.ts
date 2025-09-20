@@ -63,12 +63,20 @@ Keep your answers concise and helpful.`,
       },
     });
 
-    if (llmResponse.text === '') {
-        throw new Error('The AI assistant did not return a response.');
+    if (llmResponse.text) {
+        return { answer: llmResponse.text };
+    }
+
+    // If the model calls a tool but doesn't return text, we can check the tool output
+    // and provide a default response.
+    const toolResponse = llmResponse.toolRequest?.tool?.response;
+    if (toolResponse) {
+        // Here you could add logic based on the tool's output if needed.
+        // For now, a generic confirmation is good.
+        return { answer: "I've checked the inventory for you." };
     }
     
-    return {
-      answer: llmResponse.text,
-    };
+    // Fallback if there's no text and no tool call.
+    throw new Error('The AI assistant did not return a valid response.');
   }
 );

@@ -170,6 +170,7 @@ export default function BillScannerPage() {
         const inventoryRef = collection(db, "users", user.uid, "inventory");
         const today = new Date().toISOString().split('T')[0];
         
+        // Add each scanned item to the user's main inventory
         scannedItems.forEach(item => {
             const docRef = doc(inventoryRef);
             batch.set(docRef, { 
@@ -181,10 +182,21 @@ export default function BillScannerPage() {
             });
         });
 
-        // Log the scanned bill number to prevent duplicates
+        // Log the complete scanned bill for verification/history
         if (billNo) {
             const billDocRef = doc(collection(db, "users", user.uid, "scanned_bills"));
-            batch.set(billDocRef, { billNo: billNo, scannedAt: Timestamp.now() });
+            const totalAmount = scannedItems.reduce((sum, item) => sum + (item.price || 0), 0);
+            
+            batch.set(billDocRef, { 
+                billNo: billNo, 
+                scannedAt: Timestamp.now(),
+                totalAmount: totalAmount,
+                items: scannedItems.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price || 0
+                }))
+            });
         }
 
         await batch.commit();

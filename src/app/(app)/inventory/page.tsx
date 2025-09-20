@@ -800,3 +800,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+

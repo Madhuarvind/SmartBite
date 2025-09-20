@@ -72,9 +72,9 @@ const generateRecipeAudioFlow = ai.defineFlow(
         
         console.error('Audio generation failed.', {finishReason, error: errorMessage});
         if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit')) {
-             errorMessage = 'Too Many Requests. The free daily quota for audio generation has been exceeded.';
+             errorMessage = 'Too Many Requests: The free daily quota for audio generation has been exceeded. Please try again later or upgrade your API key.';
         } else if (errorMessage.includes('503')) {
-             errorMessage = 'The audio generation service is currently overloaded. Please try again in a moment.';
+             errorMessage = 'Service Unavailable: The audio generation service is currently overloaded. Please try again in a moment.';
         }
         throw new Error(errorMessage);
       }

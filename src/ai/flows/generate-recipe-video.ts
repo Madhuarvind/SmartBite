@@ -59,8 +59,10 @@ const generateRecipeVideoFlow = ai.defineFlow(
         const error = (result.custom as any)?.error;
         let errorMessage = error?.message || 'Expected the model to return an operation for video generation.';
         console.error('Video generation failed:', errorMessage);
-        if (errorMessage.toLowerCase().includes('rate limit')) {
-          errorMessage = 'Too Many Requests. The free daily quota for video generation has been exceeded.';
+        if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit')) {
+          errorMessage = 'Too Many Requests: The free daily quota for video generation has been exceeded. Please try again later or upgrade your API key.';
+        } else if (errorMessage.includes('503')) {
+            errorMessage = 'Service Unavailable: The video generation service is currently overloaded. Please try again in a moment.';
         }
         throw new Error(errorMessage);
       }
@@ -75,7 +77,7 @@ const generateRecipeVideoFlow = ai.defineFlow(
         let errorMessage = operation.error.message;
         console.error('Video generation operation failed:', errorMessage);
         if (errorMessage.toLowerCase().includes('rate limit')) {
-          errorMessage = 'Too Many Requests. The free daily quota for video generation has been exceeded.';
+          errorMessage = 'Too Many Requests: The free daily quota for video generation has been exceeded. Please try again later or upgrade your API key.';
         }
         throw new Error(`Failed to generate video: ${errorMessage}`);
       }
@@ -95,9 +97,9 @@ const generateRecipeVideoFlow = ai.defineFlow(
     } catch (e: any) {
         let displayMessage = e.message || "The AI couldn't create a video at this time.";
         if (e.message?.includes('429') || e.message.toLowerCase().includes('rate limit')) {
-            displayMessage = 'Too Many Requests. The free daily quota for video generation has been exceeded.';
+            displayMessage = 'Too Many Requests: The free daily quota for video generation has been exceeded. Please try again later or upgrade your API key.';
         } else if (e.message?.includes('503')) {
-            displayMessage = 'The video generation service is currently overloaded. Please try again in a moment.';
+            displayMessage = 'Service Unavailable: The video generation service is currently overloaded. Please try again in a moment.';
         }
         console.error("Video generation flow error:", e.message);
         throw new Error(displayMessage);

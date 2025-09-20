@@ -80,7 +80,8 @@ const predictiveSuggestionsFlow = ai.defineFlow(
           return { ...recipe, coverImage };
         } catch (e) {
           console.error(`Cover image generation failed for ${recipe.name}:`, e);
-          return recipe; // Return recipe without cover image on failure
+          // Ensure a recipe object is always returned, even on image failure
+          return { ...recipe, coverImage: undefined };
         }
       })
     );

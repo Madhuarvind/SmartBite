@@ -57,18 +57,18 @@ const generateRecipeVideoFlow = ai.defineFlow(
 
       if (!operation) {
         const error = (result.custom as any)?.error;
-        let errorMessage = error?.message || 'Expected the model to return an operation for video generation.';
-        console.error('Video generation failed:', errorMessage);
+        let errorMessage = 'Expected the model to return an operation for video generation.';
+        if (error?.message) {
+            errorMessage = error.message;
+        }
+        
+        console.error('Video generation failed to start:', errorMessage);
+        
         if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit')) {
-          errorMessage = 'Too Many Requests: The free daily quota for video generation has been exceeded. Please try again later or upgrade your API key.';
-        } else if (errorMessage.includes('503')) {
-            errorMessage = 'Service Unavailable: The video generation service is currently overloaded. Please try again in a moment.';
+          // Return null for rate limit errors
+          return null;
         }
-        // Instead of throwing, return null for rate limit errors
-        if (errorMessage.toLowerCase().includes('rate limit')) {
-            return null;
-        }
-        throw new Error(errorMessage);
+        throw new Error('Video generation failed to start. The service might be temporarily unavailable.');
       }
       
       // Wait until the operation completes. Note that this may take some time.

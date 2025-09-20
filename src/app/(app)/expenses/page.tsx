@@ -17,6 +17,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "
 import { format, subDays, startOfMonth, endOfMonth, getYear, getMonth, parseISO } from "date-fns";
 import Image from "next/image";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 const chartConfig = {
   amount: {
@@ -283,7 +284,7 @@ export default function ExpensesPage() {
                         {isLoading ? (
                             <div className="flex gap-4"><Skeleton className="h-40 w-32" /><Skeleton className="h-40 w-32" /></div>
                         ) : scannedBills.length > 0 ? (
-                            <ScrollArea>
+                            <ScrollArea className="no-scrollbar">
                                 <div className="flex space-x-4 pb-4">
                                     {scannedBills.map((bill) => (
                                         bill.receiptImage && (

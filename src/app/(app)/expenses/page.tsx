@@ -7,14 +7,16 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wallet, Calendar as CalendarIcon } from "lucide-react";
+import { Wallet, Calendar as CalendarIcon, ReceiptText } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "firebase/auth";
 import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
-import type { InventoryItem } from "@/lib/types";
+import type { InventoryItem, ScannedBill } from "@/lib/types";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { format, subDays, startOfMonth, endOfMonth, getYear, getMonth, parseISO } from "date-fns";
+import Image from "next/image";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const chartConfig = {
   amount: {
@@ -29,6 +31,7 @@ export default function ExpensesPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [purchaseHistory, setPurchaseHistory] = useState<InventoryItem[]>([]);
+  const [scannedBills, setScannedBills] = useState<ScannedBill[]>([]);
   const [filteredData, setFilteredData] = useState<InventoryItem[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   
@@ -60,10 +63,21 @@ export default function ExpensesPage() {
           setPurchaseHistory(history);
           setIsLoading(false);
         });
-        return () => unsubscribeSnapshot();
+        
+        const billsQuery = query(collection(db, "users", currentUser.uid, "scanned_bills"), orderBy("scannedAt", "desc"));
+        const unsubscribeBills = onSnapshot(billsQuery, (snapshot) => {
+            const bills = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as ScannedBill);
+            setScannedBills(bills);
+        });
+
+        return () => {
+            unsubscribeSnapshot();
+            unsubscribeBills();
+        };
       } else {
         setIsLoading(false);
         setPurchaseHistory([]);
+        setScannedBills([]);
       }
     });
 
@@ -259,6 +273,48 @@ export default function ExpensesPage() {
               </CardContent>
             </Card>
           </div>
+
+           <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <ReceiptText className="mr-2" /> Scanned Receipts Gallery
+                </h3>
+                <Card>
+                    <CardContent className="p-4">
+                        {isLoading ? (
+                            <div className="flex gap-4"><Skeleton className="h-40 w-32" /><Skeleton className="h-40 w-32" /></div>
+                        ) : scannedBills.length > 0 ? (
+                            <ScrollArea>
+                                <div className="flex space-x-4 pb-4">
+                                    {scannedBills.map((bill) => (
+                                        bill.receiptImage && (
+                                            <div key={bill.id} className="w-40 flex-shrink-0">
+                                                <Image
+                                                    src={bill.receiptImage}
+                                                    alt={`Receipt ${bill.billNo}`}
+                                                    width={160}
+                                                    height={240}
+                                                    className="rounded-md object-contain border"
+                                                />
+                                                 <div className="text-xs text-center mt-1 text-muted-foreground">
+                                                    <p>Bill: {bill.billNo}</p>
+                                                    <p>Amount: ₹{bill.totalAmount.toFixed(2)}</p>
+                                                    <p>{format(bill.scannedAt.toDate(), 'PPP')}</p>
+                                                 </div>
+                                            </div>
+                                        )
+                                    ))}
+                                </div>
+                                <ScrollBar orientation="horizontal" />
+                            </ScrollArea>
+                        ) : (
+                            <div className="text-center text-muted-foreground py-10">
+                                <p>No scanned receipt images found.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
         </CardContent>
       </Card>
     </div>

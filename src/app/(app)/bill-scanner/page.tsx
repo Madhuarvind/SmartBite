@@ -188,7 +188,8 @@ export default function BillScannerPage() {
             const totalAmount = scannedItems.reduce((sum, item) => sum + (item.price || 0), 0);
             
             batch.set(billDocRef, { 
-                billNo: billNo, 
+                billNo: billNo,
+                receiptImage: receiptImage,
                 scannedAt: Timestamp.now(),
                 totalAmount: totalAmount,
                 items: scannedItems.map(item => ({

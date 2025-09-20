@@ -254,7 +254,7 @@ export default function InventoryPage() {
     setNewItemExpiry("");
   }
 
-  const handleAddItem = useCallback(async () => {
+  const handleAddItem = async () => {
     if (!user || !newItemName || !newItemQuantity) {
       toast({
         variant: "destructive",
@@ -281,7 +281,7 @@ export default function InventoryPage() {
         console.error("Error adding item to Firestore:", error);
         toast({ variant: "destructive", title: "Failed to Add Item"});
     }
-  }, [user, newItemName, newItemQuantity, newItemExpiry, newItemPurchaseDate, toast]);
+  };
 
   const handleDeleteItem = async (itemId: string, itemName: string, expiry: string) => {
     if (!user) {

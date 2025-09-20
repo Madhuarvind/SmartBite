@@ -57,8 +57,11 @@ const generateRecipeVideoFlow = ai.defineFlow(
 
       if (!operation) {
         const error = (result.custom as any)?.error;
-        const errorMessage = error?.message || 'Expected the model to return an operation for video generation.';
+        let errorMessage = error?.message || 'Expected the model to return an operation for video generation.';
         console.error('Video generation failed:', errorMessage);
+        if (errorMessage.toLowerCase().includes('rate limit')) {
+          errorMessage = 'Too Many Requests. The free daily quota for video generation has been exceeded.';
+        }
         throw new Error(errorMessage);
       }
       
@@ -69,8 +72,12 @@ const generateRecipeVideoFlow = ai.defineFlow(
       }
 
       if (operation.error) {
-        console.error('Video generation operation failed:', operation.error.message);
-        throw new Error(`Failed to generate video: ${operation.error.message}`);
+        let errorMessage = operation.error.message;
+        console.error('Video generation operation failed:', errorMessage);
+        if (errorMessage.toLowerCase().includes('rate limit')) {
+          errorMessage = 'Too Many Requests. The free daily quota for video generation has been exceeded.';
+        }
+        throw new Error(`Failed to generate video: ${errorMessage}`);
       }
 
       const videoPart = operation.output?.message?.content.find((p) => p.media && p.media.contentType?.startsWith('video/'));
@@ -86,8 +93,8 @@ const generateRecipeVideoFlow = ai.defineFlow(
       };
 
     } catch (e: any) {
-        let displayMessage = "The AI couldn't create a video at this time.";
-        if (e.message?.includes('429')) {
+        let displayMessage = e.message || "The AI couldn't create a video at this time.";
+        if (e.message?.includes('429') || e.message.toLowerCase().includes('rate limit')) {
             displayMessage = 'Too Many Requests. The free daily quota for video generation has been exceeded.';
         } else if (e.message?.includes('503')) {
             displayMessage = 'The video generation service is currently overloaded. Please try again in a moment.';

@@ -68,13 +68,13 @@ const generateRecipeAudioFlow = ai.defineFlow(
       
       if (finishReason !== 'success' || !media) {
         const error = (customResponse as any)?.error;
-        const errorMessage = error?.message || 'No media was generated.';
+        let errorMessage = error?.message || 'No media was generated.';
         
         console.error('Audio generation failed.', {finishReason, error: errorMessage});
-        if (errorMessage.includes('429')) {
-             throw new Error('Too Many Requests. The free daily quota for audio generation has been exceeded.');
+        if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit')) {
+             errorMessage = 'Too Many Requests. The free daily quota for audio generation has been exceeded.';
         } else if (errorMessage.includes('503')) {
-             throw new Error('The audio generation service is currently overloaded. Please try again in a moment.');
+             errorMessage = 'The audio generation service is currently overloaded. Please try again in a moment.';
         }
         throw new Error(errorMessage);
       }

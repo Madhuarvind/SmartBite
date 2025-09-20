@@ -592,7 +592,7 @@ export default function PlateScannerPage() {
                             </CardHeader>
                             <CardContent>
                                 {recipeInModal.video?.videoDataUri ? (
-                                    <video controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
+                                    <video key={recipeInModal.video.videoDataUri} controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
                                 ) : (
                                     <div className="text-center space-y-2">
                                         <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>

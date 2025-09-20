@@ -56,8 +56,10 @@ const generateRecipeVideoFlow = ai.defineFlow(
       operation = result.operation;
 
       if (!operation) {
-        console.error('Video generation failed: No operation returned.');
-        throw new Error('Expected the model to return an operation for video generation.');
+        const error = (result.custom as any)?.error;
+        const errorMessage = error?.message || 'Expected the model to return an operation for video generation.';
+        console.error('Video generation failed:', errorMessage);
+        throw new Error(errorMessage);
       }
       
       // Wait until the operation completes. Note that this may take some time.

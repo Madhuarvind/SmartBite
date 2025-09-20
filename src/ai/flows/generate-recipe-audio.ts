@@ -53,7 +53,7 @@ const generateRecipeAudioFlow = ai.defineFlow(
     }
     
     try {
-      const { media, finishReason, custom: customError } = await ai.generate({
+      const { media, finishReason, custom: customResponse } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-preview-tts'),
         config: {
           responseModalities: ['AUDIO'],
@@ -67,7 +67,9 @@ const generateRecipeAudioFlow = ai.defineFlow(
       });
       
       if (finishReason !== 'success' || !media) {
-        const errorMessage = (customError as any)?.message || 'No media was generated.';
+        const error = (customResponse as any)?.error;
+        const errorMessage = error?.message || 'No media was generated.';
+        
         console.error('Audio generation failed.', {finishReason, error: errorMessage});
         if (errorMessage.includes('429')) {
              throw new Error('Too Many Requests. The free daily quota for audio generation has been exceeded.');

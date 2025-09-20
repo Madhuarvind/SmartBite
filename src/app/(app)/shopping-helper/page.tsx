@@ -82,7 +82,7 @@ export default function ShoppingHelperPage() {
         return;
       }
       try {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setStream(cameraStream);
         setHasCameraPermission(true);
         if (videoRef.current) {
@@ -181,7 +181,7 @@ export default function ShoppingHelperPage() {
     setScannedImage(null);
     setAnalysisResult(null);
     try {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setStream(cameraStream);
         if (videoRef.current) {
           videoRef.current.srcObject = cameraStream;

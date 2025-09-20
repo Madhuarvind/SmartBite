@@ -122,7 +122,7 @@ export default function RecipesPage() {
         return;
       }
       try {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({video: true});
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setStream(cameraStream);
         setHasCameraPermission(true);
 
@@ -855,7 +855,7 @@ export default function RecipesPage() {
                                         {recipeInModal.estimatedCost && (
                                             <TableRow>
                                                 <TableCell className="font-medium">Est. Cost</TableCell>
-                                                <TableCell className="text-right">${recipeInModal.estimatedCost.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">₹{recipeInModal.estimatedCost.toFixed(2)}</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>

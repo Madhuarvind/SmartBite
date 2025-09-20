@@ -103,7 +103,7 @@ export default function InventoryPage() {
         return;
       }
       try {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setStream(cameraStream);
         setHasCameraPermission(true);
         if (videoRef.current) {

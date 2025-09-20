@@ -54,7 +54,7 @@ const scanIngredientsFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (!output) {
+    if (!output || !output.ingredients) {
       return { ingredients: [] };
     }
 
@@ -90,3 +90,4 @@ const scanIngredientsFlow = ai.defineFlow(
     return { ingredients: ingredientsWithPredictions };
   }
 );
+

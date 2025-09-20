@@ -54,7 +54,7 @@ const scanReceiptFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
-    if (!output) {
+    if (!output || !output.items) {
       return { items: [] };
     }
 
@@ -84,3 +84,4 @@ const scanReceiptFlow = ai.defineFlow(
     return { items: itemsWithPredictions };
   }
 );
+

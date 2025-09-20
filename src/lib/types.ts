@@ -1,5 +1,7 @@
 
 
+import type { Recipe as AiRecipe } from '@/ai/schemas';
+
 export type Ingredient = {
   id: string;
   name: string;
@@ -59,3 +61,12 @@ export type Badge = {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
 };
+
+// Represents a cooked recipe stored in Firestore history
+export type RecipeHistoryItem = AiRecipe & {
+    id: string;
+    cookedAt: {
+        seconds: number;
+        nanoseconds: number;
+    };
+}

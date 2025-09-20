@@ -447,18 +447,29 @@ export default function RecipesPage() {
               }
             }
         });
-        await batch.commit();
+        
+        // 2. Log the "mealCooked" activity and save the full recipe to history
+        const historyRef = doc(collection(db, "users", user.uid, "recipeHistory"));
+        batch.set(historyRef, {
+            ...recipe,
+            cookedAt: Timestamp.now(),
+            // Remove the promise before saving to Firestore
+            mediaPromise: undefined, 
+        });
 
-        // 2. Log the "mealCooked" activity
-        await addDoc(collection(db, "users", user.uid, "activity"), {
+        const activityRef = doc(collection(db, "users", user.uid, "activity"));
+        batch.set(activityRef, {
             type: 'mealCooked',
             recipeName: recipeName,
+            recipeId: historyRef.id, // Link to the history document
             timestamp: Timestamp.now()
         });
+
+        await batch.commit();
         
         toast({
             title: "Yum! Activity Logged!",
-            description: `${recipeName} cooked and ingredients have been deducted from your inventory.`
+            description: `${recipeName} cooked, ingredients deducted, and saved to your history.`
         });
     } catch (error) {
         console.error("Error logging activity and deducting ingredients:", error);

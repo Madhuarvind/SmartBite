@@ -16,6 +16,7 @@ import {
   ReceiptText,
   ShoppingCart,
   Banknote,
+  History,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -43,6 +44,7 @@ const menuItems = [
   { href: "/health", label: "Health & Impact", icon: HeartPulse },
   { href: "/financial-advisor", label: "Financial Advisor", icon: Settings },
   { href: "/expenses", label: "Expenses", icon: Banknote },
+  { href: "/history", label: "Recipe History", icon: History },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -68,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
             </SheetHeader>
             
-            <nav className="grid gap-2 text-lg font-medium p-4">
+            <nav className="flex-1 overflow-y-auto grid gap-2 text-lg font-medium p-4">
               {menuItems.map((item) => (
                 <Link
                   key={item.href}

@@ -14,7 +14,7 @@ import {
 } from '../schemas';
 import { generateRecipeAudio } from './generate-recipe-audio';
 import { generateRecipeVideo } from './generate-recipe-video';
-import { generateRecipeStepImage } from './generate-recipe-step-image';
+import { generateRecipeMedia } from './generate-recipe-media';
 
 // This is a simplified function to estimate the cost.
 // A real-world application would need a more sophisticated way to handle quantities and units.
@@ -83,63 +83,28 @@ Respond in the specified JSON format.
 
     // Asynchronously generate all media in the background.
     const mediaPromise = (async () => {
-      // Prioritize the first image to make the UI feel faster
-      const firstImageResult = await generateRecipeStepImage({
-        prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipeWithCost.name}": ${recipeWithCost.instructionSteps[0].text}. Focus on the action described.`,
-      }).catch(e => {
-        console.error(`First image generation failed for ${recipeWithCost.name}:`, e);
-        return undefined;
-      });
+      // The generateRecipeMedia flow now handles the complexity of image generation.
+      const mediaResult = await generateRecipeMedia({ recipe: recipeWithCost });
 
-      const instructionStepsWithFirstImage = [...recipeWithCost.instructionSteps];
-      if (firstImageResult) {
-        instructionStepsWithFirstImage[0] = {
-          ...instructionStepsWithFirstImage[0],
-          image: firstImageResult,
-        };
-      }
-      
-      const remainingMediaPromise = (async () => {
-        const [remainingImagePromises, audioResult, videoResult] = await Promise.all([
-          Promise.allSettled(
-            recipeWithCost.instructionSteps.slice(1).map(step =>
-              generateRecipeStepImage({
-                prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipeWithCost.name}": ${step.text}. Focus on the action described.`,
-              })
-            )
-          ),
-          generateRecipeAudio({ instructions: recipeWithCost.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
-              console.error(`Audio generation failed for ${recipeWithCost.name}:`, e);
-              return undefined;
-          }),
-          generateRecipeVideo({ recipeName: recipeWithCost.name }).catch(e => {
-              console.error(`Video generation failed for ${recipeWithCost.name}:`, e);
-              return undefined;
-          })
-        ]);
-
-        const finalInstructionSteps = [...instructionStepsWithFirstImage];
-        recipeWithCost.instructionSteps.slice(1).forEach((step, index) => {
-            const imageResult = remainingImagePromises[index];
-            if (imageResult.status === 'fulfilled') {
-                finalInstructionSteps[index + 1] = { ...step, image: imageResult.value };
-            } else {
-                console.error(`Image generation failed for step "${step.text}" in recipe ${recipeWithCost.name}:`, imageResult.reason);
-            }
-        });
-        
-        return {
-          instructionSteps: finalInstructionSteps,
-          audio: audioResult,
-          video: videoResult,
-        };
-      })();
+      // After images are done (or failed gracefully), kick off audio/video
+      const [audioResult, videoResult] = await Promise.all([
+        generateRecipeAudio({ instructions: recipeWithCost.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
+            console.error(`Audio generation failed for ${recipeWithCost.name}:`, e);
+            return undefined;
+        }),
+        generateRecipeVideo({ recipeName: recipeWithCost.name }).catch(e => {
+            console.error(`Video generation failed for ${recipeWithCost.name}:`, e);
+            return undefined;
+        })
+      ]);
 
       return {
-          instructionSteps: instructionStepsWithFirstImage,
-          mediaPromise: remainingMediaPromise,
-      }
+          instructionSteps: mediaResult.instructionSteps,
+          audio: audioResult,
+          video: videoResult,
+      };
     })();
+
 
     return {
       ...recipeWithCost,

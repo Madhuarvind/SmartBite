@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster"
 export const metadata: Metadata = {
   title: 'SmartBite',
   description: 'AI-Powered Meal Suggestions from Your Fridge',
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

@@ -278,6 +278,7 @@ export const ScannedItemSchema = z.object({
 export type ScannedItem = z.infer<typeof ScannedItemSchema>;
 
 export const ScanReceiptOutputSchema = z.object({
+  billNo: z.string().optional().describe('The unique bill or invoice number from the receipt.'),
   items: z.array(ScannedItemSchema).describe('A list of items identified on the receipt.'),
 });
 export type ScanReceiptOutput = z.infer<typeof ScanReceiptOutputSchema>;

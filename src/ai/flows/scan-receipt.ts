@@ -1,4 +1,3 @@
-
 // src/ai/flows/scan-receipt.ts
 'use server';
 /**
@@ -28,19 +27,20 @@ const prompt = ai.definePrompt({
   output: { schema: ScanReceiptOutputSchema },
   prompt: `You are an expert OCR and data extraction AI. Analyze the provided image of a grocery store receipt.
 
-Your task is to extract all the food items listed on the receipt. For each item, you must identify:
+Your task is to extract all the food items listed on the receipt and the bill/invoice number. For each item, you must identify:
 - Its name
 - The quantity purchased
 - The price
 - Whether it is a fresh product that requires an expiry date prediction (e.g., fresh produce, meat, dairy). Packaged goods with long shelf lives (like cans, jars, dry pasta) do not need prediction.
 
+- Also, find the bill number (which may be labeled as 'Bill No.', 'Invoice #', 'Receipt No.', etc.).
 - Ignore non-food items, taxes, totals, store information, and other metadata.
 - If a quantity is not explicitly mentioned, assume it is "1".
 - Standardize item names (e.g., "LG ORG MILK" should become "Organic Milk").
 - Extract the price for each item as a number, removing any currency symbols.
 - Set expiryDate to null. It will be predicted later.
 
-Return the result as a JSON object containing an array of the extracted items.
+Return the result as a JSON object containing the bill number and an array of the extracted items.
 
 Receipt Photo: {{media url=receiptDataUri}}
   `,
@@ -54,13 +54,13 @@ const scanReceiptFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
-    if (!output || !output.items) {
+    if (!output) {
       return { items: [] };
     }
 
     // After scanning, predict expiry dates for fresh items
     const itemsWithPredictions = await Promise.all(
-      output.items.map(async (item) => {
+      (output.items || []).map(async (item) => {
         if (item.isFresh) {
           try {
             const prediction = await predictExpiryDate({
@@ -81,8 +81,6 @@ const scanReceiptFlow = ai.defineFlow(
       })
     );
 
-    return { items: itemsWithPredictions };
+    return { billNo: output.billNo, items: itemsWithPredictions };
   }
 );
-
-

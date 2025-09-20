@@ -9,19 +9,21 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, Sparkles, Loader, ReceiptText, PlusCircle, Leaf } from "lucide-react";
+import { Upload, Sparkles, Loader, ReceiptText, PlusCircle, Leaf, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { scanReceipt } from "@/ai/flows/scan-receipt";
 import { calculateCarbonFootprint } from "@/ai/flows/calculate-carbon-footprint";
 import type { ScannedItem, CalculateCarbonFootprintOutput } from "@/ai/schemas";
 import { auth, db } from "@/lib/firebase";
-import { collection, writeBatch, doc } from "firebase/firestore";
+import { collection, writeBatch, doc, getDocs, query, where, Timestamp } from "firebase/firestore";
 import type { User } from 'firebase/auth';
 import { cn } from "@/lib/utils";
 
 export default function BillScannerPage() {
   const [user, setUser] = useState<User | null>(null);
   const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
+  const [billNo, setBillNo] = useState<string | null>(null);
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
@@ -42,7 +44,19 @@ export default function BillScannerPage() {
     setScannedItems([]);
     setReceiptImage(null);
     setCarbonAnalysis(null);
+    setBillNo(null);
+    setIsDuplicate(false);
   };
+  
+  const checkForDuplicateBill = async (newBillNo: string): Promise<boolean> => {
+      if (!user || !newBillNo) return false;
+
+      const billsRef = collection(db, "users", user.uid, "scanned_bills");
+      const q = query(billsRef, where("billNo", "==", newBillNo));
+      const querySnapshot = await getDocs(q);
+
+      return !querySnapshot.empty;
+  }
 
   const handleFile = (file: File) => {
     if (file && file.type.startsWith("image/")) {
@@ -62,19 +76,35 @@ export default function BillScannerPage() {
   }
 
   const processImage = async (photoDataUri: string) => {
+    clearState();
     setIsLoading(true);
-    setScannedItems([]);
-    setCarbonAnalysis(null);
     setReceiptImage(photoDataUri);
+    
     try {
       const result = await scanReceipt({ receiptDataUri: photoDataUri });
       setScannedItems(result.items);
+      
+      if (result.billNo) {
+          const duplicate = await checkForDuplicateBill(result.billNo);
+          if (duplicate) {
+              setIsDuplicate(true);
+              setBillNo(result.billNo);
+              toast({
+                  variant: "destructive",
+                  title: "Duplicate Bill Detected",
+                  description: `This bill (${result.billNo}) has already been scanned and added to your inventory.`,
+              });
+          } else {
+              setBillNo(result.billNo);
+          }
+      }
+
       if (result.items.length === 0) {
         toast({
           title: "No items detected",
           description: "The AI couldn't find any items on the receipt. Please try a clearer picture.",
         });
-      } else {
+      } else if (!isDuplicate) {
         // Kick off carbon analysis in the background
         setIsAnalyzing(true);
         calculateCarbonFootprint({ items: result.items })
@@ -129,8 +159,8 @@ export default function BillScannerPage() {
   }
 
   const handleAddToInventory = async () => {
-    if (!user || scannedItems.length === 0) {
-        toast({ variant: "destructive", title: "Nothing to add", description: "No items were scanned from the receipt." });
+    if (!user || scannedItems.length === 0 || isDuplicate) {
+        toast({ variant: "destructive", title: "Nothing to add", description: "No new items were scanned or the bill is a duplicate." });
         return;
     }
 
@@ -150,6 +180,12 @@ export default function BillScannerPage() {
                 purchaseDate: today,
             });
         });
+
+        // Log the scanned bill number to prevent duplicates
+        if (billNo) {
+            const billDocRef = doc(collection(db, "users", user.uid, "scanned_bills"));
+            batch.set(billDocRef, { billNo: billNo, scannedAt: Timestamp.now() });
+        }
 
         await batch.commit();
 
@@ -215,6 +251,15 @@ export default function BillScannerPage() {
               <CardDescription>Review the items found on your receipt. Add them to your inventory when ready.</CardDescription>
             </CardHeader>
             <CardContent>
+               {isDuplicate && billNo && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Duplicate Bill</AlertTitle>
+                      <AlertDescription>
+                        This bill (No. {billNo}) has already been scanned. Adding these items would create duplicates in your inventory.
+                      </AlertDescription>
+                    </Alert>
+               )}
                <div className="max-h-60 overflow-y-auto">
                    {isLoading ? (
                       <div className="space-y-2">
@@ -251,7 +296,7 @@ export default function BillScannerPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full sm:w-auto" onClick={handleAddToInventory} disabled={isAdding || scannedItems.length === 0}>
+              <Button className="w-full sm:w-auto" onClick={handleAddToInventory} disabled={isAdding || scannedItems.length === 0 || isDuplicate}>
                 {isAdding ? <><Loader className="mr-2 animate-spin"/> Adding Items...</> : <><PlusCircle className="mr-2"/> Add to Inventory</>}
               </Button>
             </CardFooter>

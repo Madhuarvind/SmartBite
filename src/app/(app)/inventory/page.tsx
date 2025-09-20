@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
+import { useState, useRef, useEffect, ChangeEvent, DragEvent, useCallback } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -254,7 +254,7 @@ export default function InventoryPage() {
     setNewItemExpiry("");
   }
 
-  const handleAddItem = async () => {
+  const handleAddItem = useCallback(async () => {
     if (!user || !newItemName || !newItemQuantity) {
       toast({
         variant: "destructive",
@@ -281,7 +281,7 @@ export default function InventoryPage() {
         console.error("Error adding item to Firestore:", error);
         toast({ variant: "destructive", title: "Failed to Add Item"});
     }
-  };
+  }, [user, newItemName, newItemQuantity, newItemExpiry, newItemPurchaseDate, toast]);
 
   const handleDeleteItem = async (itemId: string, itemName: string, expiry: string) => {
     if (!user) {

@@ -70,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
             </SheetHeader>
             
-            <nav className="flex-1 overflow-y-auto grid gap-2 text-lg font-medium p-4">
+            <nav className="flex-1 overflow-y-auto grid gap-2 text-lg font-medium p-4 no-scrollbar">
               {menuItems.map((item) => (
                 <Link
                   key={item.href}

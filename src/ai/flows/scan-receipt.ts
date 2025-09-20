@@ -70,12 +70,14 @@ const scanReceiptFlow = ai.defineFlow(
             return { ...item, expiryDate: prediction.expiryDate };
           } catch (e) {
             console.error(`Could not predict expiry for ${item.name}`, e);
-            // If prediction fails, return the original item with a null expiry
-            return { ...item, expiryDate: 'N/A' };
+            // If prediction fails, fall back to default
           }
         }
-        // For non-fresh items, explicitly set expiryDate to 'N/A'
-        return { ...item, expiryDate: 'N/A' };
+        
+        // For non-fresh items or failed predictions, set a default expiry date of 30 days from now
+        const defaultExpiry = new Date();
+        defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+        return { ...item, expiryDate: defaultExpiry.toISOString().split('T')[0] };
       })
     );
 

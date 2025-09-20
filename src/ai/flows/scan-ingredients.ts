@@ -61,8 +61,13 @@ const scanIngredientsFlow = ai.defineFlow(
     // After scanning, predict expiry dates for fresh items that don't have one
     const ingredientsWithPredictions = await Promise.all(
       output.ingredients.map(async (ingredient) => {
-        // Only predict if no expiry date was found by OCR and the AI marked it as fresh.
-        if (!ingredient.expiryDate && ingredient.isFresh) {
+        // If an expiry date was found via OCR, keep it.
+        if (ingredient.expiryDate) {
+          return ingredient;
+        }
+
+        // Only predict if the AI marked it as fresh.
+        if (ingredient.isFresh) {
           try {
             const prediction = await predictExpiryDate({
               ingredientName: ingredient.name,
@@ -71,16 +76,14 @@ const scanIngredientsFlow = ai.defineFlow(
             return { ...ingredient, expiryDate: prediction.expiryDate };
           } catch (e) {
             console.error(`Could not predict expiry for ${ingredient.name}`, e);
-            // If prediction fails, return with N/A
-            return { ...ingredient, expiryDate: 'N/A' };
+             // If prediction fails, fall back to the default below
           }
         }
-         // If an expiry date was found via OCR, keep it.
-        if (ingredient.expiryDate) {
-          return ingredient;
-        }
-        // For all other cases (e.g., not fresh), set expiry to N/A
-        return { ...ingredient, expiryDate: 'N/A' };
+        
+        // For non-fresh items, failed predictions, or items without OCR date, set a default expiry date of 30 days
+        const defaultExpiry = new Date();
+        defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+        return { ...ingredient, expiryDate: defaultExpiry.toISOString().split('T')[0] };
       })
     );
 

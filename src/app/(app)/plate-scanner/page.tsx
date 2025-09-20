@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useRef, useEffect, ChangeEvent, DragEvent, FormEvent } from "react";
@@ -754,7 +753,7 @@ export default function PlateScannerPage() {
                               <CardHeader>
                                   <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Substitution Helper</CardTitle>
                                   <CardDescription>Missing an ingredient? Find a smart substitution.</CardDescription>
-                              </Header>
+                              </CardHeader>
                               <CardContent>
                                   <Label htmlFor="missing-ingredient">Which ingredient are you missing?</Label>
                                   <Select onValueChange={setMissingIngredient}>
@@ -817,3 +816,5 @@ export default function PlateScannerPage() {
     </>
   );
 }
+
+    

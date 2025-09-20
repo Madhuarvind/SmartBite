@@ -43,7 +43,7 @@ const findRecipeFromMealFlow = ai.defineFlow(
       name: 'findRecipeFromMealPrompt',
       input: { schema: FindRecipeFromMealInputSchema },
       output: { schema: Recipe }, // We expect a full Recipe object as output
-      prompt: `You are an expert recipe creator. The user has identified a meal they enjoyed and wants a standard, reliable recipe to recreate it at home.
+      prompt: `You are an expert recipe creator. The user has identified a meal they enjoyed and wants a recipe to recreate it at home.
 
 Generate a complete recipe for the following meal: **{{{mealName}}}**
 
@@ -51,7 +51,10 @@ For the recipe, you MUST provide:
 1.  A unique, appealing name (it can be the same as the input meal name if appropriate).
 2.  A full list of ingredients with specific quantities.
 3.  A detailed nutritional analysis per serving (calories, protein, carbs, fat).
-4.  Detailed, step-by-step instructions. For each step, provide a 'step' number and the 'text' for the instruction. Do not include images, audio, or video yet.
+4.  Detailed, step-by-step instructions. For each step, provide a 'step' number and the 'text' for the instruction. 
+    - If the meal is a cooked dish, provide cooking instructions.
+    - If the meal is not a cooked dish (like a 'Charcuterie Board' or 'Garden Salad'), provide assembly or arrangement instructions instead.
+    - Do not include images, audio, or video yet.
 
 Respond in the specified JSON format.
 `,

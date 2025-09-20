@@ -682,7 +682,7 @@ export default function RecipesPage() {
                         <Image src={recipe.coverImage.imageDataUri} alt={recipe.name} layout="fill" objectFit="cover" className="bg-secondary"/>
                     ) : (
                        <div className="w-full h-full bg-secondary flex items-center justify-center">
-                          <Skeleton className="w-full h-full" />
+                          <ChefHat className="w-16 h-16 text-muted-foreground/50"/>
                        </div>
                     )}
                     <Badge variant="secondary" className="absolute top-2 right-2">Recommended</Badge>

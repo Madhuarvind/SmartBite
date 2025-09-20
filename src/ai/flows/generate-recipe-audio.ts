@@ -85,6 +85,9 @@ const generateRecipeAudioFlow = ai.defineFlow(
     } catch (e: any) {
         // Re-throw specific errors or a generic one
         let displayMessage = e.message || "The AI could not generate audio at this time.";
+        if (displayMessage === 'No media was generated.') {
+            displayMessage = 'Audio generation failed. This might be due to service limits or a temporary issue. Please try again later.';
+        }
         console.error("Audio generation flow error:", e.message);
         throw new Error(displayMessage);
     }

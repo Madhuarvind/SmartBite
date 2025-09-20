@@ -438,382 +438,382 @@ export default function PlateScannerPage() {
 
   return (
     <>
-    <div className="flex flex-col gap-8 animate-fade-in">
-      <PageHeader title="Plate Scanner" />
-      
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="animate-fade-in-slide-up">
-          <CardHeader>
-            <CardTitle>Scan Your Meal</CardTitle>
-            <CardDescription>Take a picture of your plate to get an instant nutritional analysis from our AI.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div 
-              className={cn(
-                "relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer transition-colors",
-                isDragging && "bg-primary/10 border-primary"
-              )}
-              onClick={() => fileInputRef.current?.click()}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragEvents}
-              onDrop={handleDrop}
-            >
-              {scannedImage ? (
-                <Image src={scannedImage} alt="Scanned meal" layout="fill" objectFit="contain" />
-              ) : (
-                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-              )}
-               {hasCameraPermission === false && !scannedImage && (
-                 <Alert variant="destructive" className="absolute m-4">
-                   <AlertTitle>Camera Access Required</AlertTitle>
-                   <AlertDescription>
-                     To use the live scanner, please allow camera access. You can still upload an image.
-                   </AlertDescription>
-                 </Alert>
-              )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <Button onClick={handleScanFromCamera} disabled={isLoading || hasCameraPermission === false}>
-                {isLoading ? <><Loader className="mr-2 animate-spin"/> Analyzing...</> : <><Camera className="mr-2" /> Scan from Camera</>}
-              </Button>
-              <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={isLoading}>
-                <Upload className="mr-2" /> Upload Image
-              </Button>
-              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
-          <CardHeader>
-            <CardTitle className="flex items-center"><Sparkles className="w-5 h-5 mr-2 text-primary"/> AI Analysis</CardTitle>
-            <CardDescription>Here's what our AI thinks about your meal. Estimates are per serving.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-24 w-24 rounded-lg" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-6 w-48" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                </div>
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            )}
-            {!isLoading && !analysis && (
-              <div className="text-center text-muted-foreground py-10">
-                <p>Scan a meal to see its nutritional information here.</p>
-              </div>
-            )}
-            {analysis && (
-                <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                        {scannedImage && <Image src={scannedImage} alt={analysis.mealName} width={96} height={96} className="rounded-lg border object-cover" />}
-                        <div>
-                             <p className="text-sm text-muted-foreground">Identified Meal</p>
-                             <h3 className="text-2xl font-bold text-primary">{analysis.mealName}</h3>
-                        </div>
-                    </div>
-
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nutrient</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell className="font-medium">Calories</TableCell>
-                                <TableCell className="text-right">{analysis.nutrition.calories.toFixed(0)} kcal</TableCell>
-                            </TableRow>
-                             <TableRow>
-                                <TableCell className="font-medium">Protein</TableCell>
-                                <TableCell className="text-right">{analysis.nutrition.protein.toFixed(1)} g</TableCell>
-                            </TableRow>
-                             <TableRow>
-                                <TableCell className="font-medium">Carbohydrates</TableCell>
-                                <TableCell className="text-right">{analysis.nutrition.carbs.toFixed(1)} g</TableCell>
-                            </TableRow>
-                             <TableRow>
-                                <TableCell className="font-medium">Fat</TableCell>
-                                <TableCell className="text-right">{analysis.nutrition.fat.toFixed(1)} g</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
-          </CardContent>
-            {analysis && (
-                 <CardFooter className="flex-col sm:flex-row gap-2">
-                    <Button onClick={handleLogMeal} disabled={isLogging}>
-                        {isLogging ? <Loader className="animate-spin mr-2"/> : <CheckCircle className="mr-2" />} Log This Meal
-                    </Button>
-                    <Button onClick={handleFindRecipe} variant="secondary" disabled={isFindingRecipe}>
-                        {isFindingRecipe ? <Loader className="animate-spin mr-2"/> : <ChefHat className="mr-2" />} Find Recipe For This
-                    </Button>
-                </CardFooter>
-            )}
-        </Card>
-      </div>
-    </div>
-
-    {isRecipeModalOpen && (
-        <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
-            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                    {isFindingRecipe || isTransforming ? <Skeleton className="h-8 w-3/4"/> : 
-                        <DialogTitle className="text-3xl text-primary">{recipeInModal?.name}</DialogTitle>
-                    }
-                    <DialogDescription>
-                        {isFindingRecipe ? 'Please wait while we find the perfect recipe for you...' : 
-                        'View the full recipe details, and use our AI tools to find substitutions or transform the recipe.'
-                        }
-                    </DialogDescription>
-                </DialogHeader>
-                
-                {isFindingRecipe || !recipeInModal ? (
-                    <div className="flex items-center justify-center h-96">
-                        <Loader className="w-16 h-16 animate-spin text-primary" />
-                    </div>
-                ) : (
-                <div className="grid md:grid-cols-3 gap-6 flex-1 overflow-y-auto pr-4">
-                    <div className="md:col-span-2 space-y-4">
-                         <Card className="bg-secondary/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Video className="w-5 h-5 mr-2 text-primary"/> Recipe Video</CardTitle>
-                                <CardDescription>A cinematic look at the finished dish.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {recipeInModal.video?.videoDataUri ? (
-                                    <video key={recipeInModal.video.videoDataUri} controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
-                                ) : (
-                                    <div className="text-center space-y-2">
-                                        <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>
-                                        <Button className="w-full" onClick={handleGenerateVideo} disabled={isGeneratingVideo}>
-                                            {isGeneratingVideo ? <Loader className="mr-2 animate-spin"/> : <Film className="mr-2" />}
-                                            Generate Video
-                                        </Button>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                        {isTransforming && (
-                           <Alert>
-                               <Wand2 className="h-4 w-4" />
-                               <AlertTitle className="text-accent-foreground">Transforming...</AlertTitle>
-                               <AlertDescription>
-                                   The AI is creating your new recipe. Please wait.
-                               </AlertDescription>
-                           </Alert>
-                        )}
-                        
-                        <div>
-                            <h3 className="font-bold text-lg mb-2">Ingredients</h3>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Ingredient</TableHead>
-                                        <TableHead>Quantity</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {recipeInModal.ingredients.map(ing => (
-                                        <TableRow key={ing.name}>
-                                            <TableCell>{ing.name}</TableCell>
-                                            <TableCell>{ing.quantity}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        <Separator/>
-
-                        <div>
-                            <h3 className="font-bold text-lg mb-2">Instructions</h3>
-                            <div className="space-y-4">
-                                {recipeInModal.instructionSteps?.map((step, index) => (
-                                    <div key={index} className="flex gap-4 items-start">
-                                        <div className="flex flex-col items-center gap-1">
-                                           <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{step.step}</div>
-                                           <Checkbox id={`step-${index}`} className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1 space-y-2">
-                                            <Label htmlFor={`step-${index}`} className="font-normal text-base text-foreground leading-snug">{step.text}</Label>
-                                            {step.image?.imageDataUri ? (
-                                                <Image src={step.image.imageDataUri} alt={`Step ${step.step}`} width={400} height={225} className="rounded-lg border aspect-video object-cover" />
-                                            ) : (
-                                                <Skeleton className="w-full aspect-video rounded-lg" />
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                    </div>
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Log Your Progress</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <Button className="w-full" onClick={() => handleCookedThis(recipeInModal)}>
-                                    <ChefHat className="mr-2"/> I Cooked This!
-                                </Button>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-secondary/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Music className="w-5 h-5 mr-2 text-primary"/> Audio Guide</CardTitle>
-                                <CardDescription>Listen to the recipe instructions.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {recipeInModal.audio?.audioDataUri ? (
-                                    <audio controls src={recipeInModal.audio.audioDataUri} className="w-full" />
-                                ) : (
-                                    <Button className="w-full" onClick={handleGenerateAudio} disabled={isGeneratingAudio}>
-                                        {isGeneratingAudio ? <Loader className="mr-2 animate-spin"/> : <Music className="mr-2" />}
-                                        Generate Audio
-                                    </Button>
-                                )}
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-secondary/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Nutritional Info</CardTitle>
-                                <CardDescription>Estimated values per serving.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableBody>
-                                        <TableRow>
-                                            <TableCell className="font-medium">Calories</TableCell>
-                                            <TableCell className="text-right">{recipeInModal.nutrition.calories.toFixed(0)} kcal</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                            <TableCell className="font-medium">Protein</TableCell>
-                                            <TableCell className="text-right">{recipeInModal.nutrition.protein.toFixed(1)}g</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                            <TableCell className="font-medium">Carbs</TableCell>
-                                            <TableCell className="text-right">{recipeInModal.nutrition.carbs.toFixed(1)}g</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                            <TableCell className="font-medium">Fat</TableCell>
-                                            <TableCell className="text-right">{recipeInModal.nutrition.fat.toFixed(1)}g</TableCell>
-                                        </TableRow>
-                                        {recipeInModal.estimatedCost && (
-                                            <TableRow>
-                                                <TableCell className="font-medium">Est. Cost</TableCell>
-                                                <TableCell className="text-right">₹{recipeInModal.estimatedCost.toFixed(2)}</TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                         <Card className="bg-secondary/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><CheckSquare className="w-5 h-5 mr-2 text-primary"/> Inventory Check</CardTitle>
-                                <CardDescription>Do you have enough ingredients to cook this?</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Label htmlFor="servings">Servings:</Label>
-                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setServings(s => Math.max(1, s - 1))}><MinusCircle /></Button>
-                                    <span className="font-bold text-lg">{servings}</span>
-                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setServings(s => s + 1)}><PlusCircle /></Button>
-                                </div>
-                                <Button onClick={handleInventoryCheck} disabled={isCheckingInventory} className="w-full">
-                                    {isCheckingInventory ? <><Loader className="mr-2 animate-spin"/> Checking...</> : 'Check My Inventory'}
-                                </Button>
-                                {inventoryCheckResults.length > 0 && (
-                                     <div className="mt-4 space-y-2">
-                                        {inventoryCheckResults.map(res => (
-                                            <Alert key={res.ingredient.name} variant={res.status === 'missing' ? 'destructive' : 'default'}>
-                                                {res.status === 'missing' ? <AlertTriangle className="h-4 w-4"/> : <CheckSquare className="h-4 w-4"/>}
-                                                <AlertTitle className="text-sm">{res.ingredient.name}</AlertTitle>
-                                                <AlertDescription className="text-xs">
-                                                   Required: {res.ingredient.quantity}. {res.notes}
-                                                </AlertDescription>
-                                            </Alert>
-                                        ))}
-                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-secondary/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Substitution Helper</CardTitle>
-                                <CardDescription>Missing an ingredient? Find a smart substitution.</CardDescription>
-                            </Header>
-                            <CardContent>
-                                <Label htmlFor="missing-ingredient">Which ingredient are you missing?</Label>
-                                <Select onValueChange={setMissingIngredient}>
-                                    <SelectTrigger id="missing-ingredient" className="mt-2">
-                                        <SelectValue placeholder="Select an ingredient..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {recipeInModal?.ingredients.map(ing => (
-                                            <SelectItem key={ing.name} value={ing.name}>{ing.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <Button onClick={handleFindSubstitutions} disabled={isSubstituting || !missingIngredient} className="w-full mt-4">
-                                    {isSubstituting ? <><Loader className="mr-2 animate-spin"/> Finding...</> : 'Find Substitutions'}
-                                </Button>
-                                
-                                {substitutions.length > 0 && (
-                                    <div className="mt-4">
-                                        <h4 className="font-semibold mb-2">Suggested Substitutions:</h4>
-                                        <ul className="list-disc pl-5 text-muted-foreground space-y-1 mt-2 text-sm">
-                                            {substitutions.map(sub => (
-                                                <li key={sub.name}>
-                                                   <span className="font-semibold text-foreground">{sub.name}</span>: {sub.explanation}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                         <Card className="bg-secondary/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Wand2 className="w-5 h-5 mr-2 text-primary"/> AI Taste Predictor</CardTitle>
-                                <CardDescription>Transform this recipe to better match your personal taste.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Textarea 
-                                  id="transform-request"
-                                  className="mt-2"
-                                  placeholder="e.g., 'This seems bland, can you make it spicier?' or 'How can I make this vegetarian and lower in fat?'"
-                                  value={transformationRequest}
-                                  onChange={(e) => setTransformationRequest(e.target.value)}
-                                />
-                                <Button onClick={handleTransformRecipe} disabled={isTransforming || !transformationRequest} className="w-full mt-4">
-                                    {isTransforming ? <><Loader className="mr-2 animate-spin"/> Transforming...</> : 'Transform with AI'}
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
+      <div className="flex flex-col gap-8 animate-fade-in">
+        <PageHeader title="Plate Scanner" />
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="animate-fade-in-slide-up">
+            <CardHeader>
+              <CardTitle>Scan Your Meal</CardTitle>
+              <CardDescription>Take a picture of your plate to get an instant nutritional analysis from our AI.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div 
+                className={cn(
+                  "relative aspect-video w-full border-2 border-dashed border-muted-foreground/50 rounded-lg flex items-center justify-center bg-secondary overflow-hidden cursor-pointer transition-colors",
+                  isDragging && "bg-primary/10 border-primary"
                 )}
+                onClick={() => fileInputRef.current?.click()}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragEvents}
+                onDrop={handleDrop}
+              >
+                {scannedImage ? (
+                  <Image src={scannedImage} alt="Scanned meal" layout="fill" objectFit="contain" />
+                ) : (
+                  <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                )}
+                {hasCameraPermission === false && !scannedImage && (
+                  <Alert variant="destructive" className="absolute m-4">
+                    <AlertTitle>Camera Access Required</AlertTitle>
+                    <AlertDescription>
+                      To use the live scanner, please allow camera access. You can still upload an image.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button onClick={handleScanFromCamera} disabled={isLoading || hasCameraPermission === false}>
+                  {isLoading ? <><Loader className="mr-2 animate-spin"/> Analyzing...</> : <><Camera className="mr-2" /> Scan from Camera</>}
+                </Button>
+                <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={isLoading}>
+                  <Upload className="mr-2" /> Upload Image
+                </Button>
+                <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+              </div>
+            </CardContent>
+          </Card>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsRecipeModalOpen(false)}>Close</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-      )}
+          <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
+            <CardHeader>
+              <CardTitle className="flex items-center"><Sparkles className="w-5 h-5 mr-2 text-primary"/> AI Analysis</CardTitle>
+              <CardDescription>Here's what our AI thinks about your meal. Estimates are per serving.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-24 w-24 rounded-lg" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              )}
+              {!isLoading && !analysis && (
+                <div className="text-center text-muted-foreground py-10">
+                  <p>Scan a meal to see its nutritional information here.</p>
+                </div>
+              )}
+              {analysis && (
+                  <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                          {scannedImage && <Image src={scannedImage} alt={analysis.mealName} width={96} height={96} className="rounded-lg border object-cover" />}
+                          <div>
+                              <p className="text-sm text-muted-foreground">Identified Meal</p>
+                              <h3 className="text-2xl font-bold text-primary">{analysis.mealName}</h3>
+                          </div>
+                      </div>
+
+                      <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  <TableHead>Nutrient</TableHead>
+                                  <TableHead className="text-right">Amount</TableHead>
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              <TableRow>
+                                  <TableCell className="font-medium">Calories</TableCell>
+                                  <TableCell className="text-right">{analysis.nutrition.calories.toFixed(0)} kcal</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                  <TableCell className="font-medium">Protein</TableCell>
+                                  <TableCell className="text-right">{analysis.nutrition.protein.toFixed(1)} g</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                  <TableCell className="font-medium">Carbohydrates</TableCell>
+                                  <TableCell className="text-right">{analysis.nutrition.carbs.toFixed(1)} g</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                  <TableCell className="font-medium">Fat</TableCell>
+                                  <TableCell className="text-right">{analysis.nutrition.fat.toFixed(1)} g</TableCell>
+                              </TableRow>
+                          </TableBody>
+                      </Table>
+                  </div>
+              )}
+            </CardContent>
+              {analysis && (
+                  <CardFooter className="flex-col sm:flex-row gap-2">
+                      <Button onClick={handleLogMeal} disabled={isLogging}>
+                          {isLogging ? <Loader className="animate-spin mr-2"/> : <CheckCircle className="mr-2" />} Log This Meal
+                      </Button>
+                      <Button onClick={handleFindRecipe} variant="secondary" disabled={isFindingRecipe}>
+                          {isFindingRecipe ? <Loader className="animate-spin mr-2"/> : <ChefHat className="mr-2" />} Find Recipe For This
+                      </Button>
+                  </CardFooter>
+              )}
+          </Card>
+        </div>
+      </div>
+
+      {isRecipeModalOpen && (
+          <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                  <DialogHeader>
+                      {isFindingRecipe || isTransforming ? <Skeleton className="h-8 w-3/4"/> : 
+                          <DialogTitle className="text-3xl text-primary">{recipeInModal?.name}</DialogTitle>
+                      }
+                      <DialogDescription>
+                          {isFindingRecipe ? 'Please wait while we find the perfect recipe for you...' : 
+                          'View the full recipe details, and use our AI tools to find substitutions or transform the recipe.'
+                          }
+                      </DialogDescription>
+                  </DialogHeader>
+                  
+                  {isFindingRecipe || !recipeInModal ? (
+                      <div className="flex items-center justify-center h-96">
+                          <Loader className="w-16 h-16 animate-spin text-primary" />
+                      </div>
+                  ) : (
+                  <div className="grid md:grid-cols-3 gap-6 flex-1 overflow-y-auto pr-4">
+                      <div className="md:col-span-2 space-y-4">
+                          <Card className="bg-secondary/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-lg"><Video className="w-5 h-5 mr-2 text-primary"/> Recipe Video</CardTitle>
+                                  <CardDescription>A cinematic look at the finished dish.</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                  {recipeInModal.video?.videoDataUri ? (
+                                      <video key={recipeInModal.video.videoDataUri} controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
+                                  ) : (
+                                      <div className="text-center space-y-2">
+                                          <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>
+                                          <Button className="w-full" onClick={handleGenerateVideo} disabled={isGeneratingVideo}>
+                                              {isGeneratingVideo ? <Loader className="mr-2 animate-spin"/> : <Film className="mr-2" />}
+                                              Generate Video
+                                          </Button>
+                                      </div>
+                                  )}
+                              </CardContent>
+                          </Card>
+                          {isTransforming && (
+                            <Alert>
+                                <Wand2 className="h-4 w-4" />
+                                <AlertTitle className="text-accent-foreground">Transforming...</AlertTitle>
+                                <AlertDescription>
+                                    The AI is creating your new recipe. Please wait.
+                                </AlertDescription>
+                            </Alert>
+                          )}
+                          
+                          <div>
+                              <h3 className="font-bold text-lg mb-2">Ingredients</h3>
+                              <Table>
+                                  <TableHeader>
+                                      <TableRow>
+                                          <TableHead>Ingredient</TableHead>
+                                          <TableHead>Quantity</TableHead>
+                                      </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                      {recipeInModal.ingredients.map(ing => (
+                                          <TableRow key={ing.name}>
+                                              <TableCell>{ing.name}</TableCell>
+                                              <TableCell>{ing.quantity}</TableCell>
+                                          </TableRow>
+                                      ))}
+                                  </TableBody>
+                              </Table>
+                          </div>
+
+                          <Separator/>
+
+                          <div>
+                              <h3 className="font-bold text-lg mb-2">Instructions</h3>
+                              <div className="space-y-4">
+                                  {recipeInModal.instructionSteps?.map((step, index) => (
+                                      <div key={index} className="flex gap-4 items-start">
+                                          <div className="flex flex-col items-center gap-1">
+                                            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{step.step}</div>
+                                            <Checkbox id={`step-${index}`} className="w-5 h-5" />
+                                          </div>
+                                          <div className="flex-1 space-y-2">
+                                              <Label htmlFor={`step-${index}`} className="font-normal text-base text-foreground leading-snug">{step.text}</Label>
+                                              {step.image?.imageDataUri ? (
+                                                  <Image src={step.image.imageDataUri} alt={`Step ${step.step}`} width={400} height={225} className="rounded-lg border aspect-video object-cover" />
+                                              ) : (
+                                                  <Skeleton className="w-full aspect-video rounded-lg" />
+                                              )}
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+
+                      </div>
+                      <div className="space-y-6">
+                          <Card>
+                              <CardHeader>
+                                  <CardTitle className="text-lg">Log Your Progress</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                  <Button className="w-full" onClick={() => handleCookedThis(recipeInModal)}>
+                                      <ChefHat className="mr-2"/> I Cooked This!
+                                  </Button>
+                              </CardContent>
+                          </Card>
+                          <Card className="bg-secondary/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-lg"><Music className="w-5 h-5 mr-2 text-primary"/> Audio Guide</CardTitle>
+                                  <CardDescription>Listen to the recipe instructions.</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                  {recipeInModal.audio?.audioDataUri ? (
+                                      <audio controls src={recipeInModal.audio.audioDataUri} className="w-full" />
+                                  ) : (
+                                      <Button className="w-full" onClick={handleGenerateAudio} disabled={isGeneratingAudio}>
+                                          {isGeneratingAudio ? <Loader className="mr-2 animate-spin"/> : <Music className="mr-2" />}
+                                          Generate Audio
+                                      </Button>
+                                  )}
+                              </CardContent>
+                          </Card>
+                          <Card className="bg-secondary/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Nutritional Info</CardTitle>
+                                  <CardDescription>Estimated values per serving.</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                  <Table>
+                                      <TableBody>
+                                          <TableRow>
+                                              <TableCell className="font-medium">Calories</TableCell>
+                                              <TableCell className="text-right">{recipeInModal.nutrition.calories.toFixed(0)} kcal</TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                              <TableCell className="font-medium">Protein</TableCell>
+                                              <TableCell className="text-right">{recipeInModal.nutrition.protein.toFixed(1)}g</TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                              <TableCell className="font-medium">Carbs</TableCell>
+                                              <TableCell className="text-right">{recipeInModal.nutrition.carbs.toFixed(1)}g</TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                              <TableCell className="font-medium">Fat</TableCell>
+                                              <TableCell className="text-right">{recipeInModal.nutrition.fat.toFixed(1)}g</TableCell>
+                                          </TableRow>
+                                          {recipeInModal.estimatedCost && (
+                                              <TableRow>
+                                                  <TableCell className="font-medium">Est. Cost</TableCell>
+                                                  <TableCell className="text-right">₹{recipeInModal.estimatedCost.toFixed(2)}</TableCell>
+                                              </TableRow>
+                                          )}
+                                      </TableBody>
+                                  </Table>
+                              </CardContent>
+                          </Card>
+                          <Card className="bg-secondary/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-lg"><CheckSquare className="w-5 h-5 mr-2 text-primary"/> Inventory Check</CardTitle>
+                                  <CardDescription>Do you have enough ingredients to cook this?</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                  <div className="flex items-center gap-2 mb-4">
+                                      <Label htmlFor="servings">Servings:</Label>
+                                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setServings(s => Math.max(1, s - 1))}><MinusCircle /></Button>
+                                      <span className="font-bold text-lg">{servings}</span>
+                                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setServings(s => s + 1)}><PlusCircle /></Button>
+                                  </div>
+                                  <Button onClick={handleInventoryCheck} disabled={isCheckingInventory} className="w-full">
+                                      {isCheckingInventory ? <><Loader className="mr-2 animate-spin"/> Checking...</> : 'Check My Inventory'}
+                                  </Button>
+                                  {inventoryCheckResults.length > 0 && (
+                                      <div className="mt-4 space-y-2">
+                                          {inventoryCheckResults.map(res => (
+                                              <Alert key={res.ingredient.name} variant={res.status === 'missing' ? 'destructive' : 'default'}>
+                                                  {res.status === 'missing' ? <AlertTriangle className="h-4 w-4"/> : <CheckSquare className="h-4 w-4"/>}
+                                                  <AlertTitle className="text-sm">{res.ingredient.name}</AlertTitle>
+                                                  <AlertDescription className="text-xs">
+                                                    Required: {res.ingredient.quantity}. {res.notes}
+                                                  </AlertDescription>
+                                              </Alert>
+                                          ))}
+                                      </div>
+                                  )}
+                              </CardContent>
+                          </Card>
+                          <Card className="bg-secondary/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Substitution Helper</CardTitle>
+                                  <CardDescription>Missing an ingredient? Find a smart substitution.</CardDescription>
+                              </Header>
+                              <CardContent>
+                                  <Label htmlFor="missing-ingredient">Which ingredient are you missing?</Label>
+                                  <Select onValueChange={setMissingIngredient}>
+                                      <SelectTrigger id="missing-ingredient" className="mt-2">
+                                          <SelectValue placeholder="Select an ingredient..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          {recipeInModal?.ingredients.map(ing => (
+                                              <SelectItem key={ing.name} value={ing.name}>{ing.name}</SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                  </Select>
+
+                                  <Button onClick={handleFindSubstitutions} disabled={isSubstituting || !missingIngredient} className="w-full mt-4">
+                                      {isSubstituting ? <><Loader className="mr-2 animate-spin"/> Finding...</> : 'Find Substitutions'}
+                                  </Button>
+                                  
+                                  {substitutions.length > 0 && (
+                                      <div className="mt-4">
+                                          <h4 className="font-semibold mb-2">Suggested Substitutions:</h4>
+                                          <ul className="list-disc pl-5 text-muted-foreground space-y-1 mt-2 text-sm">
+                                              {substitutions.map(sub => (
+                                                  <li key={sub.name}>
+                                                    <span className="font-semibold text-foreground">{sub.name}</span>: {sub.explanation}
+                                                  </li>
+                                              ))}
+                                          </ul>
+                                      </div>
+                                  )}
+                              </CardContent>
+                          </Card>
+                          <Card className="bg-secondary/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-lg"><Wand2 className="w-5 h-5 mr-2 text-primary"/> AI Taste Predictor</CardTitle>
+                                  <CardDescription>Transform this recipe to better match your personal taste.</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                  <Textarea 
+                                    id="transform-request"
+                                    className="mt-2"
+                                    placeholder="e.g., 'This seems bland, can you make it spicier?' or 'How can I make this vegetarian and lower in fat?'"
+                                    value={transformationRequest}
+                                    onChange={(e) => setTransformationRequest(e.target.value)}
+                                  />
+                                  <Button onClick={handleTransformRecipe} disabled={isTransforming || !transformationRequest} className="w-full mt-4">
+                                      {isTransforming ? <><Loader className="mr-2 animate-spin"/> Transforming...</> : 'Transform with AI'}
+                                  </Button>
+                              </CardContent>
+                          </Card>
+                      </div>
+                  </div>
+                  )}
+
+                  <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsRecipeModalOpen(false)}>Close</Button>
+                  </DialogFooter>
+              </DialogContent>
+          </Dialog>
+        )}
     </>
   );
 }

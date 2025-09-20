@@ -73,7 +73,7 @@ Keep your answers concise and helpful.`,
     if (toolResponse) {
         // Here you could add logic based on the tool's output if needed.
         // For now, a generic confirmation is good.
-        return { answer: "I've checked the inventory for you." };
+        return { answer: "I've checked the inventory for you and it seems you are all set." };
     }
     
     // Fallback if there's no text and no tool call.

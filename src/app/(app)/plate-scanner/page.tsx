@@ -584,25 +584,7 @@ export default function PlateScannerPage() {
                   ) : (
                   <div className="grid md:grid-cols-3 gap-6 flex-1 overflow-y-auto pr-4">
                       <div className="md:col-span-2 space-y-4">
-                          <Card className="bg-secondary/50">
-                              <CardHeader>
-                                  <CardTitle className="flex items-center text-lg"><Video className="w-5 h-5 mr-2 text-primary"/> Recipe Video</CardTitle>
-                                  <CardDescription>A cinematic look at the finished dish.</CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                  {recipeInModal.video?.videoDataUri ? (
-                                      <video key={recipeInModal.video.videoDataUri} controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
-                                  ) : (
-                                      <div className="text-center space-y-2">
-                                          <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>
-                                          <Button className="w-full" onClick={handleGenerateVideo} disabled={isGeneratingVideo}>
-                                              {isGeneratingVideo ? <Loader className="mr-2 animate-spin"/> : <Film className="mr-2" />}
-                                              Generate Video
-                                          </Button>
-                                      </div>
-                                  )}
-                              </CardContent>
-                          </Card>
+                         
                           {isTransforming && (
                             <Alert>
                                 <Wand2 className="h-4 w-4" />
@@ -682,6 +664,25 @@ export default function PlateScannerPage() {
                                           {isGeneratingAudio ? <Loader className="mr-2 animate-spin"/> : <Music className="mr-2" />}
                                           Generate Audio
                                       </Button>
+                                  )}
+                              </CardContent>
+                          </Card>
+                           <Card className="bg-secondary/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-lg"><Video className="w-5 h-5 mr-2 text-primary"/> Recipe Video</CardTitle>
+                                  <CardDescription>A cinematic look at the finished dish.</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                  {recipeInModal.video?.videoDataUri ? (
+                                      <video key={recipeInModal.video.videoDataUri} controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
+                                  ) : (
+                                      <div className="text-center space-y-2">
+                                          <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>
+                                          <Button className="w-full" onClick={handleGenerateVideo} disabled={isGeneratingVideo}>
+                                              {isGeneratingVideo ? <Loader className="mr-2 animate-spin"/> : <Film className="mr-2" />}
+                                              Generate Video
+                                          </Button>
+                                      </div>
                                   )}
                               </CardContent>
                           </Card>

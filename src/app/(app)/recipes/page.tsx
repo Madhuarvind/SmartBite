@@ -67,6 +67,7 @@ export default function RecipesPage() {
   const [isCheckingInventory, setIsCheckingInventory] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoGenerationFailed, setVideoGenerationFailed] = useState(false);
   
   // Mood-based states
   const [mood, setMood] = useState("");
@@ -322,6 +323,7 @@ export default function RecipesPage() {
     setInventoryCheckResults([]);
     setIsCheckingInventory(false);
     setServings(2);
+    setVideoGenerationFailed(false);
   };
   
   const handleFindSubstitutions = async () => {
@@ -481,11 +483,19 @@ export default function RecipesPage() {
   const handleGenerateVideo = async () => {
     if (!recipeInModal) return;
     setIsGeneratingVideo(true);
+    setVideoGenerationFailed(false);
     try {
       const result = await generateRecipeVideo({ recipeName: recipeInModal.name });
-      setRecipeInModal(prev => prev ? { ...prev, video: result } : null);
+      if (result) {
+        setRecipeInModal(prev => prev ? { ...prev, video: result } : null);
+      } else {
+        // Handle the null case for rate limit errors
+        setVideoGenerationFailed(true);
+        toast({ variant: "destructive", title: "Video Generation Limit Reached", description: "You've exceeded the daily quota for video generation." });
+      }
     } catch (e: any) {
       console.error("Error generating video:", e);
+      setVideoGenerationFailed(true);
       toast({ variant: "destructive", title: "Video Generation Failed", description: e.message || "The AI couldn't create a video at this time. This can happen under heavy load." });
     } finally {
       setIsGeneratingVideo(false);
@@ -797,6 +807,14 @@ export default function RecipesPage() {
                             <CardContent>
                                 {recipeInModal.video?.videoDataUri ? (
                                     <video key={recipeInModal.video.videoDataUri} controls src={recipeInModal.video.videoDataUri} className="w-full rounded-lg" />
+                                ) : videoGenerationFailed ? (
+                                    <Alert variant="destructive">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <AlertTitle>Video Limit Reached</AlertTitle>
+                                        <AlertDescription>
+                                        The daily quota for video generation has been exceeded. Please try again tomorrow or upgrade your API key.
+                                        </AlertDescription>
+                                    </Alert>
                                 ) : (
                                     <div className="text-center space-y-2">
                                         <p className="text-xs text-muted-foreground">Click to generate video. This may take up to a minute.</p>

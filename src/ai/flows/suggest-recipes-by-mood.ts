@@ -14,8 +14,6 @@ import {
   SuggestRecipesByMoodOutputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeAudio } from './generate-recipe-audio';
-import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeMedia } from './generate-recipe-media';
 
 export async function suggestRecipesByMood(
@@ -65,42 +63,16 @@ Respond in the specified JSON format.
       return { recipes: [] };
     }
 
-    // After generating the recipe text, kick off all media generation in parallel.
-    const enhancedRecipes: Recipe[] = await Promise.all(
+    const enhancedRecipes = await Promise.all(
       output.recipes.map(async (recipe: Recipe) => {
-        // Asynchronously generate all media in the background.
-        const mediaPromise = (async () => {
-          const mediaResult = await generateRecipeMedia({ recipe });
-
-          const [audioResult, videoResult] = await Promise.all([
-            generateRecipeAudio({ instructions: recipe.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
-                console.error(`Audio generation failed for ${recipe.name}:`, e);
-                return undefined;
-            }),
-            generateRecipeVideo({ recipeName: recipe.name }).catch(e => {
-                console.error(`Video generation failed for ${recipe.name}:`, e);
-                return undefined;
-            })
-          ]);
-          
-          return {
-            instructionSteps: mediaResult.instructionSteps,
-            audio: audioResult,
-            video: videoResult,
-          };
-        })();
-        
-        // Return the recipe immediately with placeholders and the media promise
+        const mediaResult = await generateRecipeMedia({ recipe });
         return {
           ...recipe,
-          instructionSteps: recipe.instructionSteps.map(step => ({...step, image: undefined})),
-          audio: undefined,
-          video: undefined,
-          mediaPromise: mediaPromise as any,
+          instructionSteps: mediaResult.instructionSteps,
         };
       })
     );
-
+    
     return { recipes: enhancedRecipes };
   }
 );

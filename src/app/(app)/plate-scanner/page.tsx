@@ -19,7 +19,7 @@ import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { deductIngredients } from "@/ai/flows/deduct-ingredients";
 import { generateRecipeAudio } from "@/ai/flows/generate-recipe-audio";
 import { generateRecipeVideo } from "@/ai/flows/generate-recipe-video";
-import { AnalyzePlateOutput, Recipe, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput, SubstitutionSuggestion, RecipeIngredient, InstructionStep } from "@/ai/schemas";
+import { AnalyzePlateOutput, Recipe, SubstitutionSuggestion, RecipeIngredient } from "@/ai/schemas";
 import { cn } from "@/lib/utils";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp, onSnapshot, query, doc, writeBatch } from "firebase/firestore";
@@ -253,21 +253,6 @@ export default function PlateScannerPage() {
     setInventoryCheckResults([]);
     setIsCheckingInventory(false);
     setServings(2);
-
-    if (recipe.mediaPromise) {
-        (recipe.mediaPromise as Promise<{
-            instructionSteps: InstructionStep[];
-            audio?: GenerateRecipeAudioOutput;
-            video?: GenerateRecipeVideoOutput;
-        }>).then(media => {
-            setRecipeInModal(currentRecipe => {
-                if (currentRecipe && currentRecipe.name === recipe.name) {
-                    return { ...currentRecipe, ...media };
-                }
-                return currentRecipe;
-            });
-        });
-    }
   };
 
 

@@ -12,8 +12,6 @@ import {
   TransformRecipeInputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeAudio } from './generate-recipe-audio';
-import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeMedia } from './generate-recipe-media';
 
 export async function transformRecipe(
@@ -65,33 +63,13 @@ Generate a new, transformed recipe based on this request.
     }
     
     // Asynchronously generate all media in the background.
-    const mediaPromise = (async () => {
-      const mediaResult = await generateRecipeMedia({ recipe });
-
-      const [audioResult, videoResult] = await Promise.all([
-        generateRecipeAudio({ instructions: recipe.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
-            console.error(`Audio generation failed for ${recipe.name}:`, e);
-            return undefined;
-        }),
-        generateRecipeVideo({ recipeName: recipe.name }).catch(e => {
-            console.error(`Video generation failed for ${recipe.name}:`, e);
-            return undefined;
-        })
-      ]);
+    const mediaResult = await generateRecipeMedia({ recipe });
       
-      return {
-        instructionSteps: mediaResult.instructionSteps,
-        audio: audioResult,
-        video: videoResult,
-      };
-    })();
-
     return {
       ...recipe,
-      instructionSteps: recipe.instructionSteps.map(step => ({...step, image: undefined})),
+      instructionSteps: mediaResult.instructionSteps,
       audio: undefined,
       video: undefined,
-      mediaPromise: mediaPromise as any,
     };
   }
 );

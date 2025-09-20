@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion, GenerateRecipeAudioOutput, GenerateRecipeVideoOutput, InstructionStep } from "@/ai/schemas";
+import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
@@ -30,7 +30,6 @@ import { suggestRecipesByMood } from "@/ai/flows/suggest-recipes-by-mood";
 import { predictiveSuggestions } from "@/ai/flows/predictive-suggestions";
 import { predictFacialMood } from "@/ai/flows/predict-facial-mood";
 import { inventRecipe } from "@/ai/flows/invent-recipe";
-import { generateRecipeMedia } from "@/ai/flows/generate-recipe-media";
 import { Textarea } from "@/components/ui/textarea";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp, onSnapshot, query, orderBy, getDocs, writeBatch, doc } from "firebase/firestore";
@@ -323,21 +322,6 @@ export default function RecipesPage() {
     setInventoryCheckResults([]);
     setIsCheckingInventory(false);
     setServings(2);
-
-    if (recipe.mediaPromise) {
-      (recipe.mediaPromise as Promise<{
-        instructionSteps: InstructionStep[];
-        audio?: GenerateRecipeAudioOutput;
-        video?: GenerateRecipeVideoOutput;
-      }>).then(media => {
-        setRecipeInModal(currentRecipe => {
-          if (currentRecipe && currentRecipe.name === recipe.name) {
-            return { ...currentRecipe, ...media };
-          }
-          return currentRecipe;
-        });
-      });
-    }
   };
   
   const handleFindSubstitutions = async () => {
@@ -440,8 +424,6 @@ export default function RecipesPage() {
         batch.set(historyRef, {
             ...recipe,
             cookedAt: Timestamp.now(),
-            // Remove the promise before saving to Firestore
-            mediaPromise: undefined, 
         });
 
         const activityRef = doc(collection(db, "users", user.uid, "activity"));

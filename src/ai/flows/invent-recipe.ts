@@ -12,8 +12,6 @@ import {
   InventRecipeInputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeAudio } from './generate-recipe-audio';
-import { generateRecipeVideo } from './generate-recipe-video';
 import { generateRecipeMedia } from './generate-recipe-media';
 
 // This is a simplified function to estimate the cost.
@@ -81,37 +79,14 @@ Respond in the specified JSON format.
     const estimatedCost = calculateEstimatedCost(recipe.ingredients, input.ingredients);
     const recipeWithCost: Recipe = { ...recipe, estimatedCost };
 
-    // Asynchronously generate all media in the background.
-    const mediaPromise = (async () => {
-      // The generateRecipeMedia flow now handles the complexity of image generation.
-      const mediaResult = await generateRecipeMedia({ recipe: recipeWithCost });
-
-      // After images are done (or failed gracefully), kick off audio/video
-      const [audioResult, videoResult] = await Promise.all([
-        generateRecipeAudio({ instructions: recipeWithCost.instructionSteps.map(s => s.text).join('\n') }).catch(e => {
-            console.error(`Audio generation failed for ${recipeWithCost.name}:`, e);
-            return undefined;
-        }),
-        generateRecipeVideo({ recipeName: recipeWithCost.name }).catch(e => {
-            console.error(`Video generation failed for ${recipeWithCost.name}:`, e);
-            return undefined;
-        })
-      ]);
-
-      return {
-          instructionSteps: mediaResult.instructionSteps,
-          audio: audioResult,
-          video: videoResult,
-      };
-    })();
-
+    // Asynchronously generate step images.
+    const mediaResult = await generateRecipeMedia({ recipe: recipeWithCost });
 
     return {
       ...recipeWithCost,
-      instructionSteps: recipeWithCost.instructionSteps.map(step => ({...step, image: undefined})),
+      instructionSteps: mediaResult.instructionSteps,
       audio: undefined,
       video: undefined,
-      mediaPromise: mediaPromise as any,
     };
   }
 );

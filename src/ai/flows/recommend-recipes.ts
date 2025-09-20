@@ -59,9 +59,17 @@ const recommendRecipesFlow = ai.defineFlow(
           });
           return { ...recipe, coverImage };
         } catch (e) {
-          console.error(`Cover image generation failed for ${recipe.name}:`, e);
-          // Ensure a recipe object is always returned, even on image failure
-          return { ...recipe, coverImage: undefined };
+          console.error(`Primary image generation failed for ${recipe.name}, trying fallback:`, e);
+          try {
+            const coverImage = await generateImage({
+              prompt: `A simple, appetizing photo of "${recipe.name}".`,
+            });
+            return { ...recipe, coverImage };
+          } catch (fallbackError) {
+             console.error(`Fallback image generation also failed for ${recipe.name}:`, fallbackError);
+            // Ensure a recipe object is always returned, even on image failure
+            return { ...recipe, coverImage: undefined };
+          }
         }
       })
     );

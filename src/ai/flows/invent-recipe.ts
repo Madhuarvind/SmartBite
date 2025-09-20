@@ -12,7 +12,7 @@ import {
   InventRecipeInputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeMedia } from './generate-recipe-media';
+import { generateImage } from './generate-image';
 
 // This is a simplified function to estimate the cost.
 // A real-world application would need a more sophisticated way to handle quantities and units.
@@ -76,14 +76,34 @@ const inventRecipeFlow = ai.defineFlow(
 
     // After generating the recipe, calculate the cost.
     const estimatedCost = calculateEstimatedCost(recipe.ingredients, input.ingredients);
-    const recipeWithCost: Recipe = { ...recipe, estimatedCost };
+    let recipeWithCost: Recipe = { ...recipe, estimatedCost };
+    
+    // Generate cover image with a fallback
+    let coverImage;
+    try {
+        coverImage = await generateImage({
+        prompt: `A beautiful, appetizing, professional food photography shot of a finished plate of "${recipe.name}".`,
+      });
+    } catch (e) {
+      console.error(`Primary image generation failed for ${recipe.name}, trying fallback:`, e);
+      try {
+        coverImage = await generateImage({
+          prompt: `A simple, appetizing photo of "${recipe.name}".`,
+        });
+      } catch (fallbackError) {
+        console.error(`Fallback image generation also failed for ${recipe.name}:`, fallbackError);
+        // Ensure a recipe object is always returned, even on image failure
+        coverImage = undefined;
+      }
+    }
 
-    // Asynchronously generate step images.
-    const mediaResult = await generateRecipeMedia({ recipe: recipeWithCost });
+    // This flow is designed to generate a single invented recipe, so we just add the image to it.
+    recipeWithCost = { ...recipeWithCost, coverImage };
 
+    // This flow doesn't have step images, audio, or video, so they are explicitly set to undefined.
     return {
       ...recipeWithCost,
-      instructionSteps: mediaResult.instructionSteps,
+      instructionSteps: recipe.instructionSteps || [], // Ensure instructionSteps is an array
       audio: undefined,
       video: undefined,
     };

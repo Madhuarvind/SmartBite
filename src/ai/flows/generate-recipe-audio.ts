@@ -47,6 +47,11 @@ const generateRecipeAudioFlow = ai.defineFlow(
     outputSchema: GenerateRecipeAudioOutputSchema,
   },
   async ({instructions}) => {
+    // Add validation to prevent calling the model with an empty string
+    if (!instructions || instructions.trim() === '') {
+      throw new Error('Cannot generate audio from empty instructions.');
+    }
+    
     try {
       const { media, finishReason, custom: customError } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-preview-tts'),

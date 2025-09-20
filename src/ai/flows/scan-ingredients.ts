@@ -71,15 +71,19 @@ const scanIngredientsFlow = ai.defineFlow(
             return { ...ingredient, expiryDate: prediction.expiryDate };
           } catch (e) {
             console.error(`Could not predict expiry for ${ingredient.name}`, e);
-            // If prediction fails, return the original ingredient
-            return ingredient;
+            // If prediction fails, return with N/A
+            return { ...ingredient, expiryDate: 'N/A' };
           }
         }
-        return ingredient;
+         // If an expiry date was found via OCR, keep it.
+        if (ingredient.expiryDate) {
+          return ingredient;
+        }
+        // For all other cases (e.g., not fresh), set expiry to N/A
+        return { ...ingredient, expiryDate: 'N/A' };
       })
     );
 
     return { ingredients: ingredientsWithPredictions };
   }
 );
-

@@ -71,10 +71,11 @@ const scanReceiptFlow = ai.defineFlow(
           } catch (e) {
             console.error(`Could not predict expiry for ${item.name}`, e);
             // If prediction fails, return the original item with a null expiry
-            return { ...item, expiryDate: null };
+            return { ...item, expiryDate: 'N/A' };
           }
         }
-        return item;
+        // For non-fresh items, explicitly set expiryDate to 'N/A'
+        return { ...item, expiryDate: 'N/A' };
       })
     );
 

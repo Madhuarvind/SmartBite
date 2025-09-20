@@ -20,20 +20,11 @@ export async function transformRecipe(
   return transformRecipeFlow(input);
 }
 
-
-const transformRecipeFlow = ai.defineFlow(
-  {
-    name: 'transformRecipeFlow',
-    inputSchema: TransformRecipeInputSchema,
-    outputSchema: Recipe,
-  },
-  async (input) => {
-
-    const transformRecipePrompt = ai.definePrompt({
-      name: 'transformRecipePrompt',
-      input: { schema: TransformRecipeInputSchema },
-      output: { schema: Recipe },
-      prompt: `You are an expert chef and culinary psychologist. Your task is to act as an "AI Taste Predictor". You will transform a given recipe based on a user's specific taste preferences and requests.
+const transformRecipePrompt = ai.definePrompt({
+  name: 'transformRecipePrompt',
+  input: { schema: TransformRecipeInputSchema },
+  output: { schema: Recipe },
+  prompt: `You are an expert chef and culinary psychologist. Your task is to act as an "AI Taste Predictor". You will transform a given recipe based on a user's specific taste preferences and requests.
 
 You must deeply analyze the transformation request and modify the recipe accordingly. This might involve:
 - Changing ingredients (e.g., swapping a mild pepper for a hotter one).
@@ -55,7 +46,15 @@ Transformation Request / Taste Profile: "{{{transformation}}}"
 
 Generate a new, transformed recipe based on this request.
 `,
-    });
+});
+
+const transformRecipeFlow = ai.defineFlow(
+  {
+    name: 'transformRecipeFlow',
+    inputSchema: TransformRecipeInputSchema,
+    outputSchema: Recipe,
+  },
+  async (input) => {
 
     const { output: recipe } = await transformRecipePrompt(input);
     if (!recipe) {

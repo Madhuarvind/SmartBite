@@ -23,20 +23,11 @@ export async function predictiveSuggestions(
   return predictiveSuggestionsFlow(input);
 }
 
-
-const predictiveSuggestionsFlow = ai.defineFlow(
-  {
-    name: 'predictiveSuggestionsFlow',
-    inputSchema: PredictiveSuggestionsInputSchema,
-    outputSchema: PredictiveSuggestionsOutputSchema,
-  },
-  async (input) => {
-
-    const predictiveSuggestionsPrompt = ai.definePrompt({
-      name: 'predictiveSuggestionsPrompt',
-      input: { schema: PredictiveSuggestionsInputSchema },
-      output: { schema: PredictiveSuggestionsOutputSchema },
-      prompt: `You are a highly intuitive predictive cooking assistant. Your task is to analyze a user's profile, which includes their available ingredients, their past purchase history, and their recent cooking activity, to predict what they might want to cook next.
+const predictiveSuggestionsPrompt = ai.definePrompt({
+  name: 'predictiveSuggestionsPrompt',
+  input: { schema: PredictiveSuggestionsInputSchema },
+  output: { schema: PredictiveSuggestionsOutputSchema },
+  prompt: `You are a highly intuitive predictive cooking assistant. Your task is to analyze a user's profile, which includes their available ingredients, their past purchase history, and their recent cooking activity, to predict what they might want to cook next.
 
 Generate exactly 4 distinct and creative recipes that reflect a thoughtful prediction based on the user's habits and available items. For example, if they recently bought ingredients for a specific cuisine, you might suggest a recipe from that cuisine. If they often cook quick meals, prioritize simpler recipes.
 
@@ -64,7 +55,15 @@ User's Recent Cooking Activity:
 
 Respond in the specified JSON format.
 `,
-    });
+});
+
+const predictiveSuggestionsFlow = ai.defineFlow(
+  {
+    name: 'predictiveSuggestionsFlow',
+    inputSchema: PredictiveSuggestionsInputSchema,
+    outputSchema: PredictiveSuggestionsOutputSchema,
+  },
+  async (input) => {
 
     const { output } = await predictiveSuggestionsPrompt(input);
     if (!output || !output.recipes) {

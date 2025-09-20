@@ -21,21 +21,12 @@ export async function findRecipeFromMeal(
   return findRecipeFromMealFlow(input);
 }
 
-
-const findRecipeFromMealFlow = ai.defineFlow(
-  {
-    name: 'findRecipeFromMealFlow',
-    inputSchema: FindRecipeFromMealInputSchema,
-    outputSchema: Recipe, // Output the full recipe schema directly
-  },
-  async (input) => {
-    
-    // Define a prompt that asks the AI to generate the recipe structure, but without images yet.
-    const findRecipePrompt = ai.definePrompt({
-      name: 'findRecipeFromMealPrompt',
-      input: { schema: FindRecipeFromMealInputSchema },
-      output: { schema: Recipe }, // We expect a full Recipe object as output
-      prompt: `You are an expert recipe creator. The user has identified a meal they enjoyed and wants a recipe to recreate it at home.
+// Define a prompt that asks the AI to generate the recipe structure, but without images yet.
+const findRecipePrompt = ai.definePrompt({
+  name: 'findRecipeFromMealPrompt',
+  input: { schema: FindRecipeFromMealInputSchema },
+  output: { schema: Recipe }, // We expect a full Recipe object as output
+  prompt: `You are an expert recipe creator. The user has identified a meal they enjoyed and wants a recipe to recreate it at home.
 
 Generate a complete recipe for the following meal: **{{{mealName}}}**
 
@@ -50,8 +41,17 @@ For the recipe, you MUST provide:
 
 Respond in the specified JSON format.
 `,
-    });
+});
 
+
+const findRecipeFromMealFlow = ai.defineFlow(
+  {
+    name: 'findRecipeFromMealFlow',
+    inputSchema: FindRecipeFromMealInputSchema,
+    outputSchema: Recipe, // Output the full recipe schema directly
+  },
+  async (input) => {
+    
     // Generate the basic recipe structure (text only).
     const { output: recipe } = await findRecipePrompt(input);
     if (!recipe) {

@@ -15,20 +15,11 @@ export async function recommendRecipes(input: RecommendRecipesInput): Promise<Re
   return recommendRecipesFlow(input);
 }
 
-
-const recommendRecipesFlow = ai.defineFlow(
-  {
-    name: 'recommendRecipesFlow',
-    inputSchema: RecommendRecipesInputSchema,
-    outputSchema: RecommendRecipesOutputSchema,
-  },
-  async input => {
-
-    const recommendRecipesPrompt = ai.definePrompt({
-      name: 'recommendRecipesPrompt',
-      input: {schema: RecommendRecipesInputSchema},
-      output: {schema: RecommendRecipesOutputSchema},
-      prompt: `You are a creative and expert recipe recommendation engine. You will be provided with a list of ingredients the user has available, their dietary restrictions, and a list of ingredients that are about to expire.
+const recommendRecipesPrompt = ai.definePrompt({
+  name: 'recommendRecipesPrompt',
+  input: {schema: RecommendRecipesInputSchema},
+  output: {schema: RecommendRecipesOutputSchema},
+  prompt: `You are a creative and expert recipe recommendation engine. You will be provided with a list of ingredients the user has available, their dietary restrictions, and a list of ingredients that are about to expire.
 
 Your task is to generate exactly 4 distinct and creative recipes. Prioritize using the expiring ingredients first. 
 
@@ -44,7 +35,15 @@ Expiring Ingredients: {{{expiringIngredients}}}
 
 Respond in JSON format.
 `,
-    });
+});
+
+const recommendRecipesFlow = ai.defineFlow(
+  {
+    name: 'recommendRecipesFlow',
+    inputSchema: RecommendRecipesInputSchema,
+    outputSchema: RecommendRecipesOutputSchema,
+  },
+  async input => {
 
     const {output} = await recommendRecipesPrompt(input);
     if (!output || !output.recipes) {

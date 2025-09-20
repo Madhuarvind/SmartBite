@@ -36,20 +36,11 @@ export async function inventRecipe(
   return inventRecipeFlow(input);
 }
 
-
-const inventRecipeFlow = ai.defineFlow(
-  {
-    name: 'inventRecipeFlow',
-    inputSchema: InventRecipeInputSchema,
-    outputSchema: Recipe,
-  },
-  async (input) => {
-
-    const inventRecipePrompt = ai.definePrompt({
-      name: 'inventRecipePrompt',
-      input: { schema: InventRecipeInputSchema },
-      output: { schema: Recipe },
-      prompt: `You are a creative and experimental "Creative Chef AI" with a deep understanding of food science. Your task is to invent a completely new, interesting, and delicious recipe using only the provided list of ingredients.
+const inventRecipePrompt = ai.definePrompt({
+  name: 'inventRecipePrompt',
+  input: { schema: InventRecipeInputSchema },
+  output: { schema: Recipe },
+  prompt: `You are a creative and experimental "Creative Chef AI" with a deep understanding of food science. Your task is to invent a completely new, interesting, and delicious recipe using only the provided list of ingredients.
 
 Do not just find a standard recipe. Create something unique and give it an appealing, creative name. For example, if you are given rice, spinach, and curd, you might create a "Spinach Yogurt Rice Bowl with Spiced Dressing."
 
@@ -68,7 +59,15 @@ Available Ingredients:
 
 Respond in the specified JSON format.
 `,
-    });
+});
+
+const inventRecipeFlow = ai.defineFlow(
+  {
+    name: 'inventRecipeFlow',
+    inputSchema: InventRecipeInputSchema,
+    outputSchema: Recipe,
+  },
+  async (input) => {
 
     const { output: recipe } = await inventRecipePrompt(input);
     if (!recipe) {

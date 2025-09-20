@@ -22,20 +22,11 @@ export async function suggestRecipesByMood(
   return suggestRecipesByMoodFlow(input);
 }
 
-
-const suggestRecipesByMoodFlow = ai.defineFlow(
-  {
-    name: 'suggestRecipesByMoodFlow',
-    inputSchema: SuggestRecipesByMoodInputSchema,
-    outputSchema: SuggestRecipesByMoodOutputSchema,
-  },
-  async (input) => {
-
-    const suggestRecipesByMoodPrompt = ai.definePrompt({
-      name: 'suggestRecipesByMoodPrompt',
-      input: { schema: SuggestRecipesByMoodInputSchema },
-      output: { schema: SuggestRecipesByMoodOutputSchema },
-      prompt: `You are a creative chef and culinary psychologist. Your task is to suggest recipes that perfectly match the user's current mood, using ONLY the ingredients they have available.
+const suggestRecipesByMoodPrompt = ai.definePrompt({
+  name: 'suggestRecipesByMoodPrompt',
+  input: { schema: SuggestRecipesByMoodInputSchema },
+  output: { schema: SuggestRecipesByMoodOutputSchema },
+  prompt: `You are a creative chef and culinary psychologist. Your task is to suggest recipes that perfectly match the user's current mood, using ONLY the ingredients they have available.
 
 Analyze the user's stated mood and their available ingredients. Generate exactly 4 distinct and creative recipes.
 
@@ -56,7 +47,15 @@ Available Ingredients: {{#each availableIngredients}}{{{this}}}, {{/each}}
 
 Respond in the specified JSON format.
 `,
-    });
+});
+
+const suggestRecipesByMoodFlow = ai.defineFlow(
+  {
+    name: 'suggestRecipesByMoodFlow',
+    inputSchema: SuggestRecipesByMoodInputSchema,
+    outputSchema: SuggestRecipesByMoodOutputSchema,
+  },
+  async (input) => {
 
     const { output } = await suggestRecipesByMoodPrompt(input);
     if (!output || !output.recipes) {

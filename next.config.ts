@@ -20,8 +20,6 @@ const nextConfig: NextConfig = {
   },
   serverActions: {
     bodySizeLimit: '4.5mb',
-    // @ts-expect-error - timeout is an experimental property
-    timeout: 120, // Increase timeout to 2 minutes for long-running AI tasks
   },
 };
 

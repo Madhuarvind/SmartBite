@@ -53,24 +53,24 @@ const recommendRecipesFlow = ai.defineFlow(
     // After generating the recipe text, generate a cover image for each one in parallel.
     const enhancedRecipes = await Promise.all(
       output.recipes.map(async (recipe: Recipe) => {
+        let coverImage;
         try {
-          const coverImage = await generateImage({
+          coverImage = await generateImage({
             prompt: `A beautiful, appetizing, professional food photography shot of a finished plate of "${recipe.name}".`,
           });
-          return { ...recipe, coverImage };
         } catch (e) {
           console.error(`Primary image generation failed for ${recipe.name}, trying fallback:`, e);
           try {
-            const coverImage = await generateImage({
+            coverImage = await generateImage({
               prompt: `A simple, appetizing photo of "${recipe.name}".`,
             });
-            return { ...recipe, coverImage };
           } catch (fallbackError) {
              console.error(`Fallback image generation also failed for ${recipe.name}:`, fallbackError);
             // Ensure a recipe object is always returned, even on image failure
-            return { ...recipe, coverImage: undefined };
+            coverImage = undefined;
           }
         }
+        return { ...recipe, coverImage };
       })
     );
 

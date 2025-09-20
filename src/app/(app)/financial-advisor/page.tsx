@@ -195,7 +195,7 @@ export default function FinancialAdvisorPage() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-3xl font-bold text-primary">
-                                    ${
+                                    ₹{
                                       purchaseHistory
                                         .reduce((acc, item) => acc + (item.price || 0), 0)
                                         .toFixed(2)

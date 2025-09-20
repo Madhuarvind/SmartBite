@@ -224,7 +224,7 @@ export default function DashboardPage() {
           <CardContent>
             {isLoading ? <Skeleton className="h-28 w-full" /> : (
                 <>
-                    <div className="text-2xl font-bold text-primary">${weeklyTotal.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-primary">₹{weeklyTotal.toFixed(2)}</div>
                     <p className="text-xs text-muted-foreground">Total for the last 7 days</p>
                     <div className="h-[120px] mt-4">
                       <ChartContainer config={spendingChartConfig} className="h-full w-full">

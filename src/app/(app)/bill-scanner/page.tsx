@@ -238,7 +238,7 @@ export default function BillScannerPage() {
                                       <TableCell className="font-medium">{item.name}</TableCell>
                                       <TableCell>{item.quantity}</TableCell>
                                       <TableCell>{item.expiryDate || 'N/A'}</TableCell>
-                                      <TableCell className="text-right">{item.price ? `$${item.price.toFixed(2)}` : 'N/A'}</TableCell>
+                                      <TableCell className="text-right">{item.price ? `₹${item.price.toFixed(2)}` : 'N/A'}</TableCell>
                                   </TableRow>
                               ))}
                           </TableBody>

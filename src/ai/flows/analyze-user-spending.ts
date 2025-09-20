@@ -1,3 +1,4 @@
+
 // src/ai/flows/analyze-user-spending.ts
 'use server';
 /**
@@ -38,7 +39,7 @@ Your tasks are:
 
 List of Purchased Items:
 {{#each purchaseHistory}}
-- {{this.name}} (Price: \${{this.price}})
+- {{this.name}} (Price: ₹{{this.price}})
 {{/each}}
 
 Return the analysis in the specified JSON format.

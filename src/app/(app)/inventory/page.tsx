@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 
 export default function InventoryPage() {
+  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [pantryEssentials, setPantryEssentials] = useState<PantryItem[]>([]);
@@ -43,7 +44,6 @@ export default function InventoryPage() {
   const [isDragging, setIsDragging] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   // State for multi-delete
@@ -163,7 +163,7 @@ export default function InventoryPage() {
       }
   }
 
-  const handleScanFromCamera = async () => {
+  const handleScanFromCamera = () => {
     if (!videoRef.current) return;
     setUploadedImage(null);
 
@@ -254,7 +254,7 @@ export default function InventoryPage() {
     setNewItemExpiry("");
   }
 
-  const handleAddItem = async () => {
+  const handleAddItem = () => {
     if (!user || !newItemName || !newItemQuantity) {
       toast({
         variant: "destructive",
@@ -270,7 +270,7 @@ export default function InventoryPage() {
       purchaseDate: newItemPurchaseDate,
     };
     try {
-        await addDoc(collection(db, "users", user.uid, "inventory"), newItem);
+        addDoc(collection(db, "users", user.uid, "inventory"), newItem);
         toast({
             title: "Item Added",
             description: `${newItem.name} has been added to your inventory.`,
@@ -283,7 +283,7 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDeleteItem = async (itemId: string, itemName: string, expiry: string) => {
+  const handleDeleteItem = (itemId: string, itemName: string, expiry: string) => {
     if (!user) {
         toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to delete items."});
         return;
@@ -291,7 +291,7 @@ export default function InventoryPage() {
     
     if (expiry !== 'N/A' && isPast(parseISO(expiry))) {
         try {
-            await addDoc(collection(db, "users", user.uid, "activity"), {
+            addDoc(collection(db, "users", user.uid, "activity"), {
                 type: 'itemWasted',
                 itemName: itemName,
                 timestamp: Timestamp.now()
@@ -303,7 +303,7 @@ export default function InventoryPage() {
     }
 
     try {
-        await deleteDoc(doc(db, "users", user.uid, "inventory", itemId));
+        deleteDoc(doc(db, "users", user.uid, "inventory", itemId));
         toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
     } catch (error) {
         console.error("Error deleting item from Firestore:", error);
@@ -312,7 +312,7 @@ export default function InventoryPage() {
   };
 
 
-  const handleAddAllScannedItems = async (target: 'inventory' | 'essentials') => {
+  const handleAddAllScannedItems = (target: 'inventory' | 'essentials') => {
     if (!user || scannedIngredients.length === 0) {
       toast({
         variant: "destructive",
@@ -345,7 +345,7 @@ export default function InventoryPage() {
         }
       });
 
-      await batch.commit();
+      batch.commit();
 
       toast({
         title: `${target === 'inventory' ? 'Inventory' : 'Pantry Essentials'} Updated!`,
@@ -386,7 +386,7 @@ export default function InventoryPage() {
 
     recognition.start();
 
-    recognition.onresult = async (event) => {
+    recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       toast({
         title: "You said:",
@@ -395,14 +395,16 @@ export default function InventoryPage() {
       
       setIsLoading(true);
       try {
-        const result = await scanIngredients({ textQuery: transcript });
-        setScannedIngredients(result.ingredients);
-         if(result.ingredients.length === 0) {
-            toast({
-                title: "No ingredients detected",
-                description: "The AI couldn't understand the ingredients in your request. Please try again.",
-            });
-        }
+        const result = scanIngredients({ textQuery: transcript });
+        result.then(res => {
+          setScannedIngredients(res.ingredients);
+          if(res.ingredients.length === 0) {
+              toast({
+                  title: "No ingredients detected",
+                  description: "The AI couldn't understand the ingredients in your request. Please try again.",
+              });
+          }
+        });
       } catch (error) {
          console.error("Error parsing voice input:", error);
          toast({
@@ -430,13 +432,13 @@ export default function InventoryPage() {
     };
   };
 
-  const handleAddEssentialItem = async () => {
+  const handleAddEssentialItem = () => {
     if (!user || !newEssentialName || !newEssentialQuantity) {
         toast({ variant: "destructive", title: "Missing Information", description: "Please fill out both name and quantity." });
         return;
     }
     try {
-        await addDoc(collection(db, "users", user.uid, "pantry_essentials"), {
+        addDoc(collection(db, "users", user.uid, "pantry_essentials"), {
             name: newEssentialName,
             quantity: newEssentialQuantity,
         });
@@ -450,10 +452,10 @@ export default function InventoryPage() {
     }
   };
 
-  const handleRemoveEssentialItem = async (itemId: string, itemName: string) => {
+  const handleRemoveEssentialItem = (itemId: string, itemName: string) => {
     if (!user) return;
     try {
-        await deleteDoc(doc(db, "users", user.uid, "pantry_essentials", itemId));
+        deleteDoc(doc(db, "users", user.uid, "pantry_essentials", itemId));
         toast({ variant: "destructive", title: "Item Removed", description: `${itemName} removed from essentials.` });
     } catch (error) {
         console.error("Error removing essential item:", error);
@@ -461,7 +463,7 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDeleteSelectedItems = async () => {
+  const handleDeleteSelectedItems = () => {
     if (!user || selectedItems.length === 0) return;
 
     const batch = writeBatch(db);
@@ -486,8 +488,8 @@ export default function InventoryPage() {
     });
 
     try {
-      await batch.commit();
-      await activityBatch.commit(); // Commit separately or together, depending on logic
+      batch.commit();
+      activityBatch.commit(); // Commit separately or together, depending on logic
       toast({
         variant: "destructive",
         title: "Items Deleted",
@@ -632,7 +634,10 @@ export default function InventoryPage() {
         </Dialog>
       } />
       
-      <Tabs defaultValue="inventory" onValueChange={() => setScannedIngredients([])}>
+      <Tabs defaultValue="inventory" onValueChange={() => {
+        setScannedIngredients([]);
+        setUploadedImage(null);
+      }}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="inventory">My Items</TabsTrigger>
           <TabsTrigger value="pantry">Pantry Essentials</TabsTrigger>
@@ -800,3 +805,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    

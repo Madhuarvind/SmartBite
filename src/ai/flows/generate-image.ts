@@ -29,8 +29,11 @@ const generateImageFlow = ai.defineFlow(
   },
   async ({ prompt }) => {
     const { media } = await ai.generate({
-      model: googleAI.model('imagen-4.0-fast-generate-001'),
-      prompt,
+      model: googleAI.model('gemini-2.5-flash-image-preview'),
+      prompt: [{ text: prompt }],
+      config: {
+        responseModalities: ['IMAGE', 'TEXT'],
+      },
     });
 
     const imageDataUri = media.url;

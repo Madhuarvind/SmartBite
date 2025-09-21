@@ -710,7 +710,14 @@ export default function RecipesPage() {
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl text-primary">{recipeInModal.name}</DialogTitle>
+                    {isTransforming ? (
+                      <>
+                        <DialogTitle className="sr-only">Transforming Recipe</DialogTitle>
+                        <Skeleton className="h-8 w-3/4" />
+                      </>
+                    ) : (
+                      <DialogTitle className="text-3xl text-primary">{recipeInModal.name}</DialogTitle>
+                    )}
                     <DialogDescription>
                         View the full recipe details, and use our AI tools to find substitutions or transform the recipe.
                     </DialogDescription>
@@ -958,3 +965,5 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    

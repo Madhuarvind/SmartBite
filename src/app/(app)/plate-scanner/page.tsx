@@ -577,9 +577,14 @@ export default function PlateScannerPage() {
           <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
               <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
                   <DialogHeader>
-                      {isFindingRecipe || isTransforming ? <Skeleton className="h-8 w-3/4"/> : 
+                      {isFindingRecipe || isTransforming ? (
+                        <>
+                          <DialogTitle className="sr-only">Loading Recipe</DialogTitle>
+                          <Skeleton className="h-8 w-3/4"/>
+                        </>
+                      ) : (
                           <DialogTitle className="text-3xl text-primary">{recipeInModal?.name}</DialogTitle>
-                      }
+                      )}
                       <DialogDescription>
                           {isFindingRecipe ? 'Please wait while we find the perfect recipe for you...' : 
                           'View the full recipe details, and use our AI tools to find substitutions or transform the recipe.'
@@ -835,5 +840,7 @@ export default function PlateScannerPage() {
     </>
   );
 }
+
+    
 
     

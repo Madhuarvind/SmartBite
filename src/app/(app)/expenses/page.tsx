@@ -18,7 +18,7 @@ import { format, subDays, startOfMonth, endOfMonth, getYear, getMonth, parseISO 
 import Image from "next/image";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 
 const chartConfig = {
   amount: {
@@ -322,6 +322,12 @@ export default function ExpensesPage() {
             {selectedReceipt && (
               <Dialog open={!!selectedReceipt} onOpenChange={() => setSelectedReceipt(null)}>
                 <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Receipt Details</DialogTitle>
+                    <DialogDescription>
+                      Bill No: {selectedReceipt.billNo} - Total: ₹{selectedReceipt.totalAmount.toFixed(2)}
+                    </DialogDescription>
+                  </DialogHeader>
                   <Image
                     src={selectedReceipt.receiptImage}
                     alt={`Receipt ${selectedReceipt.billNo}`}

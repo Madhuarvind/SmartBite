@@ -87,7 +87,7 @@ const generateRecipeVideoFlow = ai.defineFlow(
         throw new Error(`Failed to generate video: ${errorMessage}`);
       }
 
-      const videoPart = operation.output?.message?.content.find((p) => p.media && p.media.contentType?.startsWith('video/'));
+      const videoPart = operation.output?.message?.content.find((p) => p.media);
       if (!videoPart || !videoPart.media?.url) {
         console.error('Video generation failed: No video part found in result.');
         throw new Error('Failed to find the generated video in the operation result.');

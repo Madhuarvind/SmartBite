@@ -18,6 +18,7 @@ import { format, subDays, startOfMonth, endOfMonth, getYear, getMonth, parseISO 
 import Image from "next/image";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 const chartConfig = {
   amount: {
@@ -40,6 +41,9 @@ export default function ExpensesPage() {
   const [period, setPeriod] = useState<Period>('last30');
   const [selectedYear, setSelectedYear] = useState(getYear(new Date()));
   const [selectedMonth, setSelectedMonth] = useState(getMonth(new Date()));
+
+  // State for image viewer
+  const [selectedReceipt, setSelectedReceipt] = useState<ScannedBill | null>(null);
 
   const uniqueYears = useMemo(() => {
     const years = new Set(purchaseHistory.map(item => getYear(parseISO(item.purchaseDate!))));
@@ -288,7 +292,7 @@ export default function ExpensesPage() {
                                 <div className="flex space-x-4 pb-4">
                                     {scannedBills.map((bill) => (
                                         bill.receiptImage && (
-                                            <div key={bill.id} className="w-40 flex-shrink-0">
+                                            <div key={bill.id} className="w-40 flex-shrink-0 cursor-pointer" onClick={() => setSelectedReceipt(bill)}>
                                                 <Image
                                                     src={bill.receiptImage}
                                                     alt={`Receipt ${bill.billNo}`}
@@ -315,6 +319,19 @@ export default function ExpensesPage() {
                     </CardContent>
                 </Card>
             </div>
+            {selectedReceipt && (
+              <Dialog open={!!selectedReceipt} onOpenChange={() => setSelectedReceipt(null)}>
+                <DialogContent className="max-w-3xl">
+                  <Image
+                    src={selectedReceipt.receiptImage}
+                    alt={`Receipt ${selectedReceipt.billNo}`}
+                    width={800}
+                    height={1200}
+                    className="rounded-md object-contain w-full h-auto"
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
 
         </CardContent>
       </Card>

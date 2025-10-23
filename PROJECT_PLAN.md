@@ -70,8 +70,7 @@ This document provides a comprehensive, week-by-week breakdown of the 15-week ex
         5.  Flow -> `predictExpiryDate` Flow.
         6.  Flow returns structured JSON to Client.
     -   **Task 2: UI/UX Wireframing & Mockups.** Use a tool like Figma or draw.io to create low-fidelity wireframes for all primary screens (Dashboard, Inventory, Bill Scanner, Plate Scanner, Recipe Finder, Meal Planner). Progress to high-fidelity mockups for the Dashboard and Inventory screens, establishing the visual style (colors, fonts, spacing).
-    -   **Task
-3: Firestore Data Modeling.** Define the schemas for each Firestore collection in `backend.json`. For example:
+    -   **Task 3: Firestore Data Modeling.** Define the schemas for each Firestore collection in `backend.json`. For example:
         -   `users/{userId}`
         -   `users/{userId}/inventory/{itemId}`
         -   `users/{userId}/recipeHistory/{historyId}`

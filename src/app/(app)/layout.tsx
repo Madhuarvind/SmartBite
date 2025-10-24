@@ -18,6 +18,7 @@ import {
   Cpu,
   TrendingDown,
   Recycle,
+  Wallet,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -45,6 +46,7 @@ const menuItems = [
   { href: "/health", label: "Health & Impact", icon: HeartPulse },
   { href: "/impact-tracker", label: "Impact Tracker", icon: TrendingDown },
   { href: "/circular-kitchen", label: "Circular Kitchen", icon: Recycle },
+  { href: "/financial-advisor", label: "Financial Advisor", icon: Wallet },
   { href: "/aura", label: "Aura", icon: Cpu },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

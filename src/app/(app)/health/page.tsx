@@ -237,7 +237,7 @@ export default function HealthAndImpactPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="Health & Impact" />
+      <PageHeader title="Health &amp; Impact" />
       
       <div className="grid gap-6 md:grid-cols-3">
         <Card>

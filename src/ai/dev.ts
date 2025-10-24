@@ -35,7 +35,8 @@ import './flows/suggest-substitutions';
 import './flows/transform-recipe';
 import './flows/generate-recipe-media';
 import './flows/get-circular-kitchen-suggestions';
-import './flows-preservation-suggestions';
+import './flows/get-preservation-suggestions';
 import './flows/get-kitchen-resilience-score';
+
 
 

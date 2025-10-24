@@ -1,7 +1,7 @@
 
 // src/ai/schemas.ts
 /**
- * @fileOverview This file contains all the Zod schemas and TypeScript types for the AI flows.
+ * @fileOverview This file contains all of the Zod schemas and TypeScript types for the AI flows.
  * By centralizing them here, we avoid "use server" export errors in the flow files.
  */
 

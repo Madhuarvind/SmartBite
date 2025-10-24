@@ -1,38 +1,37 @@
+# SmartBite - Your AI-Powered Sustainable Kitchen Assistant
 
-# SmartBite - AI-Powered Smart Kitchen Assistant
+Welcome to SmartBite, a next-generation smart kitchen application designed to empower you to live more sustainably. By revolutionizing your meal planning, cooking, and shopping experience, SmartBite acts as your personal guide to reducing food waste, making eco-conscious choices, and saving money.
 
-Welcome to SmartBite, a next-generation smart kitchen application designed to revolutionize your meal planning, cooking, and shopping experience. Powered by cutting-edge AI, SmartBite acts as your personal chef, nutritionist, and financial advisor, all in one intuitive interface.
+## Core Features for Sustainable Living
 
-## Core Features
+SmartBite is packed with advanced features that work together to help you build a more sustainable kitchen.
 
-SmartBite is packed with advanced features that work together to save you time, money, and reduce food waste.
+### 1. Intelligent Inventory Management to Combat Food Waste
+- **AI Bill Scanner**: Instantly digitize your grocery receipts by taking a photo. The AI extracts items, quantities, and prices, adding them directly to your inventory to ensure nothing gets lost or forgotten.
+- **AI Pantry Scanner**: Use your camera to scan multiple grocery items at once. The AI identifies each item for quick inventory updates, giving you a clear picture of what you have.
+- **Voice-Powered Input**: Add items to your inventory simply by speaking, making it effortless to keep your pantry up-to-date.
+- **Predictive Expiry**: For fresh produce, the AI predicts expiry dates, helping you prioritize what to use first and drastically reduce spoilage.
+- **Pantry Essentials**: Keep a separate list of staples you always have on hand, which are automatically included in recipe suggestions to maximize the use of your ingredients.
 
-### 1. Intelligent Inventory Management
-- **AI Bill Scanner**: Instantly digitize your grocery receipts by taking a photo. The AI extracts items, quantities, and prices, adding them directly to your inventory.
-- **AI Pantry Scanner**: Use your camera to scan multiple grocery items at once. The AI identifies each item and its quantity for quick inventory updates.
-- **Voice-Powered Input**: Add items to your inventory simply by speaking.
-- **Predictive Expiry**: For fresh produce, the AI predicts expiry dates to help you prioritize what to use first.
-- **Pantry Essentials**: Keep a separate list of staples you always have on hand, which are automatically included in recipe suggestions.
-
-### 2. Predictive & Personalized Cooking
-- **Predictive Suggestions**: The AI analyzes your purchase history, cooking habits, and available ingredients to predict what you might want to cook next.
-- **Recipe Recommendations**: Get recipe ideas based on the specific ingredients you have available, prioritizing items that are about to expire.
-- **Mood-Based Suggestions**: Feeling tired, stressed, or celebratory? The app can suggest the perfect meal to match your mood, which can be entered manually or detected via your device's camera using **Facial Mood Prediction**.
-- **AI Taste Predictor**: Transform any recipe to match your personal "flavor genome." Make dishes spicier, healthier, vegan, or more creative with a simple text command.
+### 2. Predictive & Sustainable Cooking
+- **Waste-Reduction Recipes**: Get recipe ideas based on the specific ingredients you have available, prioritizing items that are about to expire to ensure you use them in time.
+- **Predictive Suggestions**: The AI analyzes your habits and available ingredients to predict what you might want to cook next, helping you plan meals that use every last ingredient.
+- **Mood-Based Suggestions**: Feeling tired or celebratory? The app suggests the perfect meal to match your mood, using ingredients you already own.
+- **AI Taste Predictor**: Transform any recipe to match your preferences (e.g., "make it vegan," "make it spicier") without needing to buy new, special ingredients.
 
 ### 3. Advanced Culinary Tools
-- **Plate Scanner**: Don't know what you ate? Snap a photo of your meal, and the AI will identify it, estimate its nutritional content, and even find a recipe for it.
-- **Ingredient Substitution Engine**: Missing an ingredient? The AI suggests smart, scientifically-backed substitutions from your available pantry items.
+- **Plate Scanner**: Snap a photo of your meal, and the AI will identify it, estimate its nutritional content, and find a recipe, promoting mindful eating.
+- **Ingredient Substitution Engine**: Missing an ingredient? The AI suggests smart, scientifically-backed substitutions from your available pantry items, preventing last-minute trips to the store.
 - **Multimedia Recipes**: Recipes come alive with AI-generated step-by-step images, full audio narration, and a cinematic summary video for the finished dish.
 
-### 4. Health & Financial Insight
+### 4. Environmental & Financial Insight
 - **AI Health Coach**: Get a detailed analysis of your grocery shopping habits, with insights on your nutritional breakdown and actionable suggestions for a healthier lifestyle.
 - **AI Financial Advisor**: The app analyzes your spending patterns from scanned receipts and provides predictive budget optimization suggestions to help you save money.
 - **Carbon Footprint Analysis**: Understand the environmental impact of your groceries with an AI-powered carbon footprint estimate and get tips for more sustainable shopping.
-- **Sustainability Tracking**: A dedicated dashboard tracks meals cooked, food waste saved, and badges earned on your journey to a more sustainable kitchen.
+- **Sustainability Tracking**: A dedicated dashboard tracks key metrics like meals cooked and food waste saved. Earn badges as you reach milestones on your journey to a more sustainable kitchen.
 
 ### 5. Smart Shopping & Planning
-- **AI Meal Planner**: Generate a complete 7-day meal plan based on your available ingredients, nutritional goals, and dietary restrictions. The AI also generates a shopping list for any missing items.
+- **AI Meal Planner**: Generate a complete 7-day meal plan based on your available ingredients and nutritional goals. The AI also generates a shopping list for only the items you're missing.
 - **Collaborative Shopping Helper**: Use the "Smart Lens" to scan an item in the grocery store. The AI identifies it and checks if you or a family member already have it at home, preventing duplicate purchases.
 - **Pantry Chat Assistant**: Ask natural language questions about your inventory (e.g., "Do I have any milk left?") and get instant answers from the AI.
 

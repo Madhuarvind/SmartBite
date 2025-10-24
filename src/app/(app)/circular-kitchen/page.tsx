@@ -80,8 +80,10 @@ export default function CircularKitchenPage() {
     const activityQuery = query(collection(db, 'users', userId, 'activity'));
     const inventoryQuery = query(collection(db, 'users', userId, 'inventory'));
 
-    const activitySnap = await getDocs(activityQuery);
-    const inventorySnap = await getDocs(inventoryQuery);
+    const [activitySnap, inventorySnap] = await Promise.all([
+      getDocs(activityQuery),
+      getDocs(inventoryQuery)
+    ]);
 
     let used = 0;
     let wasted = 0;

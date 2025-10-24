@@ -20,7 +20,7 @@ import {
   Recycle,
   Wallet,
 } from "lucide-react";
-import { ForkAndLeaf } from "@/components/icons";
+import { SmartBiteLogo } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -69,7 +69,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <SheetHeader className="p-4 border-b">
                  <SheetTitle className="sr-only">Main Menu</SheetTitle>
                  <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}>
-                    <ForkAndLeaf className="w-8 h-8 text-primary" />
+                    <SmartBiteLogo className="w-8 h-8 text-primary" />
                     <h2 className="text-xl font-bold text-primary">SmartBite</h2>
                 </Link>
             </SheetHeader>
@@ -109,7 +109,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </Sheet>
         <div className="flex w-full items-center justify-end gap-4">
             <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
-                <ForkAndLeaf className="w-8 h-8 text-primary" />
+                <SmartBiteLogo className="w-8 h-8 text-primary" />
                 <span className="sr-only">SmartBite</span>
             </Link>
             <div className="flex-1"></div>

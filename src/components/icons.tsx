@@ -4,8 +4,6 @@ export function SmartBiteLogo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -14,15 +12,14 @@ export function SmartBiteLogo(props: SVGProps<SVGSVGElement>) {
       strokeLinejoin="round"
       {...props}
     >
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2Z" />
-      <path d="M12 6v6" />
-      <path d="M16 8h-4" />
-      <path d="M12 12c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5Z" />
-      <path d="M12 14v4" />
-      <path d="M14 16h-4" />
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2Z" />
+        <path d="m9 12 2-10 2 10" />
+        <path d="M12 12c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5Z" />
+        <path d="m15.5 14.5-3 3-1.5-1.5" />
     </svg>
   );
 }
+
 
 export function ForkAndLeaf(props: SVGProps<SVGSVGElement>) {
   return (

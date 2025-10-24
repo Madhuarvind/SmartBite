@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera } from "lucide-react";
+import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera, Leaf } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
 import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion } from "@/ai/schemas";
@@ -901,8 +901,8 @@ export default function RecipesPage() {
                         </Card>
                         <Card className="bg-secondary/50">
                             <CardHeader>
-                                <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary"/> Substitution Helper</CardTitle>
-                                <CardDescription>Missing an ingredient? Find a smart substitution.</CardDescription>
+                                <CardTitle className="flex items-center text-lg"><Leaf className="w-5 h-5 mr-2 text-primary"/> Flavor Sustainability Index</CardTitle>
+                                <CardDescription>Missing an ingredient? Find a smart, sustainable substitution.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Label htmlFor="missing-ingredient">Which ingredient are you missing?</Label>
@@ -922,15 +922,17 @@ export default function RecipesPage() {
                                 </Button>
                                 
                                 {substitutions.length > 0 && (
-                                    <div className="mt-4">
-                                        <h4 className="font-semibold mb-2">Suggested Substitutions:</h4>
-                                        <ul className="list-disc pl-5 text-muted-foreground space-y-1 mt-2 text-sm">
-                                            {substitutions.map(sub => (
-                                                <li key={sub.name}>
-                                                   <span className="font-semibold text-foreground">{sub.name}</span>: {sub.explanation}
-                                                </li>
-                                            ))}
-                                        </ul>
+                                    <div className="mt-4 space-y-2">
+                                        {substitutions.map(sub => (
+                                            <Alert key={sub.name} variant="default">
+                                                <Leaf className="h-4 w-4" />
+                                                <AlertTitle>{sub.name}</AlertTitle>
+                                                <AlertDescription>
+                                                   <p><span className="font-semibold">Why it works:</span> {sub.explanation}</p>
+                                                   <p className="mt-1"><span className="font-semibold">Sustainability:</span> {sub.sustainabilityRationale}</p>
+                                                </AlertDescription>
+                                            </Alert>
+                                        ))}
                                     </div>
                                 )}
                             </CardContent>
@@ -965,5 +967,7 @@ export default function RecipesPage() {
     </>
   );
 }
+
+    
 
     

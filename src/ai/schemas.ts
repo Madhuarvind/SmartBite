@@ -1,3 +1,4 @@
+
 // src/ai/schemas.ts
 /**
  * @fileOverview This file contains all the Zod schemas and TypeScript types for the AI flows.
@@ -523,3 +524,28 @@ export const GetSustainabilityNudgeOutputSchema = z.object({
     nudge: z.string().describe('A single, concise, personalized, and actionable nudge to encourage the user.'),
 });
 export type GetSustainabilityNudgeOutput = z.infer<typeof GetSustainabilityNudgeOutputSchema>;
+
+
+// Schemas for get-circular-kitchen-suggestions.ts
+export const WastedItemsForCircularSuggestionsSchema = z.array(
+    z.object({
+        name: z.string().describe("The name of the wasted item, e.g., 'Carrot Peels', 'Stale Bread', 'Chicken Bones'"),
+    })
+).describe("A list of wasted items or food scraps.");
+
+export const GetCircularKitchenSuggestionsInputSchema = z.object({
+    wastedItems: WastedItemsForCircularSuggestionsSchema,
+});
+export type GetCircularKitchenSuggestionsInput = z.infer<typeof GetCircularKitchenSuggestionsInputSchema>;
+
+
+const CircularSuggestionSchema = z.object({
+    from: z.string().describe("The specific scrap or wasted item the suggestion is for (e.g., 'Onion Peels')."),
+    to: z.string().describe("The new product or use for the scrap (e.g., 'Natural Fabric Dye', 'Vegetable Broth')."),
+    suggestion: z.string().describe("A short, actionable tip explaining how to make the transformation."),
+});
+
+export const GetCircularKitchenSuggestionsOutputSchema = z.object({
+  suggestions: z.array(CircularSuggestionSchema).describe("An array of creative suggestions for reusing food scraps to 'close the loop'."),
+});
+export type GetCircularKitchenSuggestionsOutput = z.infer<typeof GetCircularKitchenSuggestionsOutputSchema>;

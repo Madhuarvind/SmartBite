@@ -34,3 +34,4 @@ import './flows/suggest-recipes-by-mood';
 import './flows/suggest-substitutions';
 import './flows/transform-recipe';
 import './flows/generate-recipe-media';
+import './flows/get-circular-kitchen-suggestions';

@@ -1,8 +1,9 @@
+
 "use client";
 
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Projector, Beaker, Sprout, Cpu, CpuIcon } from "lucide-react";
+import { Projector, Beaker, Sprout, Cpu } from "lucide-react";
 import Image from "next/image";
 import { ForkAndLeaf } from "@/components/icons";
 
@@ -45,7 +46,7 @@ export default function AuraPage() {
 
         <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.2s'}}>
           <CardHeader>
-            <CpuIcon className="w-10 h-10 mb-4 text-primary" />
+            <Cpu className="w-10 h-10 mb-4 text-primary" />
             <CardTitle>Aura Knife</CardTitle>
             <CardDescription>Onboard Food Analysis</CardDescription>
           </CardHeader>

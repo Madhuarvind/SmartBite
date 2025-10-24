@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scanIngredients } from "@/ai/flows/scan-ingredients";
 import { predictExpiryDate } from "@/ai/flows/predict-expiry-date";
+import { logWaste } from "@/ai/flows/log-waste";
 import { useToast } from "@/hooks/use-toast";
 import type { DetectedIngredient } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
@@ -282,27 +283,35 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDeleteItem = (itemId: string, itemName: string, expiry: string) => {
+  const handleDeleteItem = async (itemId: string, itemName: string, expiry: string) => {
     if (!user) {
         toast({ variant: "destructive", title: "Not logged in", description: "You must be logged in to delete items."});
         return;
     }
     
+    // Log as wasted if the item is expired
     if (expiry !== 'N/A' && isPast(parseISO(expiry))) {
         try {
-            addDoc(collection(db, "users", user.uid, "activity"), {
+            await addDoc(collection(db, "users", user.uid, "activity"), {
                 type: 'itemWasted',
                 itemName: itemName,
                 timestamp: Timestamp.now()
             });
-            toast({ title: "Wasted item logged" });
+
+            // Get composting tip
+            const wasteInfo = await logWaste({ itemName });
+            toast({ 
+                title: "Composting Tip",
+                description: wasteInfo.tip,
+             });
+
         } catch (error) {
             console.error("Error logging wasted item:", error);
         }
     }
 
     try {
-        deleteDoc(doc(db, "users", user.uid, "inventory", itemId));
+        await deleteDoc(doc(db, "users", user.uid, "inventory", itemId));
         toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
     } catch (error) {
         console.error("Error deleting item from Firestore:", error);
@@ -466,19 +475,21 @@ export default function InventoryPage() {
     if (!user || selectedItems.length === 0) return;
 
     const batch = writeBatch(db);
-    const activityBatch = writeBatch(db);
     
-    selectedItems.forEach(id => {
+    selectedItems.forEach(async id => {
       const itemToDelete = inventory.find(item => item.id === id);
       if (itemToDelete) {
         // Log wasted item if it's expired
         if (itemToDelete.expiry && itemToDelete.expiry !== 'N/A' && isPast(parseISO(itemToDelete.expiry))) {
-          const activityRef = doc(collection(db, "users", user.uid, "activity"));
-          activityBatch.set(activityRef, {
-            type: 'itemWasted',
-            itemName: itemToDelete.name,
-            timestamp: Timestamp.now()
-          });
+          try {
+              await addDoc(collection(db, "users", user.uid, "activity"), {
+                  type: 'itemWasted',
+                  itemName: itemToDelete.name,
+                  timestamp: Timestamp.now()
+              });
+              const wasteInfo = await logWaste({ itemName: itemToDelete.name });
+              toast({ title: "Composting Tip", description: wasteInfo.tip });
+          } catch(e) { console.error("Error in waste logging for batch delete", e); }
         }
         // Add delete operation to the main batch
         const docRef = doc(db, "users", user.uid, "inventory", id);
@@ -488,7 +499,6 @@ export default function InventoryPage() {
 
     try {
       batch.commit();
-      activityBatch.commit(); // Commit separately or together, depending on logic
       toast({
         variant: "destructive",
         title: "Items Deleted",

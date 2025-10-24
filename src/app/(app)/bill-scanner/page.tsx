@@ -14,7 +14,7 @@ import { scanReceipt } from "@/ai/flows/scan-receipt";
 import { calculateCarbonFootprint } from "@/ai/flows/calculate-carbon-footprint";
 import type { ScannedItem, CalculateCarbonFootprintOutput } from "@/ai/schemas";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, Timestamp, writeBatch, doc } from "firebase/firestore";
 import type { User } from 'firebase/auth';
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,7 @@ export default function BillScannerPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [carbonAnalysis, setCarbonAnalysis] = useState<CalculateCarbonFootprintOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [billNo, setBillNo] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -41,6 +42,7 @@ export default function BillScannerPage() {
     setScannedItems([]);
     setReceiptImage(null);
     setCarbonAnalysis(null);
+    setBillNo(undefined);
   };
 
   const handleFile = (file: File) => {
@@ -68,6 +70,7 @@ export default function BillScannerPage() {
     try {
       const result = await scanReceipt({ receiptDataUri: photoDataUri });
       setScannedItems(result.items);
+      setBillNo(result.billNo);
       if (result.items.length === 0) {
         toast({
           title: "No items detected",
@@ -135,18 +138,35 @@ export default function BillScannerPage() {
 
     setIsAdding(true);
     try {
+        const batch = writeBatch(db);
         const inventoryRef = collection(db, "users", user.uid, "inventory");
+        const billsRef = collection(db, "users", user.uid, "scanned_bills");
         const today = new Date().toISOString().split('T')[0];
+        let totalAmount = 0;
         
         for (const item of scannedItems) {
-            await addDoc(inventoryRef, { 
+            const docRef = doc(inventoryRef);
+            batch.set(docRef, { 
                 name: item.name, 
                 quantity: item.quantity, 
                 expiry: item.expiryDate || 'N/A',
                 price: item.price || 0,
                 purchaseDate: today,
             });
+            totalAmount += item.price || 0;
         }
+
+        if (receiptImage) {
+            const billDocRef = doc(billsRef);
+            batch.set(billDocRef, {
+                billNo,
+                totalAmount,
+                receiptImage,
+                scannedAt: Timestamp.now(),
+            })
+        }
+        
+        await batch.commit();
         
         toast({
             title: "Inventory Updated!",

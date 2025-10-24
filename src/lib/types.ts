@@ -70,3 +70,14 @@ export type RecipeHistoryItem = AiRecipe & {
         nanoseconds: number;
     };
 }
+
+export type ScannedBill = {
+  id: string;
+  billNo?: string;
+  totalAmount: number;
+  receiptImage: string;
+  scannedAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
+}

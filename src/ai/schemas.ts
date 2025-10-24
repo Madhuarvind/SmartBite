@@ -467,3 +467,21 @@ export const GenerateRecipeMediaInputSchema = z.object({
   recipe: Recipe.describe('The text-only recipe object to generate media for.'),
 });
 export type GenerateRecipeMediaInput = z.infer<typeof GenerateRecipeMediaInputSchema>;
+
+// Schemas for log-waste.ts
+export const LogWasteInputSchema = z.object({
+  itemName: z.string().describe('The name of the food item being discarded.'),
+});
+export type LogWasteInput = z.infer<typeof LogWasteInputSchema>;
+
+export const LogWasteOutputSchema = z.object({
+  isCompostable: z
+    .boolean()
+    .describe('Whether the item is generally compostable.'),
+  tip: z
+    .string()
+    .describe(
+      'A helpful tip on how to compost the item, or why it should not be composted.'
+    ),
+});
+export type LogWasteOutput = z.infer<typeof LogWasteOutputSchema>;

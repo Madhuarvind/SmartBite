@@ -18,10 +18,10 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 
 const badges = [
-  { name: 'First Meal', description: 'Cooked your first recipe!', icon: FirstBadge },
-  { name: 'Waste Warrior', description: 'Saved 10 items from expiring.', icon: Award },
-  { name: 'Eco-Planner', description: 'Planned a full week of meals.', icon: Recycle },
-  { name: 'Top Chef', description: 'Cooked 25 recipes.', icon: Trophy },
+  { name: 'First Meal', description: 'Cooked your first recipe!', icon: FirstBadge, key: 'meals_1' },
+  { name: 'Compost Beginner', description: 'Composted 10 items.', icon: Recycle, key: 'composted_10' },
+  { name: 'Eco-Planner', description: 'Planned a full week of meals.', icon: Recycle, key: 'planner_1' },
+  { name: 'Top Chef', description: 'Cooked 25 recipes.', icon: Trophy, key: 'meals_25' },
 ];
 
 const chartConfig = {
@@ -59,7 +59,8 @@ export default function HealthAndImpactPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [totalMealsCooked, setTotalMealsCooked] = useState(0);
-  const [totalWasteSaved, setTotalWasteSaved] = useState(0);
+  const [totalItemsComposted, setTotalItemsComposted] = useState(0);
+  const [unlockedBadges, setUnlockedBadges] = useState<string[]>([]);
   
   const [wasteAnalysis, setWasteAnalysis] = useState<AnalyzeWastePatternsOutput | null>(null);
   const [isAnalyzingWaste, setIsAnalyzingWaste] = useState(true);
@@ -87,20 +88,32 @@ export default function HealthAndImpactPage() {
     const activityQuery = query(collection(db, "users", userId, "activity"), orderBy("timestamp", "desc"));
     onSnapshot(activityQuery, (snapshot) => {
       let meals = 0;
-      let wasted = 0;
+      let composted = 0;
       const wastedItemsForAnalysis: { itemName: string }[] = [];
+      const newUnlockedBadges: string[] = [];
 
       snapshot.docs.forEach(doc => {
         const data = doc.data();
         if (data.type === 'mealCooked') meals++;
         else if (data.type === 'itemWasted') {
-          wasted++;
+          composted++;
           wastedItemsForAnalysis.push({ itemName: data.itemName });
         }
       });
       
       setTotalMealsCooked(meals);
-      setTotalWasteSaved(meals); // Placeholder logic
+      setTotalItemsComposted(composted);
+
+      // Badge logic
+      if (meals >= 1) newUnlockedBadges.push('meals_1');
+      if (meals >= 25) newUnlockedBadges.push('meals_25');
+      if (composted >= 10) newUnlockedBadges.push('composted_10');
+      // In a real app, planner badges would be unlocked from the planner page
+      // For demo purposes, we can unlock it here if they've cooked a few meals
+      if (meals > 5) newUnlockedBadges.push('planner_1');
+
+      setUnlockedBadges(newUnlockedBadges);
+
 
       if (wastedItemsForAnalysis.length > 0) {
         runWasteAnalysis(wastedItemsForAnalysis);
@@ -168,12 +181,12 @@ export default function HealthAndImpactPage() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Food Waste Saved</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Items Composted</CardTitle>
             <Leaf className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold text-primary">{totalWasteSaved} Items</div>}
-            <p className="text-xs text-muted-foreground">Based on meals cooked vs expired items.</p>
+            {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold text-primary">{totalItemsComposted} Items</div>}
+            <p className="text-xs text-muted-foreground">Based on expired items from your pantry.</p>
           </CardContent>
         </Card>
         <Card>
@@ -192,7 +205,7 @@ export default function HealthAndImpactPage() {
             <Trophy className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-             {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold text-primary">1 Badge</div>}
+             {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold text-primary">{unlockedBadges.length} / {badges.length}</div>}
             <p className="text-xs text-muted-foreground">Keep up the great work!</p>
           </CardContent>
         </Card>
@@ -302,7 +315,7 @@ export default function HealthAndImpactPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {badges.map(badge => (
-                <div key={badge.name} className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-secondary/50">
+                <div key={badge.name} className={`flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-secondary/50 transition-opacity ${unlockedBadges.includes(badge.key) ? 'opacity-100' : 'opacity-30'}`}>
                   <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center border">
                     <badge.icon className="w-10 h-10 text-primary" />
                   </div>

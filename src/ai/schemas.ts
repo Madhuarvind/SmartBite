@@ -575,6 +575,23 @@ export const GetPreservationSuggestionsOutputSchema = z.object({
 });
 export type GetPreservationSuggestionsOutput = z.infer<typeof GetPreservationSuggestionsOutputSchema>;
 
+
+// Schemas for get-kitchen-resilience-score.ts
+const InventoryItemForResilienceSchema = z.object({
+  name: z.string(),
+});
+export const GetKitchenResilienceScoreInputSchema = z.object({
+  inventoryItems: z.array(InventoryItemForResilienceSchema).describe("The user's main inventory items."),
+  pantryEssentials: z.array(InventoryItemForResilienceSchema).describe("The user's list of pantry essentials."),
+});
+export type GetKitchenResilienceScoreInput = z.infer<typeof GetKitchenResilienceScoreInputSchema>;
+
+export const GetKitchenResilienceScoreOutputSchema = z.object({
+  resilienceScore: z.number().int().min(0).max(100).describe('A score from 0-100 representing the kitchen\'s resilience.'),
+  keyInsight: z.string().describe('A single, concise sentence summarizing the resilience state.'),
+  suggestions: z.array(z.string()).describe('Three actionable tips to improve the resilience score.'),
+});
+export type GetKitchenResilienceScoreOutput = z.infer<typeof GetKitchenResilienceScoreOutputSchema>;
     
 
     

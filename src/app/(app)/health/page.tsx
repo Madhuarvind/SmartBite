@@ -1,10 +1,12 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Leaf, Award, Recycle, Lightbulb, TrendingUp, Heart, BrainCircuit, AlertTriangle, Activity } from "lucide-react";
+import { Leaf, Award, Recycle, Lightbulb, TrendingUp, Heart, BrainCircuit, AlertTriangle, Activity, ShieldCheck } from "lucide-react";
 import { Trophy, FirstBadge } from "@/components/icons";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "firebase/auth";
@@ -12,8 +14,9 @@ import { collection, query, onSnapshot, orderBy, getDocs } from "firebase/firest
 import { analyzeWastePatterns } from "@/ai/flows/analyze-waste-patterns";
 import { analyzeHealthHabits } from "@/ai/flows/analyze-health-habits";
 import { forecastWaste } from "@/ai/flows/forecast-waste";
-import type { AnalyzeWastePatternsOutput, AnalyzeHealthHabitsOutput, ForecastWasteOutput, CookingHistoryItem } from "@/ai/schemas";
-import type { InventoryItem } from "@/lib/types";
+import { getKitchenResilienceScore } from "@/ai/flows/get-kitchen-resilience-score";
+import type { AnalyzeWastePatternsOutput, AnalyzeHealthHabitsOutput, ForecastWasteOutput, CookingHistoryItem, GetKitchenResilienceScoreOutput } from "@/ai/schemas";
+import type { InventoryItem, PantryItem } from "@/lib/types";
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, LabelList, Cell } from "recharts";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { format } from "date-fns";
@@ -77,6 +80,9 @@ export default function HealthAndImpactPage() {
   const [wasteForecast, setWasteForecast] = useState<ForecastWasteOutput | null>(null);
   const [isForecasting, setIsForecasting] = useState(true);
 
+  const [resilienceScore, setResilienceScore] = useState<GetKitchenResilienceScoreOutput | null>(null);
+  const [isGettingResilience, setIsGettingResilience] = useState(true);
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -88,6 +94,7 @@ export default function HealthAndImpactPage() {
         setIsAnalyzingWaste(false);
         setIsAnalyzingHealth(false);
         setIsForecasting(false);
+        setIsGettingResilience(false);
       }
     });
 
@@ -95,16 +102,21 @@ export default function HealthAndImpactPage() {
   }, []);
 
   const setupListeners = async (userId: string) => {
-    // One-time fetch for full inventory for health analysis and forecast
+    // One-time fetch for full inventory and pantry essentials
     const inventoryQuery = query(collection(db, "users", userId, "inventory"));
-    const inventorySnapshot = await getDocs(inventoryQuery);
-    const purchaseHistory = inventorySnapshot.docs.map(doc => doc.data() as InventoryItem);
+    const pantryQuery = query(collection(db, "users", userId, "pantry_essentials"));
 
-    if (purchaseHistory.length > 0) {
-        runHealthAnalysis(purchaseHistory);
-    } else {
-        setIsAnalyzingHealth(false);
-    }
+    const [inventorySnapshot, pantrySnapshot] = await Promise.all([
+      getDocs(inventoryQuery),
+      getDocs(pantryQuery),
+    ]);
+    
+    const purchaseHistory = inventorySnapshot.docs.map(doc => doc.data() as InventoryItem);
+    const pantryEssentials = pantrySnapshot.docs.map(doc => ({ name: doc.data().name } as {name: string}));
+
+    runHealthAnalysis(purchaseHistory);
+    runResilienceAnalysis(purchaseHistory, pantryEssentials);
+
 
     // Listener for activity log (waste, meals) to derive history for analysis
     const activityQuery = query(collection(db, "users", userId, "activity"), orderBy("timestamp", "desc"));
@@ -136,30 +148,34 @@ export default function HealthAndImpactPage() {
       if (meals >= 1) newUnlockedBadges.push('meals_1');
       if (meals >= 25) newUnlockedBadges.push('meals_25');
       if (composted >= 10) newUnlockedBadges.push('composted_10');
-      // In a real app, planner badges would be unlocked from the planner page
-      // For demo purposes, we can unlock it here if they've cooked a few meals
       if (meals > 5) newUnlockedBadges.push('planner_1');
       setUnlockedBadges(newUnlockedBadges);
 
-
-      if (wastedItemsForAnalysis.length > 0) {
-        runWasteAnalysis(wastedItemsForAnalysis);
-      } else {
-        setIsAnalyzingWaste(false);
-      }
-      
-      // Run forecast with the latest data
-      if (purchaseHistory.length > 0) {
-        runWasteForecast(purchaseHistory, cookingHistoryForForecast);
-      } else {
-        setIsForecasting(false);
-      }
+      runWasteAnalysis(wastedItemsForAnalysis);
+      runWasteForecast(purchaseHistory, cookingHistoryForForecast);
     });
 
     setIsLoading(false);
   }
+
+  const runResilienceAnalysis = async (inventory: { name: string }[], pantry: { name: string }[]) => {
+      setIsGettingResilience(true);
+      try {
+          const result = await getKitchenResilienceScore({ inventoryItems: inventory, pantryEssentials: pantry });
+          setResilienceScore(result);
+      } catch (error) {
+          console.error("Error analyzing resilience:", error);
+      } finally {
+          setIsGettingResilience(false);
+      }
+  }
   
   const runWasteAnalysis = async (wasteHistory: { itemName: string }[]) => {
+      if(wasteHistory.length === 0) {
+        setIsAnalyzingWaste(false);
+        setWasteAnalysis(null);
+        return;
+      }
       setIsAnalyzingWaste(true);
       try {
           const result = await analyzeWastePatterns({ wasteHistory });
@@ -172,21 +188,21 @@ export default function HealthAndImpactPage() {
   }
 
   const runHealthAnalysis = async (purchaseHistory: InventoryItem[]) => {
+      const purchaseDataForAnalysis = purchaseHistory
+        .filter(item => item.price && item.price > 0)
+        .map(item => ({
+          name: item.name,
+          price: item.price
+      }));
+      
+      if (purchaseDataForAnalysis.length === 0) {
+          setHealthAnalysis(null);
+          setIsAnalyzingHealth(false);
+          return;
+      }
+
       setIsAnalyzingHealth(true);
       try {
-          const purchaseDataForAnalysis = purchaseHistory
-            .filter(item => item.price && item.price > 0)
-            .map(item => ({
-              name: item.name,
-              price: item.price
-          }));
-          
-          if (purchaseDataForAnalysis.length === 0) {
-              setHealthAnalysis(null);
-              setIsAnalyzingHealth(false);
-              return;
-          }
-
           const result = await analyzeHealthHabits({ purchaseHistory: purchaseDataForAnalysis });
           setHealthAnalysis(result);
       } catch (error) {
@@ -197,6 +213,11 @@ export default function HealthAndImpactPage() {
   }
   
   const runWasteForecast = async (inventory: InventoryItem[], cookingHistory: CookingHistoryItem[]) => {
+    if (inventory.length === 0) {
+        setIsForecasting(false);
+        setWasteForecast(null);
+        return;
+    }
     setIsForecasting(true);
     try {
         const inventoryForForecast = inventory.map(item => ({
@@ -381,6 +402,47 @@ export default function HealthAndImpactPage() {
                     <div className="text-center text-muted-foreground py-10">
                         <p>No wasted items have been logged yet. Your analysis will appear here.</p>
                     </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><ShieldCheck className="mr-2 text-primary"/> AI Kitchen Resilience Score</CardTitle>
+                <CardDescription>How well your pantry can handle supply disruptions or emergencies.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isGettingResilience ? (
+                  <div className="space-y-4 p-4"><Skeleton className="h-32 w-full" /></div>
+                ) : resilienceScore ? (
+                   <div className="space-y-4">
+                        <div className="flex items-center justify-center gap-4">
+                            <div className="relative size-24">
+                                <svg className="size-full" viewBox="0 0 36 36">
+                                  <path className="stroke-muted" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" strokeWidth="3" />
+                                  <path className="stroke-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" strokeWidth="3" strokeDasharray={`${resilienceScore.resilienceScore}, 100`} />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-3xl font-bold">{resilienceScore.resilienceScore}</span>
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-semibold">Key Insight</h4>
+                                <blockquote className="border-l-2 pl-4 italic text-sm text-muted-foreground">"{resilienceScore.keyInsight}"</blockquote>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 className="font-semibold text-lg flex items-center mt-4 mb-2"><Lightbulb className="mr-2"/> Pantry Upgrade Suggestions</h4>
+                            <ul className="list-disc pl-5 text-muted-foreground space-y-1 mt-2 text-sm">
+                                {resilienceScore.suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}
+                            </ul>
+                        </div>
+                    </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-10">
+                    <p>Add items to your inventory to calculate your resilience score.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>

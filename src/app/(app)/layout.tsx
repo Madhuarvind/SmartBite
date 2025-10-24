@@ -47,7 +47,7 @@ const menuItems = [
   { href: "/impact-tracker", label: "Impact Tracker", icon: TrendingDown },
   { href: "/circular-kitchen", label: "Circular Kitchen", icon: Recycle },
   { href: "/financial-advisor", label: "Financial Advisor", icon: Wallet },
-  { href: "/aura", label: "Aura", icon: Cpu },
+  { href: "/aura", label: "Project Aura", icon: Cpu },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

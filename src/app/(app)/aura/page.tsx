@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Projector, Beaker, Sprout, Cpu } from "lucide-react";
+import { Projector, Cpu, Sprout } from "lucide-react";
 import Image from "next/image";
 import { ForkAndLeaf } from "@/components/icons";
 

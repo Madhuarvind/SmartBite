@@ -152,6 +152,7 @@ export default function FinancialAdvisorPage() {
                                     axisLine={false}
                                     width={150}
                                     className="text-sm"
+                                    tick={{ dy: 10 }}
                                     tickFormatter={(value) =>
                                       chartConfig[value as keyof typeof chartConfig]?.label
                                     }

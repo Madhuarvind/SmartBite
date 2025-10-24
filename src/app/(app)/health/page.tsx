@@ -295,6 +295,7 @@ export default function HealthAndImpactPage() {
                                 axisLine={false}
                                 width={110}
                                 className="text-xs"
+                                tick={{ dy: 10 }}
                                 tickFormatter={(value) =>
                                   chartConfig[value as keyof typeof chartConfig]?.label
                                 }

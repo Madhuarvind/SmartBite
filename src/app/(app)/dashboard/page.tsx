@@ -308,7 +308,7 @@ export default function DashboardPage() {
         <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.4s'}}>
           <CardHeader>
             <CardTitle className="flex items-center"><TrendingDown className="mr-2"/> Carbon Debt</CardTitle>
-            <CardDescription>Your current estimated carbon footprint from groceries. "Repay" it by cooking at home.</CardDescription>
+            <CardDescription>Your environmental "bill" from grocery purchases. Repay it by cooking sustainable meals at home.</CardDescription>
           </CardHeader>
           <CardContent>
              {isLoading ? <Skeleton className="h-28 w-full" /> : (

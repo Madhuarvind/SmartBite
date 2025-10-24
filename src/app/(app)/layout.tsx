@@ -14,6 +14,7 @@ import {
   LogOut,
   ReceiptText,
   ShoppingCart,
+  Cpu,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -39,6 +40,7 @@ const menuItems = [
   { href: "/planner", label: "Meal Planner", icon: Calendar },
   { href: "/shopping-helper", label: "Shopping Helper", icon: ShoppingCart },
   { href: "/health", label: "Health & Impact", icon: HeartPulse },
+  { href: "/aura", label: "Aura", icon: Cpu },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

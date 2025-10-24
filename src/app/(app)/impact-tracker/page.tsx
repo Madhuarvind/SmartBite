@@ -141,7 +141,10 @@ export default function ImpactTrackerPage() {
     let totalDebtIncurred = 0;
     let totalDebtRepaid = 0;
 
-    filteredActivity.forEach(act => {
+    // Sort activities chronologically to calculate cumulative debt correctly
+    const sortedActivities = filteredActivity.sort((a, b) => a.timestamp.toDate() - b.timestamp.toDate());
+    
+    sortedActivities.forEach(act => {
         const day = format(act.timestamp.toDate(), 'MMM d');
         if (act.type === 'carbonIncurred') {
             cumulativeDebt += act.amount;
@@ -151,10 +154,10 @@ export default function ImpactTrackerPage() {
             totalMeals++;
             totalDebtRepaid += 0.5;
         }
-        debtMap.set(day, cumulativeDebt);
+        debtMap.set(day, Math.max(0, cumulativeDebt));
     });
 
-    const carbonChart = Array.from(debtMap.entries()).map(([date, debt]) => ({ date, debt: Math.max(0, debt) })).reverse();
+    const carbonChart = Array.from(debtMap.entries()).map(([date, debt]) => ({ date, debt })).reverse();
 
     return { 
         filteredData: filtered, 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -217,7 +216,7 @@ export default function HealthAndImpactPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="Your Health & Impact" />
+      <PageHeader title="Health & Impact" />
       
       <div className="grid gap-6 md:grid-cols-3">
         <Card>

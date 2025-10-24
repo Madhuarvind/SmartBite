@@ -14,6 +14,7 @@ import { scanIngredients } from "@/ai/flows/scan-ingredients";
 import { predictEdibility } from "@/ai/flows/predict-expiry-date";
 import { logWaste } from "@/ai/flows/log-waste";
 import { getPreservationSuggestions } from "@/ai/flows/get-preservation-suggestions";
+import { inventRecipe } from "@/ai/flows/invent-recipe";
 import { useToast } from "@/hooks/use-toast";
 import type { DetectedIngredient, PredictEdibilityOutput, GetPreservationSuggestionsOutput } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
@@ -319,10 +320,30 @@ export default function InventoryPage() {
                 isCompostable: wasteInfo.isCompostable,
             });
 
-            toast({ 
-                title: "Item Logged as Waste",
-                description: wasteInfo.tip,
-             });
+            // "Reincarnation" Logic
+            const allItems = [...inventory, ...pantryEssentials];
+            const otherIngredients = allItems
+              .filter(i => i.id !== itemId) // Exclude the wasted item itself
+              .map(i => ({ name: i.name, price: 'price' in i ? i.price : undefined }))
+              .sort(() => 0.5 - Math.random()) // Shuffle
+              .slice(0, 4); // Take a few random items
+            
+            const ingredientsForInvention = [{ name: itemName, price: inventory.find(i=>i.id === itemId)?.price }, ...otherIngredients];
+            
+            try {
+                const reincarnation = await inventRecipe({ ingredients: ingredientsForInvention });
+                toast({
+                    duration: 10000,
+                    title: `Your ${itemName} could have been reincarnated!`,
+                    description: `As '${reincarnation.name}' (Est. Cost: ₹${reincarnation.estimatedCost?.toFixed(2)}). For composting: ${wasteInfo.tip}`
+                });
+            } catch (reincarnationError) {
+                // Fallback to simple toast if invention fails
+                toast({ 
+                    title: "Item Logged as Waste",
+                    description: wasteInfo.tip,
+                });
+            }
 
         } catch (error) {
             console.error("Error logging wasted item:", error);
@@ -331,7 +352,9 @@ export default function InventoryPage() {
 
     try {
         await deleteDoc(doc(db, "users", user.uid, "inventory", itemId));
-        toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
+        if (!(expiry !== 'N/A' && isPast(parseISO(expiry)))) {
+            toast({ variant: "destructive", title: "Item Deleted", description: `${itemName} has been removed from your inventory.` });
+        }
     } catch (error) {
         console.error("Error deleting item from Firestore:", error);
         toast({ variant: "destructive", title: "Failed to Delete Item"});

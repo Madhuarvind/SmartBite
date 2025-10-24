@@ -30,7 +30,7 @@ You will be given a list of items the user has marked as wasted.
 
 Your tasks are:
 1.  **Identify the most frequently wasted item**: Find the single item that appears most often in the waste history.
-2.  **Generate a key insight**: Based on the overall waste history, write a concise, one-sentence observation about the user's habits. For example, "You seem to be buying more leafy greens than you can use," or "Dairy products are frequently expiring."
+2.  **Generate a key insight**: Based on the overall waste history, write a concise, one-sentence observation about the user's habits. This should infer a causal link. For example, "Buying leafy greens in large quantities seems to be leading to spoilage before they can be used," or "Dairy products are frequently expiring, suggesting they are being bought too far in advance of their use."
 3.  **Provide 3 actionable suggestions**: Based on the insight, provide three concrete, actionable tips to help the user reduce waste. These should be specific and easy to implement. For example:
     *   "Try buying spinach in smaller quantities more frequently."
     *   "Freeze half of your bread loaf immediately after purchase."

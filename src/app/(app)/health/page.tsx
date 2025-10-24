@@ -375,7 +375,7 @@ export default function HealthAndImpactPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center"><Recycle className="mr-2 text-primary"/> AI Waste Coach</CardTitle>
+                <CardTitle className="flex items-center"><BrainCircuit className="mr-2 text-primary"/> AI Causality Engine</CardTitle>
                 <CardDescription>Personalized insights from your past habits to help you save more.</CardDescription>
               </CardHeader>
               <CardContent>

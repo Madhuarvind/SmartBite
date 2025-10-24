@@ -20,6 +20,7 @@ import './flows/generate-meal-plan';
 import './flows/generate-recipe-audio';
 import './flows/generate-recipe-step-image';
 import './flows/generate-recipe-video';
+import './flows/get-sustainability-nudge';
 import './flows/identify-and-check-item';
 import './flows/invent-recipe';
 import './flows/log-waste';
@@ -33,4 +34,3 @@ import './flows/suggest-recipes-by-mood';
 import './flows/suggest-substitutions';
 import './flows/transform-recipe';
 import './flows/generate-recipe-media';
-

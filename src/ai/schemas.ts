@@ -509,3 +509,17 @@ export const ForecastWasteOutputSchema = z.object({
     })).describe("A list of suggestions to prevent the predicted waste."),
 });
 export type ForecastWasteOutput = z.infer<typeof ForecastWasteOutputSchema>;
+
+// Schemas for get-sustainability-nudge.ts
+export const GetSustainabilityNudgeInputSchema = z.object({
+    weeklyMealsCooked: z.number().describe('The number of meals the user cooked in the last 7 days.'),
+    weeklyItemsWasted: z.number().describe('The number of items the user wasted in the last 7 days.'),
+    weeklySpending: z.number().describe('The total grocery spending for the last 7 days.'),
+    currentInventoryCount: z.number().describe('The total number of items currently in the user\'s inventory.'),
+});
+export type GetSustainabilityNudgeInput = z.infer<typeof GetSustainabilityNudgeInputSchema>;
+
+export const GetSustainabilityNudgeOutputSchema = z.object({
+    nudge: z.string().describe('A single, concise, personalized, and actionable nudge to encourage the user.'),
+});
+export type GetSustainabilityNudgeOutput = z.infer<typeof GetSustainabilityNudgeOutputSchema>;

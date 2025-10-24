@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
-import { ArrowRight, Lightbulb, TrendingUp } from "lucide-react";
+import { ArrowRight, Lightbulb, TrendingUp, Sparkles } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import type { User } from "firebase/auth";
 import { collection, query, where, getDocs, Timestamp, onSnapshot } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { InventoryItem } from "@/lib/types";
+import { getSustainabilityNudge } from "@/ai/flows/get-sustainability-nudge";
 
 
 const weeklyChartConfig = {
@@ -36,18 +37,21 @@ export default function DashboardPage() {
   const [weeklyChartData, setWeeklyChartData] = useState<any[]>([]);
   const [spendingChartData, setSpendingChartData] = useState<any[]>([]);
   const [weeklyTotal, setWeeklyTotal] = useState(0);
+  const [nudge, setNudge] = useState<string | null>(null);
+  const [isNudgeLoading, setIsNudgeLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        fetchWeeklyData(currentUser.uid);
         
         // Set up real-time listener for inventory
         const inventoryRef = collection(db, "users", currentUser.uid, "inventory");
         const unsubscribeInventory = onSnapshot(inventoryRef, (snapshot) => {
           const today = new Date();
-          const items = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as InventoryItem))
+          const items = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as InventoryItem));
+
+          const expiring = items
             .map(item => {
               if (!item.expiry || item.expiry === 'N/A') return { ...item, daysLeft: Infinity };
               const expiryDate = parseISO(item.expiry);
@@ -60,10 +64,10 @@ export default function DashboardPage() {
               ...item,
               status: item.daysLeft <= 2 ? "Urgent" as const : "Soon" as const,
             }));
-          setExpiringItems(items);
+          setExpiringItems(expiring);
           
-          // Fetch spending data when inventory changes
-          fetchSpendingData(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as InventoryItem));
+          fetchSpendingData(items);
+          fetchWeeklyData(currentUser.uid, items); // Pass items to fetch weekly data and then nudge
         });
 
         setIsLoading(false);
@@ -74,16 +78,20 @@ export default function DashboardPage() {
         setSpendingChartData([]);
         setWeeklyChartData([]);
         setUser(null);
+        setNudge(null);
       }
     });
 
     return () => unsubscribeAuth();
   }, []);
   
-  const fetchWeeklyData = async (userId: string) => {
+  const fetchWeeklyData = async (userId: string, inventoryItems: InventoryItem[]) => {
       const today = new Date();
       const weeklyData: { day: string, meals: number, waste: number }[] = [];
       const activityRef = collection(db, "users", userId, "activity");
+
+      let totalMeals = 0;
+      let totalWaste = 0;
 
       for (let i = 6; i >= 0; i--) {
           const day = subDays(today, i);
@@ -104,6 +112,9 @@ export default function DashboardPage() {
                   waste++;
               }
           });
+          
+          totalMeals += meals;
+          totalWaste += waste;
 
           weeklyData.push({
               day: format(day, "E"), // e.g., "Mon", "Tue"
@@ -112,6 +123,9 @@ export default function DashboardPage() {
           });
       }
       setWeeklyChartData(weeklyData);
+      
+      // After calculating weekly data, fetch the nudge
+      fetchNudge(totalMeals, totalWaste, inventoryItems);
   }
 
   const fetchSpendingData = (inventoryItems: InventoryItem[]) => {
@@ -134,6 +148,24 @@ export default function DashboardPage() {
       setSpendingChartData(spendingData);
       setWeeklyTotal(total);
   }
+  
+  const fetchNudge = async (meals: number, waste: number, inventory: InventoryItem[]) => {
+    setIsNudgeLoading(true);
+    try {
+        const result = await getSustainabilityNudge({
+            weeklyMealsCooked: meals,
+            weeklyItemsWasted: waste,
+            weeklySpending: weeklyTotal,
+            currentInventoryCount: inventory.length
+        });
+        setNudge(result.nudge);
+    } catch(e) {
+        console.error("Failed to get sustainability nudge:", e);
+        setNudge("Start by checking your inventory to see what you can cook today!");
+    } finally {
+        setIsNudgeLoading(false);
+    }
+  }
 
 
   const displayName = user?.displayName?.split(' ')[0] || user?.email || "User";
@@ -147,6 +179,19 @@ export default function DashboardPage() {
       )}
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="lg:col-span-3 animate-fade-in-slide-up">
+            <CardHeader>
+                <CardTitle className="flex items-center text-lg"><Sparkles className="w-5 h-5 mr-2 text-primary" /> Your Daily Nudge</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {isNudgeLoading ? (
+                    <Skeleton className="h-6 w-full" />
+                ) : (
+                    <blockquote className="text-xl italic text-center text-muted-foreground p-4">"{nudge}"</blockquote>
+                )}
+            </CardContent>
+        </Card>
+        
         <Card className="lg:col-span-2 animate-fade-in-slide-up" style={{animationDelay: '0.1s'}}>
           <CardHeader>
             <CardTitle>Weekly Summary</CardTitle>

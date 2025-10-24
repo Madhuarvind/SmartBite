@@ -26,7 +26,7 @@ export const AnalyzePlateOutputSchema = z.object({
       fat: z.number().describe('The estimated grams of fat for the meal.'),
     }).describe('The estimated nutritional information for the meal.'),
 });
-export type AnalyzePlateOutput = z-infer<typeof AnalyzePlateOutputSchema>;
+export type AnalyzePlateOutput = z.infer<typeof AnalyzePlateOutputSchema>;
 
 
 // Schemas for predict-expiry-date.ts (now predict-edibility)
@@ -574,5 +574,7 @@ export const GetPreservationSuggestionsOutputSchema = z.object({
   suggestions: z.array(PreservationSuggestionSchema).describe('A list of suggested preservation methods.'),
 });
 export type GetPreservationSuggestionsOutput = z.infer<typeof GetPreservationSuggestionsOutputSchema>;
+
+    
 
     

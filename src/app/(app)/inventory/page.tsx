@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect, ChangeEvent, DragEvent, useCallback } from "react";
@@ -6,14 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload, Wand2, Mic } from "lucide-react";
+import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload, Wand2, Mic, Beaker } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scanIngredients } from "@/ai/flows/scan-ingredients";
 import { predictEdibility } from "@/ai/flows/predict-expiry-date";
 import { logWaste } from "@/ai/flows/log-waste";
+import { getPreservationSuggestions } from "@/ai/flows/get-preservation-suggestions";
 import { useToast } from "@/hooks/use-toast";
-import type { DetectedIngredient, PredictEdibilityOutput } from "@/ai/schemas";
+import type { DetectedIngredient, PredictEdibilityOutput, GetPreservationSuggestionsOutput } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
@@ -27,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function InventoryPage() {
@@ -65,6 +68,12 @@ export default function InventoryPage() {
   const [isEssentialDialogOpen, setIsEssentialDialogOpen] = useState(false);
   const [newEssentialName, setNewEssentialName] = useState("");
   const [newEssentialQuantity, setNewEssentialQuantity] = useState("");
+  
+  // State for preservation dialog
+  const [isPreserveDialogOpen, setIsPreserveDialogOpen] = useState(false);
+  const [itemToPreserve, setItemToPreserve] = useState<InventoryItem | null>(null);
+  const [isGettingSuggestions, setIsGettingSuggestions] = useState(false);
+  const [preservationSuggestions, setPreservationSuggestions] = useState<GetPreservationSuggestionsOutput['suggestions']>([]);
 
 
   useEffect(() => {
@@ -329,6 +338,26 @@ export default function InventoryPage() {
     }
   };
 
+  const handlePreserveItem = async (item: InventoryItem) => {
+    setItemToPreserve(item);
+    setIsPreserveDialogOpen(true);
+    setIsGettingSuggestions(true);
+    setPreservationSuggestions([]);
+    try {
+        const result = await getPreservationSuggestions({ ingredientName: item.name });
+        setPreservationSuggestions(result.suggestions);
+    } catch (error) {
+        console.error("Error getting preservation suggestions:", error);
+        toast({
+            variant: "destructive",
+            title: "Could not get suggestions",
+            description: "The AI failed to generate preservation ideas. Please try again."
+        });
+    } finally {
+        setIsGettingSuggestions(false);
+    }
+  };
+
 
   const handleAddAllScannedItems = (target: 'inventory' | 'essentials') => {
     if (!user || scannedIngredients.length === 0) {
@@ -560,7 +589,7 @@ export default function InventoryPage() {
            {!uploadedImage && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
               <p className="text-white font-semibold">
-                Click or drag & drop to upload
+                Click or drag &amp; drop to upload
               </p>
             </div>
           )}
@@ -772,6 +801,7 @@ export default function InventoryPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handlePreserveItem(item)}><Beaker className="mr-2 h-4 w-4" /> Preserve with AI</DropdownMenuItem>
                                     <DropdownMenuItem disabled><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
                                     <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteItem(item.id, item.name, item.expiry)}>
                                         <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -857,6 +887,45 @@ export default function InventoryPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isPreserveDialogOpen} onOpenChange={setIsPreserveDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>AI Preservation Coach for: <span className="text-primary">{itemToPreserve?.name}</span></DialogTitle>
+                <DialogDescription>
+                    Here are some AI-powered suggestions to preserve your item and prevent waste.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                {isGettingSuggestions ? (
+                    <div className="space-y-2">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                ) : preservationSuggestions.length > 0 ? (
+                    <div className="space-y-4">
+                        {preservationSuggestions.map((suggestion, index) => (
+                            <Card key={index} className="bg-secondary/50">
+                                <CardHeader>
+                                    <CardTitle className="text-lg flex items-center">{suggestion.method}</CardTitle>
+                                    <CardDescription>Difficulty: {suggestion.difficulty}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm mb-2">{suggestion.description}</p>
+                                    <p className="text-sm font-semibold">You'll need: <span className="font-normal">{suggestion.requiredItems.join(', ')}</span></p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-center text-muted-foreground">The AI couldn't find any specific preservation methods for this item.</p>
+                )}
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPreserveDialogOpen(false)}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

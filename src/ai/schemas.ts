@@ -553,3 +553,23 @@ export const GetCircularKitchenSuggestionsOutputSchema = z.object({
   suggestions: z.array(CircularSuggestionSchema).describe("An array of creative suggestions for reusing food scraps to 'close the loop'."),
 });
 export type GetCircularKitchenSuggestionsOutput = z.infer<typeof GetCircularKitchenSuggestionsOutputSchema>;
+
+
+// Schemas for get-preservation-suggestions.ts
+export const GetPreservationSuggestionsInputSchema = z.object({
+  ingredientName: z.string().describe('The name of the ingredient to preserve.'),
+});
+export type GetPreservationSuggestionsInput = z.infer<typeof GetPreservationSuggestionsInputSchema>;
+
+const PreservationSuggestionSchema = z.object({
+    method: z.string().describe("The name of the preservation method (e.g., 'Quick Pickling')."),
+    description: z.string().describe("A brief explanation of the process."),
+    requiredItems: z.array(z.string()).describe("A list of other essential items needed."),
+    difficulty: z.enum(["Easy", "Medium", "Hard"]).describe("The difficulty level of the method."),
+});
+export type PreservationSuggestion = z.infer<typeof PreservationSuggestionSchema>;
+
+export const GetPreservationSuggestionsOutputSchema = z.object({
+  suggestions: z.array(PreservationSuggestionSchema).describe('A list of suggested preservation methods.'),
+});
+export type GetPreservationSuggestionsOutput = z.infer<typeof GetPreservationSuggestionsOutputSchema>;

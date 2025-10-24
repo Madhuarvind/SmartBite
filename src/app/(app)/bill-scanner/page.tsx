@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect, DragEvent } from "react";
@@ -77,10 +78,19 @@ export default function BillScannerPage() {
           description: "The AI couldn't find any items on the receipt. Please try a clearer picture.",
         });
       } else {
-        // Kick off carbon analysis in the background
+        // Kick off carbon analysis and log it
         setIsAnalyzing(true);
         calculateCarbonFootprint({ items: result.items })
-          .then(setCarbonAnalysis)
+          .then(analysisResult => {
+              setCarbonAnalysis(analysisResult);
+              if (user && analysisResult.totalCarbonFootprint > 0) {
+                 addDoc(collection(db, "users", user.uid, "activity"), {
+                    type: 'carbonIncurred',
+                    amount: analysisResult.totalCarbonFootprint,
+                    timestamp: Timestamp.now(),
+                 });
+              }
+          })
           .catch(err => {
               console.error("Carbon analysis failed:", err);
               toast({ variant: "destructive", title: "Carbon Analysis Failed" });

@@ -7,35 +7,34 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wallet, Calendar as CalendarIcon, ReceiptText } from "lucide-react";
+import { Wallet, TrendingDown, ReceiptText, ChefHat, Sparkles } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "firebase/auth";
-import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy, Timestamp, where, getDocs } from "firebase/firestore";
 import type { InventoryItem, ScannedBill } from "@/lib/types";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { format, subDays, startOfMonth, endOfMonth, getYear, getMonth, parseISO } from "date-fns";
 import Image from "next/image";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 
-const chartConfig = {
-  amount: {
-    label: "Amount",
-    color: "hsl(var(--primary))",
-  },
+const spendingChartConfig = {
+  amount: { label: "Amount", color: "hsl(var(--primary))" },
+} satisfies ChartConfig;
+
+const carbonChartConfig = {
+  debt: { label: "Carbon Debt", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig;
 
 type Period = 'last7' | 'last30' | 'last90' | 'month' | 'year';
 
-export default function ExpensesPage() {
+export default function ImpactTrackerPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [purchaseHistory, setPurchaseHistory] = useState<InventoryItem[]>([]);
   const [scannedBills, setScannedBills] = useState<ScannedBill[]>([]);
-  const [filteredData, setFilteredData] = useState<InventoryItem[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [activityHistory, setActivityHistory] = useState<any[]>([]);
   
   // Filter states
   const [period, setPeriod] = useState<Period>('last30');
@@ -60,13 +59,12 @@ export default function ExpensesPage() {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const q = query(collection(db, "users", currentUser.uid, "inventory"), orderBy("purchaseDate", "desc"));
-        const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        const invQuery = query(collection(db, "users", currentUser.uid, "inventory"), orderBy("purchaseDate", "desc"));
+        const unsubscribeInv = onSnapshot(invQuery, (snapshot) => {
           const history = snapshot.docs
             .map(doc => doc.data() as InventoryItem)
             .filter(item => item.purchaseDate && item.price && item.price > 0);
           setPurchaseHistory(history);
-          setIsLoading(false);
         });
         
         const billsQuery = query(collection(db, "users", currentUser.uid, "scanned_bills"), orderBy("scannedAt", "desc"));
@@ -74,36 +72,39 @@ export default function ExpensesPage() {
             const bills = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as ScannedBill);
             setScannedBills(bills);
         });
+        
+        const activityQuery = query(collection(db, "users", currentUser.uid, "activity"), orderBy("timestamp", "desc"));
+        const unsubscribeActivity = onSnapshot(activityQuery, (snapshot) => {
+            const activities = snapshot.docs.map(doc => doc.data());
+            setActivityHistory(activities);
+        });
 
+        setIsLoading(false);
         return () => {
-            unsubscribeSnapshot();
+            unsubscribeInv();
             unsubscribeBills();
+            unsubscribeActivity();
         };
       } else {
         setIsLoading(false);
         setPurchaseHistory([]);
         setScannedBills([]);
+        setActivityHistory([]);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
+  const { filteredData, spendingChartData, totalSpent, carbonChartData, totalCarbonDebt, totalMealsCooked, debtRepaid } = useMemo(() => {
     const now = new Date();
     let startDate: Date;
     let endDate: Date = now;
 
     switch(period) {
-      case 'last7':
-        startDate = subDays(now, 6);
-        break;
-      case 'last30':
-        startDate = subDays(now, 29);
-        break;
-      case 'last90':
-        startDate = subDays(now, 89);
-        break;
+      case 'last7': startDate = subDays(now, 6); break;
+      case 'last30': startDate = subDays(now, 29); break;
+      case 'last90': startDate = subDays(now, 89); break;
       case 'month':
         startDate = startOfMonth(new Date(selectedYear, selectedMonth));
         endDate = endOfMonth(new Date(selectedYear, selectedMonth));
@@ -118,33 +119,63 @@ export default function ExpensesPage() {
       const itemDate = parseISO(item.purchaseDate!);
       return itemDate >= startDate && itemDate <= endDate;
     });
-    setFilteredData(filtered);
 
-    // Aggregate data for the chart
     const dailySpending = new Map<string, number>();
     filtered.forEach(item => {
       const day = format(parseISO(item.purchaseDate!), 'MMM d');
-      const currentAmount = dailySpending.get(day) || 0;
-      dailySpending.set(day, currentAmount + (item.price || 0));
+      dailySpending.set(day, (dailySpending.get(day) || 0) + (item.price || 0));
     });
     
-    const chartEntries = Array.from(dailySpending.entries()).map(([date, amount]) => ({ date, amount }));
-    setChartData(chartEntries.reverse());
+    const spendingChart = Array.from(dailySpending.entries()).map(([date, amount]) => ({ date, amount })).reverse();
+    const total = filtered.reduce((acc, item) => acc + (item.price || 0), 0);
+    
+    // Carbon Debt Calculation
+    let cumulativeDebt = 0;
+    const debtMap = new Map<string, number>();
+    const filteredActivity = activityHistory.filter(act => {
+        const actDate = act.timestamp.toDate();
+        return actDate >= startDate && actDate <= endDate;
+    });
 
-  }, [period, selectedYear, selectedMonth, purchaseHistory]);
-  
-  const totalSpent = useMemo(() => {
-    return filteredData.reduce((acc, item) => acc + (item.price || 0), 0);
-  }, [filteredData]);
+    let totalMeals = 0;
+    let totalDebtIncurred = 0;
+    let totalDebtRepaid = 0;
+
+    filteredActivity.forEach(act => {
+        const day = format(act.timestamp.toDate(), 'MMM d');
+        if (act.type === 'carbonIncurred') {
+            cumulativeDebt += act.amount;
+            totalDebtIncurred += act.amount;
+        } else if (act.type === 'mealCooked') {
+            cumulativeDebt -= 0.5; // Repay 0.5kg for a meal
+            totalMeals++;
+            totalDebtRepaid += 0.5;
+        }
+        debtMap.set(day, cumulativeDebt);
+    });
+
+    const carbonChart = Array.from(debtMap.entries()).map(([date, debt]) => ({ date, debt: Math.max(0, debt) })).reverse();
+
+    return { 
+        filteredData: filtered, 
+        spendingChartData: spendingChart, 
+        totalSpent: total,
+        carbonChartData: carbonChart,
+        totalCarbonDebt: Math.max(0, cumulativeDebt),
+        totalMealsCooked: totalMeals,
+        debtRepaid: totalDebtRepaid,
+    };
+  }, [period, selectedYear, selectedMonth, purchaseHistory, activityHistory]);
+
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
-      <PageHeader title="Expenses" />
+      <PageHeader title="Impact Tracker" />
 
       <Card>
         <CardHeader>
-          <CardTitle>Spending Dashboard</CardTitle>
-          <CardDescription>Analyze your grocery spending over various periods.</CardDescription>
+          <CardTitle>Your Sustainability Dashboard</CardTitle>
+          <CardDescription>Analyze your spending and carbon footprint. See how your actions make a difference.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex flex-wrap gap-4 items-center">
@@ -164,74 +195,92 @@ export default function ExpensesPage() {
             {period === 'month' && (
               <div className="flex gap-2">
                 <Select onValueChange={(value) => setSelectedMonth(parseInt(value))} value={selectedMonth.toString()}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Select month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>)}
-                  </SelectContent>
+                  <SelectTrigger className="w-[140px]"><SelectValue placeholder="Select month" /></SelectTrigger>
+                  <SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>)}</SelectContent>
                 </Select>
                  <Select onValueChange={(value) => setSelectedYear(parseInt(value))} value={selectedYear.toString()}>
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uniqueYears.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
-                  </SelectContent>
+                  <SelectTrigger className="w-[100px]"><SelectValue placeholder="Select year" /></SelectTrigger>
+                  <SelectContent>{uniqueYears.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
             
             {period === 'year' && (
               <Select onValueChange={(value) => setSelectedYear(parseInt(value))} value={selectedYear.toString()}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uniqueYears.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
-                  </SelectContent>
+                  <SelectTrigger className="w-[120px]"><SelectValue placeholder="Select year" /></SelectTrigger>
+                  <SelectContent>{uniqueYears.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
               </Select>
             )}
           </div>
           
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="md:col-span-1">
+            <Card className="bg-secondary/50">
                 <CardHeader>
                     <CardTitle className="flex items-center text-lg"><Wallet className="mr-2"/>Total Spent</CardTitle>
-                    <CardDescription>For the selected period</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? <Skeleton className="h-10 w-32" /> : (
-                        <p className="text-4xl font-bold text-primary">₹{totalSpent.toFixed(2)}</p>
-                    )}
+                    {isLoading ? <Skeleton className="h-10 w-32" /> : <p className="text-4xl font-bold text-primary">₹{totalSpent.toFixed(2)}</p>}
                 </CardContent>
             </Card>
-            <Card className="md:col-span-2">
+             <Card className="bg-secondary/50">
                 <CardHeader>
-                    <CardTitle className="text-lg">Daily Spending</CardTitle>
-                    <CardDescription>A visual breakdown of your spending per day.</CardDescription>
+                    <CardTitle className="flex items-center text-lg"><TrendingDown className="mr-2"/>Carbon Debt</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {isLoading ? <Skeleton className="h-48 w-full" /> : chartData.length > 0 ? (
-                     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                        <BarChart accessibilityLayer data={chartData}>
+                    {isLoading ? <Skeleton className="h-10 w-32" /> : <p className="text-4xl font-bold text-destructive">{totalCarbonDebt.toFixed(2)} <span className="text-lg">kg CO₂e</span></p>}
+                </CardContent>
+            </Card>
+             <Card className="bg-secondary/50">
+                <CardHeader>
+                    <CardTitle className="flex items-center text-lg"><ChefHat className="mr-2"/>Debt Repaid</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? <Skeleton className="h-10 w-32" /> : <p className="text-4xl font-bold text-green-500">{debtRepaid.toFixed(2)} <span className="text-lg">kg CO₂e</span></p>}
+                     <p className="text-xs text-muted-foreground">by cooking {totalMealsCooked} meals at home!</p>
+                </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Daily Spending</CardTitle>
+                    <CardDescription>Breakdown of your spending per day for the selected period.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? <Skeleton className="h-48 w-full" /> : spendingChartData.length > 0 ? (
+                     <ChartContainer config={spendingChartConfig} className="min-h-[200px] w-full">
+                        <BarChart accessibilityLayer data={spendingChartData}>
                           <CartesianGrid vertical={false} />
-                          <XAxis
-                            dataKey="date"
-                            tickLine={false}
-                            tickMargin={10}
-                            axisLine={false}
-                            tickFormatter={(value) => value.slice(0, 6)}
-                          />
+                          <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => value.slice(0, 6)} />
                           <YAxis />
                           <ChartTooltip content={<ChartTooltipContent />} />
                           <Bar dataKey="amount" fill="var(--color-amount)" radius={4} />
                         </BarChart>
                       </ChartContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-48 text-muted-foreground">
-                      <p>No spending data for this period.</p>
-                    </div>
+                    <div className="flex items-center justify-center h-48 text-muted-foreground"><p>No spending data for this period.</p></div>
+                  )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Carbon Debt Over Time</CardTitle>
+                    <CardDescription>How your carbon debt has changed. Cooking meals helps reduce it!</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? <Skeleton className="h-48 w-full" /> : carbonChartData.length > 0 ? (
+                     <ChartContainer config={carbonChartConfig} className="min-h-[200px] w-full">
+                        <LineChart accessibilityLayer data={carbonChartData}>
+                          <CartesianGrid vertical={false} />
+                          <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => value.slice(0, 6)} />
+                          <YAxis />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Line type="monotone" dataKey="debt" stroke="var(--color-debt)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-48 text-muted-foreground"><p>No carbon data for this period.</p></div>
                   )}
                 </CardContent>
             </Card>
@@ -250,15 +299,13 @@ export default function ExpensesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? (
-                        Array.from({length: 5}).map((_, i) => (
+                      {isLoading ? Array.from({length: 5}).map((_, i) => (
                            <TableRow key={i}>
                              <TableCell><Skeleton className="h-5 w-32"/></TableCell>
                              <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                              <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto"/></TableCell>
                            </TableRow>
-                        ))
-                      ) : filteredData.length > 0 ? (
+                      )) : filteredData.length > 0 ? (
                         filteredData.map((item, index) => (
                           <TableRow key={`${item.id}-${index}`}>
                             <TableCell className="font-medium">{item.name}</TableCell>
@@ -267,11 +314,7 @@ export default function ExpensesPage() {
                           </TableRow>
                         ))
                       ) : (
-                        <TableRow>
-                          <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                            No transactions in this period.
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No transactions in this period.</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
@@ -292,20 +335,39 @@ export default function ExpensesPage() {
                                 <div className="flex space-x-4 pb-4">
                                     {scannedBills.map((bill) => (
                                         bill.receiptImage && (
-                                            <div key={bill.id} className="w-40 flex-shrink-0 cursor-pointer" onClick={() => setSelectedReceipt(bill)}>
-                                                <Image
+                                            <Dialog key={bill.id}>
+                                              <DialogTrigger asChild>
+                                                <div className="w-40 flex-shrink-0 cursor-pointer">
+                                                    <Image
+                                                        src={bill.receiptImage}
+                                                        alt={`Receipt ${bill.billNo}`}
+                                                        width={160}
+                                                        height={240}
+                                                        className="rounded-md object-contain border"
+                                                    />
+                                                     <div className="text-xs text-center mt-1 text-muted-foreground">
+                                                        <p>Bill: {bill.billNo}</p>
+                                                        <p>Amount: ₹{bill.totalAmount.toFixed(2)}</p>
+                                                        <p>{format(bill.scannedAt.toDate(), 'PPP')}</p>
+                                                     </div>
+                                                </div>
+                                              </DialogTrigger>
+                                              <DialogContent className="max-w-3xl">
+                                                  <DialogHeader>
+                                                    <DialogTitle>Receipt Details</DialogTitle>
+                                                    <DialogDescription>
+                                                      Bill No: {bill.billNo} - Total: ₹{bill.totalAmount.toFixed(2)}
+                                                    </DialogDescription>
+                                                  </DialogHeader>
+                                                  <Image
                                                     src={bill.receiptImage}
                                                     alt={`Receipt ${bill.billNo}`}
-                                                    width={160}
-                                                    height={240}
-                                                    className="rounded-md object-contain border"
-                                                />
-                                                 <div className="text-xs text-center mt-1 text-muted-foreground">
-                                                    <p>Bill: {bill.billNo}</p>
-                                                    <p>Amount: ₹{bill.totalAmount.toFixed(2)}</p>
-                                                    <p>{format(bill.scannedAt.toDate(), 'PPP')}</p>
-                                                 </div>
-                                            </div>
+                                                    width={800}
+                                                    height={1200}
+                                                    className="rounded-md object-contain w-full h-auto"
+                                                  />
+                                              </DialogContent>
+                                            </Dialog>
                                         )
                                     ))}
                                 </div>
@@ -319,26 +381,6 @@ export default function ExpensesPage() {
                     </CardContent>
                 </Card>
             </div>
-            {selectedReceipt && (
-              <Dialog open={!!selectedReceipt} onOpenChange={() => setSelectedReceipt(null)}>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                    <DialogTitle>Receipt Details</DialogTitle>
-                    <DialogDescription>
-                      Bill No: {selectedReceipt.billNo} - Total: ₹{selectedReceipt.totalAmount.toFixed(2)}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Image
-                    src={selectedReceipt.receiptImage}
-                    alt={`Receipt ${selectedReceipt.billNo}`}
-                    width={800}
-                    height={1200}
-                    className="rounded-md object-contain w-full h-auto"
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
-
         </CardContent>
       </Card>
     </div>

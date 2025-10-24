@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
-import { ArrowRight, Lightbulb, TrendingUp, Sparkles } from "lucide-react";
+import { ArrowRight, Lightbulb, TrendingUp, Sparkles, TrendingDown } from "lucide-react";
 import type { ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,6 @@ import { collection, query, where, getDocs, Timestamp, onSnapshot } from "fireba
 import { Skeleton } from "@/components/ui/skeleton";
 import type { InventoryItem } from "@/lib/types";
 import { getSustainabilityNudge } from "@/ai/flows/get-sustainability-nudge";
-
 
 const weeklyChartConfig = {
   meals: { label: "Meals Cooked", color: "hsl(var(--primary))" },
@@ -39,6 +38,8 @@ export default function DashboardPage() {
   const [weeklyTotal, setWeeklyTotal] = useState(0);
   const [nudge, setNudge] = useState<string | null>(null);
   const [isNudgeLoading, setIsNudgeLoading] = useState(true);
+  const [carbonDebt, setCarbonDebt] = useState(0);
+
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
@@ -67,7 +68,7 @@ export default function DashboardPage() {
           setExpiringItems(expiring);
           
           fetchSpendingData(items);
-          fetchWeeklyData(currentUser.uid, items); // Pass items to fetch weekly data and then nudge
+          fetchWeeklyDataAndNudge(currentUser.uid, items);
         });
 
         setIsLoading(false);
@@ -79,19 +80,21 @@ export default function DashboardPage() {
         setWeeklyChartData([]);
         setUser(null);
         setNudge(null);
+        setCarbonDebt(0);
       }
     });
 
     return () => unsubscribeAuth();
   }, []);
   
-  const fetchWeeklyData = async (userId: string, inventoryItems: InventoryItem[]) => {
+  const fetchWeeklyDataAndNudge = async (userId: string, inventoryItems: InventoryItem[]) => {
       const today = new Date();
       const weeklyData: { day: string, meals: number, waste: number }[] = [];
       const activityRef = collection(db, "users", userId, "activity");
 
       let totalMeals = 0;
       let totalWaste = 0;
+      let currentCarbonDebt = 0;
 
       for (let i = 6; i >= 0; i--) {
           const day = subDays(today, i);
@@ -124,6 +127,18 @@ export default function DashboardPage() {
       }
       setWeeklyChartData(weeklyData);
       
+      // Calculate carbon debt from all-time activity
+      const allActivitySnapshot = await getDocs(query(activityRef));
+      allActivitySnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.type === 'carbonIncurred') {
+              currentCarbonDebt += data.amount;
+          } else if (data.type === 'mealCooked') {
+              currentCarbonDebt -= 0.5; // Repay 0.5 kg CO2e for each meal cooked
+          }
+      });
+      setCarbonDebt(Math.max(0, currentCarbonDebt));
+
       // After calculating weekly data, fetch the nudge
       fetchNudge(totalMeals, totalWaste, inventoryItems);
   }
@@ -260,7 +275,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
          <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.3s'}}>
           <CardHeader>
             <CardTitle className="flex items-center"><TrendingUp className="mr-2" /> Weekly Spending</CardTitle>
@@ -290,7 +305,27 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col justify-between animate-fade-in-slide-up" style={{animationDelay: '0.4s'}}>
+        <Card className="animate-fade-in-slide-up" style={{animationDelay: '0.4s'}}>
+          <CardHeader>
+            <CardTitle className="flex items-center"><TrendingDown className="mr-2"/> Carbon Debt</CardTitle>
+            <CardDescription>Your current estimated carbon footprint from groceries. "Repay" it by cooking at home.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             {isLoading ? <Skeleton className="h-28 w-full" /> : (
+                  <>
+                      <div className="text-2xl font-bold text-destructive">{carbonDebt.toFixed(2)} kg CO₂e</div>
+                      <p className="text-xs text-muted-foreground">Cook meals to lower your debt!</p>
+                  </>
+             )}
+          </CardContent>
+          <CardFooter>
+             <Button variant="secondary" className="w-full" asChild>
+                <Link href="/impact-tracker">View Impact Tracker <ArrowRight className="ml-2" /></Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card className="flex flex-col justify-between animate-fade-in-slide-up" style={{animationDelay: '0.5s'}}>
           <CardHeader>
             <Lightbulb className="w-12 h-12 text-primary mb-4" />
             <CardTitle>Get Recipe Ideas</CardTitle>

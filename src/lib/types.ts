@@ -81,3 +81,10 @@ export type ScannedBill = {
     nanoseconds: number;
   };
 }
+
+export type ActivityLog = {
+    id: string;
+    type: 'mealCooked' | 'itemWasted' | 'carbonIncurred';
+    timestamp: any;
+    [key: string]: any;
+}

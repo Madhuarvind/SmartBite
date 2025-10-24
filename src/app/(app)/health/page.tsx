@@ -55,6 +55,10 @@ const chartConfig = {
     label: "Beverages",
     color: "hsl(var(--primary))",
   },
+  'Other': {
+    label: "Other",
+    color: "hsl(var(--muted-foreground))",
+  }
 } satisfies ChartConfig;
 
 

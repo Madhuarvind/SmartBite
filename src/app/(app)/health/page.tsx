@@ -1,20 +1,23 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Leaf, Award, Recycle, Lightbulb, TrendingUp, Heart, BrainCircuit } from "lucide-react";
+import { Leaf, Award, Recycle, Lightbulb, TrendingUp, Heart, BrainCircuit, AlertTriangle, Activity } from "lucide-react";
 import { Trophy, FirstBadge } from "@/components/icons";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "firebase/auth";
 import { collection, query, onSnapshot, orderBy, getDocs } from "firebase/firestore";
 import { analyzeWastePatterns } from "@/ai/flows/analyze-waste-patterns";
 import { analyzeHealthHabits } from "@/ai/flows/analyze-health-habits";
-import type { AnalyzeWastePatternsOutput, AnalyzeHealthHabitsOutput } from "@/ai/schemas";
+import { forecastWaste } from "@/ai/flows/forecast-waste";
+import type { AnalyzeWastePatternsOutput, AnalyzeHealthHabitsOutput, ForecastWasteOutput, CookingHistoryItem } from "@/ai/schemas";
 import type { InventoryItem } from "@/lib/types";
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, LabelList, Cell } from "recharts";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { format } from "date-fns";
 
 
 const badges = [
@@ -67,6 +70,10 @@ export default function HealthAndImpactPage() {
 
   const [healthAnalysis, setHealthAnalysis] = useState<AnalyzeHealthHabitsOutput | null>(null);
   const [isAnalyzingHealth, setIsAnalyzingHealth] = useState(true);
+  
+  const [wasteForecast, setWasteForecast] = useState<ForecastWasteOutput | null>(null);
+  const [isForecasting, setIsForecasting] = useState(true);
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -77,6 +84,7 @@ export default function HealthAndImpactPage() {
         setIsLoading(false);
         setIsAnalyzingWaste(false);
         setIsAnalyzingHealth(false);
+        setIsForecasting(false);
       }
     });
 
@@ -84,17 +92,34 @@ export default function HealthAndImpactPage() {
   }, []);
 
   const setupListeners = async (userId: string) => {
-    // Listener for activity log (waste, meals)
+    // One-time fetch for full inventory for health analysis and forecast
+    const inventoryQuery = query(collection(db, "users", userId, "inventory"));
+    const inventorySnapshot = await getDocs(inventoryQuery);
+    const purchaseHistory = inventorySnapshot.docs.map(doc => doc.data() as InventoryItem);
+
+    if (purchaseHistory.length > 0) {
+        runHealthAnalysis(purchaseHistory);
+    } else {
+        setIsAnalyzingHealth(false);
+    }
+
+    // Listener for activity log (waste, meals) to derive history for analysis
     const activityQuery = query(collection(db, "users", userId, "activity"), orderBy("timestamp", "desc"));
     onSnapshot(activityQuery, (snapshot) => {
       let meals = 0;
       let composted = 0;
       const wastedItemsForAnalysis: { itemName: string }[] = [];
+      const cookingHistoryForForecast: CookingHistoryItem[] = [];
       const newUnlockedBadges: string[] = [];
 
       snapshot.docs.forEach(doc => {
         const data = doc.data();
-        if (data.type === 'mealCooked') meals++;
+        if (data.type === 'mealCooked') {
+            meals++;
+            if (data.recipeName && data.timestamp) {
+              cookingHistoryForForecast.push({ recipeName: data.recipeName, date: format(data.timestamp.toDate(), 'yyyy-MM-dd') });
+            }
+        }
         else if (data.type === 'itemWasted') {
           composted++;
           wastedItemsForAnalysis.push({ itemName: data.itemName });
@@ -111,7 +136,6 @@ export default function HealthAndImpactPage() {
       // In a real app, planner badges would be unlocked from the planner page
       // For demo purposes, we can unlock it here if they've cooked a few meals
       if (meals > 5) newUnlockedBadges.push('planner_1');
-
       setUnlockedBadges(newUnlockedBadges);
 
 
@@ -120,18 +144,14 @@ export default function HealthAndImpactPage() {
       } else {
         setIsAnalyzingWaste(false);
       }
+      
+      // Run forecast with the latest data
+      if (purchaseHistory.length > 0) {
+        runWasteForecast(purchaseHistory, cookingHistoryForForecast);
+      } else {
+        setIsForecasting(false);
+      }
     });
-
-    // One-time fetch for purchase history for health analysis
-    const inventoryQuery = query(collection(db, "users", userId, "inventory"));
-    const inventorySnapshot = await getDocs(inventoryQuery);
-    const purchaseHistory = inventorySnapshot.docs.map(doc => doc.data() as InventoryItem);
-
-    if (purchaseHistory.length > 0) {
-        runHealthAnalysis(purchaseHistory);
-    } else {
-        setIsAnalyzingHealth(false);
-    }
 
     setIsLoading(false);
   }
@@ -172,6 +192,23 @@ export default function HealthAndImpactPage() {
           setIsAnalyzingHealth(false);
       }
   }
+  
+  const runWasteForecast = async (inventory: InventoryItem[], cookingHistory: CookingHistoryItem[]) => {
+    setIsForecasting(true);
+    try {
+        const inventoryForForecast = inventory.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            expiry: item.expiry,
+        }));
+        const result = await forecastWaste({ inventory: inventoryForForecast, cookingHistory });
+        setWasteForecast(result);
+    } catch(e) {
+        console.error("Error forecasting waste:", e);
+    } finally {
+        setIsForecasting(false);
+    }
+  }
 
 
   return (
@@ -182,7 +219,7 @@ export default function HealthAndImpactPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Items Composted</CardTitle>
-            <Leaf className="w-4 h-4 text-muted-foreground" />
+            <Recycle className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold text-primary">{totalItemsComposted} Items</div>}
@@ -274,39 +311,78 @@ export default function HealthAndImpactPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center"><Recycle className="mr-2 text-primary"/> AI Waste Coach</CardTitle>
-            <CardDescription>Personalized insights from your pantry habits to help you save more.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isAnalyzingWaste ? (
-                <div className="space-y-4 p-4"><Skeleton className="h-48 w-full" /></div>
-            ) : wasteAnalysis ? (
-                <div className="space-y-6">
-                    <div>
-                        <h4 className="font-semibold text-lg flex items-center"><TrendingUp className="mr-2"/> Most Wasted Item</h4>
-                        <p className="text-primary font-bold text-2xl">{wasteAnalysis.mostWastedItem}</p>
+        <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><Activity className="mr-2 text-primary"/> AI Waste Forecast</CardTitle>
+                <CardDescription>A predictive look at what might go to waste this week, and how to prevent it.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isForecasting ? (
+                    <div className="space-y-4 p-4"><Skeleton className="h-32 w-full" /></div>
+                ) : wasteForecast && wasteForecast.predictedWaste.length > 0 ? (
+                    <div className="space-y-4">
+                        <div>
+                            <h4 className="font-semibold flex items-center mb-2"><AlertTriangle className="w-5 h-5 mr-2 text-destructive"/>At-Risk Items</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {wasteForecast.predictedWaste.map((item, index) => (
+                                    <span key={index} className="px-3 py-1 bg-destructive/10 text-destructive-foreground border border-destructive/20 rounded-full text-sm">{item}</span>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-lg flex items-center mb-2"><Lightbulb className="w-5 h-5 mr-2"/>Waste Prevention Tips</h4>
+                            <ul className="list-disc pl-5 text-muted-foreground space-y-2 mt-2 text-sm">
+                               {wasteForecast.preventativeSuggestions.map((suggestion, index) => (
+                                   <li key={index}>
+                                      <span className="font-semibold text-foreground">{suggestion.item}:</span> {suggestion.suggestion}
+                                   </li>
+                               ))}
+                            </ul>
+                        </div>
                     </div>
-                    <div>
-                        <h4 className="font-semibold text-lg">Key Insight</h4>
-                        <blockquote className="border-l-2 pl-6 italic text-muted-foreground">"{wasteAnalysis.keyInsight}"</blockquote>
+                ) : (
+                    <div className="text-center text-muted-foreground py-10">
+                        <p>No potential waste detected. Your inventory looks great!</p>
                     </div>
-                     <div>
-                        <h4 className="font-semibold text-lg flex items-center"><Lightbulb className="mr-2"/>Smart Suggestions</h4>
-                        <ul className="list-disc pl-5 text-muted-foreground space-y-2 mt-2">
-                           {wasteAnalysis.suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}
-                        </ul>
-                    </div>
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground py-10">
-                    <p>No wasted items have been logged yet. Your personalized analysis will appear here once you start tracking your pantry.</p>
-                </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><Recycle className="mr-2 text-primary"/> AI Waste Coach</CardTitle>
+                <CardDescription>Personalized insights from your past habits to help you save more.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isAnalyzingWaste ? (
+                    <div className="space-y-4 p-4"><Skeleton className="h-32 w-full" /></div>
+                ) : wasteAnalysis ? (
+                    <div className="space-y-6">
+                        <div>
+                            <h4 className="font-semibold text-lg flex items-center"><TrendingUp className="mr-2"/> Most Wasted Item</h4>
+                            <p className="text-primary font-bold text-2xl">{wasteAnalysis.mostWastedItem}</p>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-lg">Key Insight</h4>
+                            <blockquote className="border-l-2 pl-6 italic text-muted-foreground">"{wasteAnalysis.keyInsight}"</blockquote>
+                        </div>
+                         <div>
+                            <h4 className="font-semibold text-lg flex items-center"><Lightbulb className="mr-2"/>Smart Suggestions</h4>
+                            <ul className="list-disc pl-5 text-muted-foreground space-y-2 mt-2">
+                               {wasteAnalysis.suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}
+                            </ul>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-center text-muted-foreground py-10">
+                        <p>No wasted items have been logged yet. Your analysis will appear here.</p>
+                    </div>
+                )}
+              </CardContent>
+            </Card>
+        </div>
+        
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Your Badge Collection</CardTitle>

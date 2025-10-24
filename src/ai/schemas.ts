@@ -362,16 +362,19 @@ export const AnalyzeHealthHabitsOutputSchema = z.object({
 export type AnalyzeHealthHabitsOutput = z.infer<typeof AnalyzeHealthHabitsOutputSchema>;
 
 // Schemas for predictive-suggestions.ts
+export const CookingHistoryItemSchema = z.object({
+      recipeName: z.string(),
+      date: z.string(),
+});
+export type CookingHistoryItem = z.infer<typeof CookingHistoryItemSchema>;
+
 export const PredictiveSuggestionsInputSchema = z.object({
   availableIngredients: z.array(z.string()).describe("A list of ingredients the user has on hand."),
   purchaseHistory: z.array(z.object({
       name: z.string(),
       purchaseDate: z.string().optional(),
   })).describe("The user's recent purchase history."),
-  cookingHistory: z.array(z.object({
-      recipeName: z.string(),
-      date: z.string(),
-  })).describe("The user's recent cooking activity."),
+  cookingHistory: z.array(CookingHistoryItemSchema).describe("The user's recent cooking activity."),
 });
 export type PredictiveSuggestionsInput = z.infer<typeof PredictiveSuggestionsInputSchema>;
 
@@ -485,3 +488,24 @@ export const LogWasteOutputSchema = z.object({
     ),
 });
 export type LogWasteOutput = z.infer<typeof LogWasteOutputSchema>;
+
+
+// Schemas for forecast-waste.ts
+export const ForecastWasteInputSchema = z.object({
+  inventory: z.array(z.object({
+    name: z.string(),
+    quantity: z.string(),
+    expiry: z.string(),
+  })).describe("The user's current inventory."),
+  cookingHistory: z.array(CookingHistoryItemSchema).describe("The user's recent cooking activity."),
+});
+export type ForecastWasteInput = z.infer<typeof ForecastWasteInputSchema>;
+
+export const ForecastWasteOutputSchema = z.object({
+    predictedWaste: z.array(z.string()).describe('A list of items that are likely to be wasted in the next week.'),
+    preventativeSuggestions: z.array(z.object({
+      item: z.string().describe("The at-risk item."),
+      suggestion: z.string().describe("A specific, actionable suggestion to prevent waste."),
+    })).describe("A list of suggestions to prevent the predicted waste."),
+});
+export type ForecastWasteOutput = z.infer<typeof ForecastWasteOutputSchema>;

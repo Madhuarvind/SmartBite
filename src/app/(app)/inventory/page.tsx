@@ -10,10 +10,10 @@ import { PlusCircle, Camera, MoreHorizontal, Trash2, Pencil, Loader, Upload, Wan
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scanIngredients } from "@/ai/flows/scan-ingredients";
-import { predictExpiryDate } from "@/ai/flows/predict-expiry-date";
+import { predictEdibility } from "@/ai/flows/predict-expiry-date";
 import { logWaste } from "@/ai/flows/log-waste";
 import { useToast } from "@/hooks/use-toast";
-import type { DetectedIngredient } from "@/ai/schemas";
+import type { DetectedIngredient, PredictEdibilityOutput } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
@@ -25,6 +25,8 @@ import { parseISO, isPast } from "date-fns";
 import type { User } from 'firebase/auth';
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 
 
 export default function InventoryPage() {
@@ -56,6 +58,8 @@ export default function InventoryPage() {
   const [newItemQuantity, setNewItemQuantity] = useState("");
   const [newItemPurchaseDate, setNewItemPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [newItemExpiry, setNewItemExpiry] = useState("");
+  const [newItemStorage, setNewItemStorage] = useState<'refrigerator' | 'pantry' | 'countertop' | 'freezer'>('refrigerator');
+  const [edibilityPrediction, setEdibilityPrediction] = useState<PredictEdibilityOutput | null>(null);
   
   // State for pantry essential dialog
   const [isEssentialDialogOpen, setIsEssentialDialogOpen] = useState(false);
@@ -219,28 +223,31 @@ export default function InventoryPage() {
     }
   }
   
-  const handlePredictExpiry = async () => {
+  const handlePredictEdibility = async () => {
     if (!newItemName) {
       toast({
         variant: "destructive",
         title: "Missing Ingredient Name",
-        description: "Please enter an ingredient name to predict its expiry date.",
+        description: "Please enter an ingredient name to predict its edibility.",
       });
       return;
     }
     setIsPredicting(true);
+    setEdibilityPrediction(null);
     try {
-        const result = await predictExpiryDate({
+        const result = await predictEdibility({
             ingredientName: newItemName,
             purchaseDate: newItemPurchaseDate,
+            storageMethod: newItemStorage,
         });
-        setNewItemExpiry(result.expiryDate);
+        setEdibilityPrediction(result);
+        setNewItemExpiry(result.predictedExpiry);
     } catch(e) {
-        console.error("Error predicting expiry date:", e);
+        console.error("Error predicting edibility:", e);
         toast({
             variant: "destructive",
             title: "Prediction Failed",
-            description: "Could not predict the expiry date. Please enter it manually."
+            description: "Could not predict the edibility. Please enter it manually."
         });
     } finally {
         setIsPredicting(false);
@@ -252,6 +259,8 @@ export default function InventoryPage() {
     setNewItemQuantity("");
     setNewItemPurchaseDate(new Date().toISOString().split('T')[0]);
     setNewItemExpiry("");
+    setEdibilityPrediction(null);
+    setNewItemStorage('refrigerator');
   }
 
   const handleAddItem = () => {
@@ -268,6 +277,7 @@ export default function InventoryPage() {
       quantity: newItemQuantity,
       expiry: newItemExpiry || 'N/A',
       purchaseDate: newItemPurchaseDate,
+      storage: newItemStorage,
     };
     try {
         addDoc(collection(db, "users", user.uid, "inventory"), newItem);
@@ -292,16 +302,16 @@ export default function InventoryPage() {
     // Log as wasted if the item is expired
     if (expiry !== 'N/A' && isPast(parseISO(expiry))) {
         try {
-            await addDoc(collection(db, "users", user.uid, "activity"), {
+            const wasteInfo = await logWaste({ itemName });
+            addDoc(collection(db, "users", user.uid, "activity"), {
                 type: 'itemWasted',
                 itemName: itemName,
-                timestamp: Timestamp.now()
+                timestamp: Timestamp.now(),
+                isCompostable: wasteInfo.isCompostable,
             });
 
-            // Get composting tip
-            const wasteInfo = await logWaste({ itemName });
             toast({ 
-                title: "Composting Tip",
+                title: "Item Logged as Waste",
                 description: wasteInfo.tip,
              });
 
@@ -482,12 +492,13 @@ export default function InventoryPage() {
         // Log wasted item if it's expired
         if (itemToDelete.expiry && itemToDelete.expiry !== 'N/A' && isPast(parseISO(itemToDelete.expiry))) {
           try {
+              const wasteInfo = await logWaste({ itemName: itemToDelete.name });
               await addDoc(collection(db, "users", user.uid, "activity"), {
                   type: 'itemWasted',
                   itemName: itemToDelete.name,
-                  timestamp: Timestamp.now()
+                  timestamp: Timestamp.now(),
+                  isCompostable: wasteInfo.isCompostable,
               });
-              const wasteInfo = await logWaste({ itemName: itemToDelete.name });
               toast({ title: "Composting Tip", description: wasteInfo.tip });
           } catch(e) { console.error("Error in waste logging for batch delete", e); }
         }
@@ -607,10 +618,10 @@ export default function InventoryPage() {
             <DialogTrigger asChild>
                 <Button><PlusCircle className="mr-2"/> Add Item Manually</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>Add New Inventory Item</DialogTitle>
-                    <DialogDescription>Enter the details of your new item below. You can also scan items to pre-fill this form.</DialogDescription>
+                    <DialogDescription>Enter the details of your new item below. Use the AI wand to predict its freshness.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -621,6 +632,20 @@ export default function InventoryPage() {
                         <Label htmlFor="item-quantity" className="text-right">Quantity</Label>
                         <Input id="item-quantity" value={newItemQuantity} onChange={(e) => setNewItemQuantity(e.target.value)} className="col-span-3" placeholder="e.g. 500g" />
                     </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="item-storage" className="text-right">Storage</Label>
+                        <Select onValueChange={(v) => setNewItemStorage(v as any)} defaultValue={newItemStorage}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select storage method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="refrigerator">Refrigerator</SelectItem>
+                                <SelectItem value="pantry">Pantry</SelectItem>
+                                <SelectItem value="countertop">Countertop</SelectItem>
+                                <SelectItem value="freezer">Freezer</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="item-purchase-date" className="text-right">Purchase Date</Label>
                         <Input id="item-purchase-date" type="date" value={newItemPurchaseDate} onChange={(e) => setNewItemPurchaseDate(e.target.value)} className="col-span-3" />
@@ -629,12 +654,33 @@ export default function InventoryPage() {
                         <Label htmlFor="item-expiry" className="text-right">Expiry Date</Label>
                         <div className="col-span-3 grid grid-cols-3 gap-2">
                              <Input id="item-expiry" type="date" value={newItemExpiry} onChange={(e) => setNewItemExpiry(e.target.value)} className="col-span-2" />
-                             <Button onClick={handlePredictExpiry} disabled={isPredicting || !newItemName} variant="outline" size="sm" className="col-span-1">
+                             <Button onClick={handlePredictEdibility} disabled={isPredicting || !newItemName} variant="outline" size="sm" className="col-span-1">
                                 {isPredicting ? <Loader className="animate-spin" /> : <Wand2 />}
-                                <span className="sr-only">Predict Expiry</span>
+                                <span className="sr-only">Predict Edibility</span>
                              </Button>
                         </div>
                     </div>
+                    {isPredicting ? (
+                      <div className="col-start-2 col-span-3 space-y-2">
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                    ) : edibilityPrediction && (
+                      <div className="col-start-2 col-span-3">
+                        <Alert>
+                           <Wand2 className="h-4 w-4" />
+                          <AlertTitle className="flex justify-between items-center">
+                            <span>{edibilityPrediction.status}</span>
+                            <span className="font-normal text-sm">{edibilityPrediction.edibilityScore}% Edibility</span>
+                          </AlertTitle>
+                          <AlertDescription>
+                            <Progress value={edibilityPrediction.edibilityScore} className="h-2 my-2" />
+                            {edibilityPrediction.reasoning}
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
                 </div>
                 <DialogFooter>
                     <Button type="button" onClick={handleAddItem}>Save Item</Button>

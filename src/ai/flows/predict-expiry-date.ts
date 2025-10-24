@@ -1,71 +1,56 @@
 // src/ai/flows/predict-expiry-date.ts
 'use server';
 /**
- * @fileOverview An AI flow for predicting the expiry date of a fresh ingredient.
+ * @fileOverview An AI flow for predicting the edibility of a fresh ingredient.
  *
- * - predictExpiryDate - A function that estimates the shelf life of an ingredient.
+ * - predictEdibility - A function that estimates the shelf life and edibility of an ingredient.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import {
-  PredictExpiryDateInput,
-  PredictExpiryDateInputSchema,
-  PredictExpiryDateOutput,
-  PredictExpiryDateOutputSchema,
+  PredictEdibilityInput,
+  PredictEdibilityInputSchema,
+  PredictEdibilityOutput,
+  PredictEdibilityOutputSchema,
 } from '../schemas';
 
-export async function predictExpiryDate(
-  input: PredictExpiryDateInput
-): Promise<PredictExpiryDateOutput> {
-  return predictExpiryDateFlow(input);
+export async function predictEdibility(
+  input: PredictEdibilityInput
+): Promise<PredictEdibilityOutput> {
+  return predictEdibilityFlow(input);
 }
 
-// Internal schema for what we want the LLM to output
-const ShelfLifeSchema = z.object({
-    shelfLifeDays: z.number().describe('The estimated shelf life of the ingredient in days.'),
-});
-
 const prompt = ai.definePrompt({
-  name: 'predictExpiryDatePrompt',
-  input: { schema: PredictExpiryDateInputSchema },
-  output: { schema: ShelfLifeSchema },
-  prompt: `You are an expert in food science and safety. Your task is to estimate the typical shelf life of a fresh food item when stored correctly.
+  name: 'predictEdibilityPrompt',
+  input: { schema: PredictEdibilityInputSchema },
+  output: { schema: PredictEdibilityOutputSchema },
+  prompt: `You are an expert in food science and safety. Your task is to estimate the edibility of a fresh food item based on its name, purchase date, and storage method.
 
-Return only the estimated number of days the ingredient will last from its purchase date.
-
-Do not provide any explanation or additional text. Just return the JSON object with the shelf life in days.
+Your response must include:
+1.  **edibilityScore**: A number from 0 to 100 representing the likelihood the item is still perfectly edible.
+2.  **status**: A short, descriptive status. Examples: "Peak Freshness", "Use Soon", "Check Before Use", "Likely Spoiled".
+3.  **reasoning**: A brief, one-sentence explanation for your prediction, considering the storage method.
+4.  **predictedExpiry**: The estimated expiry date in YYYY-MM-DD format.
 
 Ingredient: {{{ingredientName}}}
+Purchase Date: {{{purchaseDate}}}
+Storage Method: {{{storageMethod}}}
+
+Return the result in the specified JSON format.
 `,
 });
 
-const predictExpiryDateFlow = ai.defineFlow(
+const predictEdibilityFlow = ai.defineFlow(
   {
-    name: 'predictExpiryDateFlow',
-    inputSchema: PredictExpiryDateInputSchema,
-    outputSchema: PredictExpiryDateOutputSchema,
+    name: 'predictEdibilityFlow',
+    inputSchema: PredictEdibilityInputSchema,
+    outputSchema: PredictEdibilityOutputSchema,
   },
-  async ({ ingredientName, purchaseDate }) => {
-    // Step 1: Get the shelf life in days from the AI
-    const { output } = await prompt({ ingredientName, purchaseDate });
-    if (!output?.shelfLifeDays) {
-        throw new Error('Could not predict shelf life from AI.');
+  async (input) => {
+    const { output } = await prompt(input);
+    if (!output) {
+      throw new Error('Could not predict edibility from AI.');
     }
-
-    // Step 2: Calculate the expiry date in code for reliability
-    const purchase = new Date(purchaseDate);
-    // Add a day to the purchase date to account for timezone shifts and ensure the calculation is from the start of that day.
-    purchase.setDate(purchase.getDate() + 1);
-
-    const expiry = new Date(purchase);
-    expiry.setDate(purchase.getDate() + output.shelfLifeDays);
-
-    // Step 3: Format the date into YYYY-MM-DD string
-    const expiryDateString = expiry.toISOString().split('T')[0];
-
-    return {
-        expiryDate: expiryDateString,
-    };
+    return output;
   }
 );

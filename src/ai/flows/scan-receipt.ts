@@ -13,7 +13,7 @@ import {
   ScanReceiptOutputSchema,
   ScanReceiptOutput,
 } from '../schemas';
-import { predictExpiryDate } from '@/ai/flows/predict-expiry-date';
+import { predictEdibility } from '@/ai/flows/predict-expiry-date';
 
 export async function scanReceipt(
   input: ScanReceiptInput
@@ -63,11 +63,12 @@ const scanReceiptFlow = ai.defineFlow(
       (output.items || []).map(async (item) => {
         if (item.isFresh) {
           try {
-            const prediction = await predictExpiryDate({
+            const prediction = await predictEdibility({
               ingredientName: item.name,
               purchaseDate: new Date().toISOString().split('T')[0],
+              storageMethod: 'refrigerator', // Assuming refrigerator for most fresh items from a receipt
             });
-            return { ...item, expiryDate: prediction.expiryDate };
+            return { ...item, expiryDate: prediction.predictedExpiry };
           } catch (e) {
             console.error(`Could not predict expiry for ${item.name}`, e);
             // If prediction fails, fall back to default

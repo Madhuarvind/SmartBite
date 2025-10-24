@@ -29,17 +29,21 @@ export const AnalyzePlateOutputSchema = z.object({
 export type AnalyzePlateOutput = z.infer<typeof AnalyzePlateOutputSchema>;
 
 
-// Schemas for predict-expiry-date.ts
-export const PredictExpiryDateInputSchema = z.object({
-    ingredientName: z.string().describe('The name of the ingredient, e.g., "Tomatoes", "Chicken Breast".'),
-    purchaseDate: z.string().describe('The date the ingredient was purchased, in ISO 8601 format (YYYY-MM-DD).'),
+// Schemas for predict-expiry-date.ts (now predict-edibility)
+export const PredictEdibilityInputSchema = z.object({
+  ingredientName: z.string().describe('The name of the ingredient, e.g., "Tomatoes", "Chicken Breast".'),
+  purchaseDate: z.string().describe('The date the ingredient was purchased, in ISO 8601 format (YYYY-MM-DD).'),
+  storageMethod: z.enum(['refrigerator', 'pantry', 'countertop', 'freezer']).describe('How the item is being stored.'),
 });
-export type PredictExpiryDateInput = z.infer<typeof PredictExpiryDateInputSchema>;
+export type PredictEdibilityInput = z.infer<typeof PredictEdibilityInputSchema>;
 
-export const PredictExpiryDateOutputSchema = z.object({
-    expiryDate: z.string().describe('The predicted expiry date for the ingredient, in ISO 8601 format (YYYY-MM-DD).'),
+export const PredictEdibilityOutputSchema = z.object({
+  edibilityScore: z.number().describe('The likelihood (0-100) that the item is still perfectly edible.'),
+  status: z.string().describe('A short, descriptive status like "Peak Freshness", "Use Soon", or "Check Before Use".'),
+  reasoning: z.string().describe('A brief explanation for the prediction.'),
+  predictedExpiry: z.string().describe('The predicted expiry date for the ingredient, in ISO 8601 format (YYYY-MM-DD).'),
 });
-export type PredictExpiryDateOutput = z.infer<typeof PredictExpiryDateOutputSchema>;
+export type PredictEdibilityOutput = z.infer<typeof PredictEdibilityOutputSchema>;
 
 
 // Schemas for generate-image.ts (replaces generate-recipe-step-image)

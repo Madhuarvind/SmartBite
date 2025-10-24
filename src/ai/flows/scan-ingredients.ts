@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import { ScanIngredientsInput, ScanIngredientsInputSchema, ScanIngredientsOutput, ScanIngredientsOutputSchema } from '../schemas';
-import { predictExpiryDate } from '@/ai/flows/predict-expiry-date';
+import { predictEdibility } from '@/ai/flows/predict-expiry-date';
 
 export async function scanIngredients(
   input: ScanIngredientsInput
@@ -69,11 +69,12 @@ const scanIngredientsFlow = ai.defineFlow(
         // Only predict if the AI marked it as fresh.
         if (ingredient.isFresh) {
           try {
-            const prediction = await predictExpiryDate({
+            const prediction = await predictEdibility({
               ingredientName: ingredient.name,
               purchaseDate: new Date().toISOString().split('T')[0],
+              storageMethod: 'refrigerator', // Assume default storage
             });
-            return { ...ingredient, expiryDate: prediction.expiryDate };
+            return { ...ingredient, expiryDate: prediction.predictedExpiry };
           } catch (e) {
             console.error(`Could not predict expiry for ${ingredient.name}`, e);
              // If prediction fails, fall back to the default below

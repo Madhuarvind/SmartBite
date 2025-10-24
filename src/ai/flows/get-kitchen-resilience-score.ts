@@ -75,7 +75,25 @@ const getKitchenResilienceScoreFlow = ai.defineFlow(
       };
     }
     
-    const { output } = await prompt(input);
-    return output!;
+    try {
+        const { output } = await prompt(input);
+        return output!;
+    } catch (error: any) {
+        console.error("Error in getKitchenResilienceScoreFlow:", error.message);
+        // Handle service unavailable errors gracefully
+        if (error.message && (error.message.includes('503') || error.message.includes('overloaded'))) {
+            return {
+                resilienceScore: 0,
+                keyInsight: "The AI analysis is temporarily unavailable as the service is currently overloaded.",
+                suggestions: [
+                    "Please try refreshing the analysis in a few moments.",
+                    "You can still manually check your pantry for shelf-stable items.",
+                    "Consider adding some basic essentials like canned goods or grains to improve resilience.",
+                ],
+            };
+        }
+        // Re-throw other errors
+        throw error;
+    }
   }
 );

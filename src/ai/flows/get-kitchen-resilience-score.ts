@@ -23,7 +23,7 @@ export async function getKitchenResilienceScore(
 const prompt = ai.definePrompt({
   name: 'getKitchenResilienceScorePrompt',
   input: { schema: GetKitchenResilienceScoreInputSchema },
-  output: { schema: GetKitchenResilience-ScoreOutputSchema },
+  output: { schema: GetKitchenResilienceScoreOutputSchema },
   prompt: `You are a food security and supply chain expert. Your task is to analyze a user's kitchen inventory to calculate a "Kitchen Resilience Score" from 0 to 100. This score represents the kitchen's ability to withstand supply chain disruptions, price spikes, or personal emergencies.
 
 A high score means the kitchen is well-stocked with a diverse range of shelf-stable, foundational ingredients. A low score indicates a heavy reliance on fresh, just-in-time ingredients with little backup.

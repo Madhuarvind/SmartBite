@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
@@ -361,7 +360,7 @@ export default function ShoppingHelperPage() {
                                 <Alert variant="destructive" className="absolute m-4">
                                 <AlertTitle>Camera Access Required</AlertTitle>
                                 <AlertDescription>
-                                    To use the Smart Shopping Lens, please allow camera access in your browser settings.
+                                    To use the Smart Shopping Lens, please allow camera permissions in your browser settings.
                                 </AlertDescription>
                                 </Alert>
                             )}

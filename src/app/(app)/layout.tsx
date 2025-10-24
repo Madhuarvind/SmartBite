@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -15,8 +14,6 @@ import {
   LogOut,
   ReceiptText,
   ShoppingCart,
-  Banknote,
-  History,
 } from "lucide-react";
 import { ForkAndLeaf } from "@/components/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -42,9 +39,7 @@ const menuItems = [
   { href: "/planner", label: "Meal Planner", icon: Calendar },
   { href: "/shopping-helper", label: "Shopping Helper", icon: ShoppingCart },
   { href: "/health", label: "Health & Impact", icon: HeartPulse },
-  { href: "/financial-advisor", label: "Financial Advisor", icon: Settings },
-  { href: "/expenses", label: "Expenses", icon: Banknote },
-  { href: "/history", label: "Recipe History", icon: History },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

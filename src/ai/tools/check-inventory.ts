@@ -1,4 +1,3 @@
-
 // src/ai/tools/check-inventory.ts
 'use server';
 

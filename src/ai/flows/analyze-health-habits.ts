@@ -1,4 +1,3 @@
-
 // src/ai/flows/analyze-health-habits.ts
 'use server';
 /**
@@ -57,5 +56,3 @@ const analyzeHealthHabitsFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

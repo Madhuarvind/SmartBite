@@ -13,13 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader, Music, Video, UtensilsCrossed, Sparkles, ChefHat, Film, Wand2, CheckSquare, MinusCircle, PlusCircle, AlertTriangle, Heart, BrainCircuit, Camera, Leaf } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { recommendRecipes } from "@/ai/flows/recommend-recipes";
-import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion } from "@/ai/schemas";
+import { Recipe, RecommendRecipesOutput, RecipeIngredient, SubstitutionSuggestion, InstructionStep } from "@/ai/schemas";
 import type { InventoryItem, PantryItem } from "@/lib/types";
 import { suggestSubstitutions } from "@/ai/flows/suggest-substitutions";
 import { transformRecipe } from "@/ai/flows/transform-recipe";
 import { deductIngredients } from "@/ai/flows/deduct-ingredients";
 import { generateRecipeAudio } from "@/ai/flows/generate-recipe-audio";
 import { generateRecipeVideo } from "@/ai/flows/generate-recipe-video";
+import { generateRecipeStepImage } from "@/ai/flows/generate-recipe-step-image";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -41,6 +42,45 @@ type InventoryCheckResult = {
     status: 'available' | 'missing' | 'partial';
     notes: string;
 }
+
+const InstructionStepComponent = ({ step, recipeName, onImageLoad }: { step: InstructionStep, recipeName: string, onImageLoad: (step: number, image: any) => void }) => {
+    const [image, setImage] = useState(step.image);
+    const [isLoading, setIsLoading] = useState(!step.image);
+
+    useEffect(() => {
+        if (!step.image) {
+            setIsLoading(true);
+            generateRecipeStepImage({
+                prompt: `A clear, professional, appetizing food photography shot of the following cooking step for a recipe called "${recipeName}": ${step.text}. Focus on the action described.`,
+            }).then(imageResult => {
+                setImage(imageResult);
+                onImageLoad(step.step, imageResult);
+            }).catch(e => {
+                console.error(`Image generation failed for step "${step.text}"`, e);
+            }).finally(() => {
+                setIsLoading(false);
+            });
+        }
+    }, [step, recipeName, onImageLoad]);
+
+    return (
+        <div className="flex gap-4 items-start">
+            <div className="flex flex-col items-center gap-1">
+                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{step.step}</div>
+                <Checkbox id={`step-${step.step}`} className="w-5 h-5" />
+            </div>
+            <div className="flex-1 space-y-2">
+                <Label htmlFor={`step-${step.step}`} className="font-normal text-base text-foreground leading-snug">{step.text}</Label>
+                {isLoading ? (
+                    <Skeleton className="w-full aspect-video rounded-lg" />
+                ) : image?.imageDataUri ? (
+                    <Image src={image.imageDataUri} alt={`Step ${step.step}`} width={400} height={225} className="rounded-lg border aspect-video object-cover" />
+                ) : null}
+            </div>
+        </div>
+    );
+};
+
 
 export default function RecipesPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -507,6 +547,19 @@ export default function RecipesPage() {
       checked ? [...prev, ingredient] : prev.filter(i => i !== ingredient)
     );
   };
+  
+  const handleStepImageLoaded = (stepNumber: number, image: any) => {
+    setRecipeInModal(prev => {
+        if (!prev) return null;
+        const newSteps = [...prev.instructionSteps];
+        const stepIndex = newSteps.findIndex(s => s.step === stepNumber);
+        if (stepIndex !== -1) {
+            newSteps[stepIndex] = { ...newSteps[stepIndex], image };
+        }
+        return { ...prev, instructionSteps: newSteps };
+    });
+  };
+
 
 
   return (
@@ -761,21 +814,13 @@ export default function RecipesPage() {
                         <div>
                             <h3 className="font-bold text-lg mb-2">Instructions</h3>
                             <div className="space-y-4">
-                                {recipeInModal.instructionSteps?.map((step, index) => (
-                                    <div key={index} className="flex gap-4 items-start">
-                                        <div className="flex flex-col items-center gap-1">
-                                           <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{step.step}</div>
-                                           <Checkbox id={`step-${index}`} className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1 space-y-2">
-                                            <Label htmlFor={`step-${index}`} className="font-normal text-base text-foreground leading-snug">{step.text}</Label>
-                                            {step.image?.imageDataUri ? (
-                                                <Image src={step.image.imageDataUri} alt={`Step ${step.step}`} width={400} height={225} className="rounded-lg border aspect-video object-cover" />
-                                            ) : (
-                                                <Skeleton className="w-full aspect-video rounded-lg" />
-                                            )}
-                                        </div>
-                                    </div>
+                                {recipeInModal.instructionSteps?.map((step) => (
+                                    <InstructionStepComponent 
+                                        key={step.step} 
+                                        step={step} 
+                                        recipeName={recipeInModal.name} 
+                                        onImageLoad={handleStepImageLoaded} 
+                                    />
                                 ))}
                             </div>
                         </div>

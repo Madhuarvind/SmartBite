@@ -12,7 +12,7 @@ import {
   TransformRecipeInputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeMedia } from './generate-recipe-media';
+import { generateImage } from './generate-image';
 
 export async function transformRecipe(
   input: TransformRecipeInput
@@ -61,12 +61,15 @@ const transformRecipeFlow = ai.defineFlow(
       throw new Error('Could not transform recipe.');
     }
     
-    // Asynchronously generate all media in the background.
-    const mediaResult = await generateRecipeMedia({ recipe });
+    // Generate only the cover image initially
+    const coverImage = await generateImage({
+        prompt: `A beautiful, appetizing, professional food photography shot of a finished plate of "${recipe.name}".`,
+    });
       
     return {
       ...recipe,
-      instructionSteps: mediaResult.instructionSteps,
+      coverImage,
+      instructionSteps: recipe.instructionSteps.map(step => ({...step, image: undefined})),
       audio: undefined,
       video: undefined,
     };

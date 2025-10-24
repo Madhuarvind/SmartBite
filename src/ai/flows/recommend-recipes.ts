@@ -70,7 +70,8 @@ const recommendRecipesFlow = ai.defineFlow(
             coverImage = undefined;
           }
         }
-        return { ...recipe, coverImage };
+        // Return recipe without step images
+        return { ...recipe, coverImage, instructionSteps: recipe.instructionSteps.map(step => ({...step, image: undefined})) };
       })
     );
 

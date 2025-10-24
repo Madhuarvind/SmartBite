@@ -12,7 +12,7 @@ import {
   FindRecipeFromMealInputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeMedia } from './generate-recipe-media';
+import { generateImage } from './generate-image';
 
 export async function findRecipeFromMeal(
   input: FindRecipeFromMealInput
@@ -58,12 +58,16 @@ const findRecipeFromMealFlow = ai.defineFlow(
       throw new Error('Could not generate a recipe for the meal.');
     }
     
-    // Asynchronously generate step images
-    const mediaResult = await generateRecipeMedia({ recipe });
-
+    // Generate only the cover image initially.
+    const coverImage = await generateImage({
+        prompt: `A beautiful, appetizing, professional food photography shot of a finished plate of "${recipe.name}".`,
+    });
+    
     return {
       ...recipe,
-      instructionSteps: mediaResult.instructionSteps,
+      coverImage: coverImage,
+      // Ensure step images are not generated here
+      instructionSteps: recipe.instructionSteps.map(step => ({ ...step, image: undefined })),
       audio: undefined,
       video: undefined,
     };

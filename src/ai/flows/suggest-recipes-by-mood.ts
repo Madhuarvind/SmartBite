@@ -14,7 +14,7 @@ import {
   SuggestRecipesByMoodOutputSchema,
   Recipe,
 } from '../schemas';
-import { generateRecipeMedia } from './generate-recipe-media';
+import { generateImage } from './generate-image';
 
 export async function suggestRecipesByMood(
   input: SuggestRecipesByMoodInput
@@ -64,10 +64,13 @@ const suggestRecipesByMoodFlow = ai.defineFlow(
 
     const enhancedRecipes = await Promise.all(
       output.recipes.map(async (recipe: Recipe) => {
-        const mediaResult = await generateRecipeMedia({ recipe });
+        const coverImage = await generateImage({
+            prompt: `A beautiful, appetizing, professional food photography shot of a finished plate of "${recipe.name}".`,
+        });
         return {
           ...recipe,
-          instructionSteps: mediaResult.instructionSteps,
+          coverImage,
+          instructionSteps: recipe.instructionSteps.map(step => ({...step, image: undefined})),
         };
       })
     );

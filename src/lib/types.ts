@@ -1,6 +1,5 @@
 
 
-
 import type { Recipe as AiRecipe } from '@/ai/schemas';
 
 export type Ingredient = {

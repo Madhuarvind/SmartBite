@@ -265,7 +265,7 @@ export default function PlateScannerPage() {
       setIsLogging(true);
       try {
         await addDoc(collection(db, 'users', user.uid, 'activity'), {
-            type: 'mealCooked', // Using 'mealCooked' for simplicity, could be 'mealEaten'
+            type: 'mealCooked',
             recipeName: analysis.mealName,
             timestamp: Timestamp.now(),
             calories: analysis.nutrition.calories,
@@ -895,4 +895,5 @@ export default function PlateScannerPage() {
     </>
   );
 }
+
 

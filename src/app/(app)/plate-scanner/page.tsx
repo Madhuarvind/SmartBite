@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useRef, useEffect, ChangeEvent, DragEvent, FormEvent } from "react";
@@ -327,6 +328,8 @@ export default function PlateScannerPage() {
     const { name: recipeName, ingredients: recipeIngredients } = recipe;
 
     try {
+        const batch = writeBatch(db);
+
         // 1. Deduct ingredients from inventory
         const allInventoryItems = [...userInventory, ...pantryEssentials].map(item => ({
             id: item.id,
@@ -339,7 +342,6 @@ export default function PlateScannerPage() {
             recipeIngredients: recipeIngredients,
         });
 
-        const batch = writeBatch(db);
         deductionResult.updatedItems.forEach(item => {
             const inventoryItem = userInventory.find(i => i.id === item.id);
             const essentialItem = pantryEssentials.find(e => e.id === item.id);
@@ -360,18 +362,27 @@ export default function PlateScannerPage() {
               }
             }
         });
-        await batch.commit();
-
+        
         // 2. Log the "mealCooked" activity
-        await addDoc(collection(db, "users", user.uid, "activity"), {
+        const activityRef = doc(collection(db, "users", user.uid, "activity"));
+        batch.set(activityRef, {
             type: 'mealCooked',
             recipeName: recipeName,
             timestamp: Timestamp.now()
         });
 
+        // 3. Save the full recipe to history
+        const historyRef = doc(collection(db, "users", user.uid, "recipeHistory"));
+        batch.set(historyRef, {
+            ...recipe,
+            cookedAt: Timestamp.now(),
+        });
+
+        await batch.commit();
+
         toast({
             title: "Yum! Activity Logged!",
-            description: `${recipeName} cooked and ingredients have been deducted from your inventory.`
+            description: `${recipeName} cooked, ingredients deducted, and saved to your history.`
         });
     } catch (error) {
         console.error("Error logging activity and deducting ingredients:", error);
@@ -884,7 +895,3 @@ export default function PlateScannerPage() {
     </>
   );
 }
-
-    
-
-    

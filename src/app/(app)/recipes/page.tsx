@@ -162,7 +162,7 @@ export default function RecipesPage() {
         return;
       }
       try {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         setStream(cameraStream);
         setHasCameraPermission(true);
 
@@ -427,6 +427,8 @@ export default function RecipesPage() {
     const { name: recipeName, ingredients: recipeIngredients } = recipe;
 
     try {
+        const batch = writeBatch(db);
+
         // 1. Deduct ingredients from inventory
         const allInventoryItems = [...userInventory, ...pantryEssentials].map(item => ({
             id: item.id,
@@ -439,7 +441,6 @@ export default function RecipesPage() {
             recipeIngredients: recipeIngredients,
         });
 
-        const batch = writeBatch(db);
         deductionResult.updatedItems.forEach(item => {
             const inventoryItem = userInventory.find(i => i.id === item.id);
             const essentialItem = pantryEssentials.find(e => e.id === item.id);
@@ -461,19 +462,19 @@ export default function RecipesPage() {
             }
         });
         
-        // 2. Log the "mealCooked" activity and save the full recipe to history
-        const historyRef = doc(collection(db, "users", user.uid, "recipeHistory"));
-        batch.set(historyRef, {
-            ...recipe,
-            cookedAt: Timestamp.now(),
-        });
-
+        // 2. Log the "mealCooked" activity
         const activityRef = doc(collection(db, "users", user.uid, "activity"));
         batch.set(activityRef, {
             type: 'mealCooked',
             recipeName: recipeName,
-            recipeId: historyRef.id, // Link to the history document
             timestamp: Timestamp.now()
+        });
+        
+        // 3. Save the full recipe to history
+        const historyRef = doc(collection(db, "users", user.uid, "recipeHistory"));
+        batch.set(historyRef, {
+            ...recipe,
+            cookedAt: Timestamp.now(),
         });
 
         await batch.commit();
@@ -1012,7 +1013,3 @@ export default function RecipesPage() {
     </>
   );
 }
-
-    
-
-    

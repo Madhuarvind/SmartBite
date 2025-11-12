@@ -895,3 +895,4 @@ export default function PlateScannerPage() {
     </>
   );
 }
+

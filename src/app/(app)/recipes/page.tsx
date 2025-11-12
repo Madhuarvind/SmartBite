@@ -182,6 +182,26 @@ export default function RecipesPage() {
         stream?.getTracks().forEach(track => track.stop());
     }
   }, []);
+  
+  const saveGeneratedRecipes = async (recipes: Recipe[], source: string) => {
+    if (!user || recipes.length === 0) return;
+    try {
+        const batch = writeBatch(db);
+        const generatedRecipesRef = collection(db, "users", user.uid, "generated_recipes");
+        recipes.forEach(recipe => {
+            const docRef = doc(generatedRecipesRef);
+            batch.set(docRef, { 
+                ...recipe, 
+                generatedAt: Timestamp.now(),
+                source, // e.g., 'finder', 'mood', 'predictive'
+            });
+        });
+        await batch.commit();
+    } catch(e) {
+        console.error("Could not save generated recipes to history", e);
+    }
+  }
+
 
   const handleGenerateRecipes = async () => {
     if (selectedIngredients.length === 0) {
@@ -204,6 +224,7 @@ export default function RecipesPage() {
       };
       const result = await recommendRecipes(input);
       setRecommendedRecipes(result.recipes);
+      saveGeneratedRecipes(result.recipes, 'finder');
       if (result.recipes.length === 0) {
         toast({
           title: "No Recipes Found",
@@ -240,6 +261,7 @@ export default function RecipesPage() {
     try {
         const result = await suggestRecipesByMood({ mood, availableIngredients });
         setRecommendedRecipes(result.recipes);
+        saveGeneratedRecipes(result.recipes, 'mood');
         if (result.recipes.length === 0) {
             toast({ title: "No suggestions found", description: "The AI couldn't find recipes for that mood with your ingredients. Try adding more items to your pantry!" });
         }
@@ -309,6 +331,7 @@ export default function RecipesPage() {
               cookingHistory
           });
           setRecommendedRecipes(result.recipes);
+          saveGeneratedRecipes(result.recipes, 'predictive');
           if (result.recipes.length === 0) {
               toast({ title: "No predictions yet", description: "The AI is still learning your habits. Keep using the app!" });
           }
@@ -341,6 +364,7 @@ export default function RecipesPage() {
 
       const result = await inventRecipe({ ingredients: pricedIngredients });
       setRecommendedRecipes([result]);
+      saveGeneratedRecipes([result], 'creative');
     } catch (error) {
       console.error("Error inventing recipe:", error);
       toast({
@@ -409,6 +433,7 @@ export default function RecipesPage() {
       // Replace the recipe in the modal with the new transformed one
       openRecipeModal(result); // This re-initializes the modal with the new recipe and its media
       toast({ title: "Recipe Transformed!", description: "Your new creation is ready." });
+      saveGeneratedRecipes([result], 'transformed');
     } catch (error) {
       console.error("Error transforming recipe:", error);
       toast({ variant: "destructive", title: "Transformation failed. Please try again." });
@@ -1013,3 +1038,4 @@ export default function RecipesPage() {
     </>
   );
 }
+
